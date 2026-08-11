@@ -10,6 +10,7 @@ export type AcademiaModuleKey =
   | "students"
   | "guardians"
   | "enrollments"
+  | "promotions"
   | "attendance";
 
 export type AcademiaModuleCard = {
@@ -52,6 +53,13 @@ export const academiaModuleCards: readonly AcademiaModuleCard[] = [
     description: "Review student profiles and academic record readiness.",
     href: "/academia/students",
     permissions: ["academia.student.view"]
+  },
+  {
+    key: "promotions",
+    title: "Student Promotion",
+    description: "Review class-wise outcomes and create audited enrollments for the next academic year.",
+    href: "/academia/promotions",
+    permissions: ["academia.promotion.manage"]
   },
   {
     key: "attendance",
@@ -115,7 +123,7 @@ export const academiaListPageConfigs = {
     searchPlaceholder: "Search students by name or admission number",
     emptyTitle: "No students found",
     emptyDescription: "Add your first student profile to start managing enrollments and attendance.",
-    columns: ["Scholar / Admission No.", "Student Name", "Current Class Section", "Father / Guardian", "Category", "Status", "Actions"]
+    columns: ["Scholar / Admission No.", "Student Name", "Current Class Section", "Father / Guardian", "Category", "Profile", "Status", "Actions"]
   },
   guardians: {
     title: "Guardians",

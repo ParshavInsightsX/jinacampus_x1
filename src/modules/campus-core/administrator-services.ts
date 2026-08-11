@@ -35,6 +35,9 @@ export type SchoolDependencySummary = {
   auditLogs: number;
   notificationOutboxItems: number;
   roles: number;
+  classSectionSubjects: number;
+  gradebookAssessments: number;
+  gradebookMarks: number;
 };
 
 type SchoolDependencyCounts = SchoolDependencySummary;
@@ -49,7 +52,10 @@ const schoolDependencyCountSelect = {
   staffAttendanceRecords: true,
   auditLogs: true,
   notificationOutboxItems: true,
-  roles: true
+  roles: true,
+  classSectionSubjects: true,
+  gradebookAssessments: true,
+  gradebookMarks: true
 } as const;
 
 const emptySchoolDependencySummary: SchoolDependencySummary = {
@@ -62,7 +68,10 @@ const emptySchoolDependencySummary: SchoolDependencySummary = {
   staffAttendanceRecords: 0,
   auditLogs: 0,
   notificationOutboxItems: 0,
-  roles: 0
+  roles: 0,
+  classSectionSubjects: 0,
+  gradebookAssessments: 0,
+  gradebookMarks: 0
 };
 
 function toSchoolDependencySummary(counts: SchoolDependencyCounts): SchoolDependencySummary {
@@ -233,6 +242,9 @@ export async function getSchoolByIdForAdministrator(
       website: true,
       createdAt: true,
       updatedAt: true,
+      tenantSettings: {
+        select: { gradebookEnabled: true }
+      },
       institutions: {
         select: {
           id: true,
@@ -376,7 +388,10 @@ export async function updateSchool(
   input: z.infer<typeof updateSchoolSchema>
 ) {
   return db.$transaction(async (tx) => {
-    const before = await tx.tenant.findUnique({ where: { id: input.tenantId } });
+    const before = await tx.tenant.findUnique({
+      where: { id: input.tenantId },
+      include: { tenantSettings: { select: { gradebookEnabled: true } } }
+    });
     if (!before) throw notFound("SCHOOL_NOT_FOUND");
     const after = await tx.tenant.update({
       where: { id: input.tenantId },
@@ -405,6 +420,14 @@ export async function updateSchool(
       }
     }
 
+    if (input.gradebookEnabled !== undefined) {
+      await tx.tenantSettings.upsert({
+        where: { tenantId: input.tenantId },
+        create: { tenantId: input.tenantId, gradebookEnabled: input.gradebookEnabled },
+        update: { gradebookEnabled: input.gradebookEnabled }
+      });
+    }
+
     await writePlatformAuditLog({
       ctx,
       action: PLATFORM_ADMINISTRATOR_AUDIT_EVENTS.SCHOOL_UPDATED,
@@ -415,14 +438,16 @@ export async function updateSchool(
         name: before.name,
         slug: before.slug,
         status: before.status,
-        supportEmail: before.supportEmail
+        supportEmail: before.supportEmail,
+        gradebookEnabled: before.tenantSettings?.gradebookEnabled ?? false
       },
       after: {
         id: after.id,
         name: after.name,
         slug: after.slug,
         status: after.status,
-        supportEmail: after.supportEmail
+        supportEmail: after.supportEmail,
+        gradebookEnabled: input.gradebookEnabled ?? before.tenantSettings?.gradebookEnabled ?? false
       }
     }, tx);
     return after;
@@ -538,12 +563,18 @@ export async function deleteSchoolPermanently(
       inAppNotifications: (await tx.inAppNotification.deleteMany({ where: { tenantId: school.id } })).count,
       studentAttendanceRecords: (await tx.studentAttendanceRecord.deleteMany({ where: { tenantId: school.id } })).count,
       staffAttendanceRecords: (await tx.staffAttendanceRecord.deleteMany({ where: { tenantId: school.id } })).count,
+      academicCalendarEntries: (await tx.academicCalendarEntry.deleteMany({ where: { tenantId: school.id } })).count,
       staffLeaveApplications: (await tx.staffLeaveApplication.deleteMany({ where: { tenantId: school.id } })).count,
       staffLeaveBalances: (await tx.staffLeaveBalance.deleteMany({ where: { tenantId: school.id } })).count,
       staffLeaveApprovers: (await tx.staffLeaveApprover.deleteMany({ where: { tenantId: school.id } })).count,
       staffLeaveTypes: (await tx.staffLeaveType.deleteMany({ where: { tenantId: school.id } })).count,
       staffLeaveSettings: (await tx.staffLeaveSetting.deleteMany({ where: { tenantId: school.id } })).count,
       staffAttendanceQrTokens: (await tx.staffAttendanceQrToken.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookMarks: (await tx.gradebookMark.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookAssessments: (await tx.gradebookAssessment.deleteMany({ where: { tenantId: school.id } })).count,
+      classSectionSubjects: (await tx.classSectionSubject.deleteMany({ where: { tenantId: school.id } })).count,
+      studentPromotionItems: (await tx.studentPromotionItem.deleteMany({ where: { tenantId: school.id } })).count,
+      studentPromotionBatches: (await tx.studentPromotionBatch.deleteMany({ where: { tenantId: school.id } })).count,
       enrollments: (await tx.enrollment.deleteMany({ where: { tenantId: school.id } })).count,
       studentGuardianLinks: (await tx.studentGuardianLink.deleteMany({ where: { tenantId: school.id } })).count,
       classSections: (await tx.classSection.deleteMany({ where: { tenantId: school.id } })).count,

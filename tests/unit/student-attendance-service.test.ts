@@ -35,6 +35,7 @@ type AttendanceRecord = AttendanceWritePayload & {
 
 const mocks = vi.hoisted(() => {
   const tx = {
+    academicCalendarEntry: { findFirst: vi.fn() },
     attendanceSetting: { findFirst: vi.fn() },
     branch: { findFirst: vi.fn() },
     classSection: { findFirst: vi.fn() },
@@ -120,6 +121,7 @@ function existingRecord(overrides: Partial<ReturnType<typeof createdRecord>> = {
 }
 
 function resetMocks() {
+  mocks.tx.academicCalendarEntry.findFirst.mockReset();
   mocks.tx.classSection.findFirst.mockReset();
   mocks.tx.attendanceSetting.findFirst.mockReset();
   mocks.tx.branch.findFirst.mockReset();
@@ -135,6 +137,7 @@ function resetMocks() {
   mocks.requirePermission.mockResolvedValue(true);
   mocks.writeAuditLog.mockReset();
   mocks.writeAuditLog.mockResolvedValue({ id: "audit-id" });
+  mocks.tx.academicCalendarEntry.findFirst.mockResolvedValue(null);
   mocks.tx.branch.findFirst.mockResolvedValue({ id: branchId, timezone: "Asia/Kolkata" });
   mocks.tx.attendanceSetting.findFirst.mockResolvedValue({
     studentAutoLockEnabled: true,
@@ -163,6 +166,26 @@ afterEach(() => {
 });
 
 describe("submitDailyStudentAttendance", () => {
+  it("rejects attendance submission on a configured student holiday", async () => {
+    mocks.tx.classSection.findFirst.mockResolvedValue(activeClassSection());
+    mocks.tx.academicCalendarEntry.findFirst.mockResolvedValue({
+      id: "00000000-0000-0000-0000-000000000088",
+      name: "Institution holiday",
+      entryType: "HOLIDAY",
+      startDate: attendanceDate,
+      endDate: attendanceDate
+    });
+
+    await expect(submitDailyStudentAttendance(ctx, {
+      classSectionId,
+      attendanceDate: "2026-04-03",
+      entries: [{ studentId: studentOneId, status: "PRESENT" }]
+    })).rejects.toMatchObject({ code: "STUDENT_ATTENDANCE_HOLIDAY" });
+
+    expect(mocks.tx.enrollment.findMany).not.toHaveBeenCalled();
+    expect(mocks.tx.studentAttendanceRecord.create).not.toHaveBeenCalled();
+  });
+
   it("creates attendance records for active enrolled students", async () => {
     mocks.tx.classSection.findFirst.mockResolvedValue(activeClassSection());
     mocks.tx.enrollment.findMany.mockResolvedValue(activeEnrollments());

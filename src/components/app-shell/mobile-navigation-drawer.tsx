@@ -8,6 +8,7 @@ import { usePathname } from "next/navigation";
 import { createPortal } from "react-dom";
 
 import { InstitutionLogo } from "@/components/brand/institution-logo";
+import { PwaInstallControl } from "@/components/pwa/pwa-install-control";
 
 import type { AppShellBranding } from "./branding";
 import type { NavbarSessionContext } from "./navbar-types";
@@ -179,6 +180,7 @@ export function MobileNavigationDrawer({
           <Link href="/account/workspaces" onClick={() => onOpenChange(false)} className="flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-slate-700 hover:bg-brand-50 hover:text-brand-700 premium-focus">
             <LayoutGrid className="h-4 w-4" aria-hidden="true" />Switch workspace
           </Link>
+          <PwaInstallControl />
           <form action="/api/auth/logout" method="post" className="mt-1 border-t border-campus-border pt-1">
             <NavbarSignOutButton mobile />
           </form>

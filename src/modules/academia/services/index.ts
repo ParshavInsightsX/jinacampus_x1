@@ -5,5 +5,6 @@ export * from "./guardian.service";
 export * from "./section.service";
 export * from "./student.service";
 export * from "./student-registration.service";
+export * from "./student-promotion.service";
 export * from "./student-attendance.service";
 export * from "./subject.service";

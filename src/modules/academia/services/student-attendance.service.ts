@@ -5,6 +5,7 @@ import { notFound } from "@/lib/errors";
 import { requirePermission } from "@/lib/rbac/require-permission";
 import type { TenantContext } from "@/lib/tenant/context";
 import { ACADEMIA_AUDIT_EVENTS } from "@/modules/academia/audit-events";
+import { findApplicableCalendarEntry } from "@/modules/campus-core/calendar/calendar-policy";
 import {
   autoLockStudentAttendanceSchema,
   correctStudentAttendanceSchema,
@@ -406,6 +407,14 @@ export async function correctStudentAttendance(
       }
     });
     if (!before) throw notFound("STUDENT_ATTENDANCE_RECORD_NOT_FOUND");
+    const holiday = await findApplicableCalendarEntry(tx, {
+      tenantId: ctx.tenantId,
+      branchId: before.branchId,
+      academicYearId: before.academicYearId,
+      attendanceDate: before.attendanceDate,
+      audience: "STUDENTS"
+    });
+    if (holiday) throw validationError("STUDENT_ATTENDANCE_HOLIDAY");
 
     const after = await tx.studentAttendanceRecord.update({
       where: { id: before.id },
@@ -514,6 +523,15 @@ export async function submitDailyStudentAttendance(
           academicYearId: classSection.academicYearId
         });
       }
+
+      const holiday = await findApplicableCalendarEntry(tx, {
+        tenantId: ctx.tenantId,
+        branchId: classSection.branchId,
+        academicYearId: classSection.academicYearId,
+        attendanceDate,
+        audience: "STUDENTS"
+      });
+      if (holiday) throw validationError("STUDENT_ATTENDANCE_HOLIDAY");
 
       const autoLockResult = await lockStudentAttendanceRecordsForScope(tx, ctx, {
         branchId: classSection.branchId,

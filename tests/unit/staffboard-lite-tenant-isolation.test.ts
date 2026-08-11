@@ -11,9 +11,10 @@ import {
 
 const mocks = vi.hoisted(() => {
   const tx = {
+    academicCalendarEntry: { findFirst: vi.fn() },
     attendanceSetting: { findFirst: vi.fn() },
     branch: { findFirst: vi.fn() },
-    staffAttendanceQrToken: { create: vi.fn(), findFirst: vi.fn(), update: vi.fn() },
+    staffAttendanceQrToken: { create: vi.fn(), findFirst: vi.fn(), findMany: vi.fn(), update: vi.fn() },
     staffAttendanceRecord: { create: vi.fn(), findFirst: vi.fn(), update: vi.fn() },
     staffProfile: { findFirst: vi.fn(), update: vi.fn() }
   };
@@ -37,6 +38,7 @@ const academicYearId = "00000000-0000-0000-0000-000000000004";
 const staffId = "00000000-0000-0000-0000-000000000005";
 const qrTokenId = "00000000-0000-0000-0000-000000000006";
 const attendanceRecordId = "00000000-0000-0000-0000-000000000007";
+const institutionId = "00000000-0000-0000-0000-000000000008";
 const rawToken = "raw-staff-qr-token-tenant-check";
 const attendanceDate = new Date(Date.UTC(2026, 4, 5));
 
@@ -47,7 +49,8 @@ const ctx: TenantContext = {
   userType: "STAFF",
   activeBranchId: branchId,
   accessibleBranchIds: [branchId],
-  activeAcademicYearId: academicYearId
+  activeAcademicYearId: academicYearId,
+  roleCodes: ["PRINCIPAL"]
 };
 
 function staffProfile(overrides: Record<string, unknown> = {}) {
@@ -64,7 +67,7 @@ function staffProfile(overrides: Record<string, unknown> = {}) {
     designation: "Teacher",
     department: "Academics",
     employmentStatus: "ACTIVE",
-    branch: { id: branchId, timezone: "Asia/Kolkata", status: "ACTIVE" },
+    branch: { id: branchId, institutionId, timezone: "Asia/Kolkata", status: "ACTIVE" },
     ...overrides
   };
 }
@@ -75,6 +78,7 @@ function qrToken(overrides: Record<string, unknown> = {}) {
     tenantId,
     branchId,
     purpose: "CHECK_IN",
+    status: "ACTIVE",
     validFrom: new Date("2026-05-05T00:00:00.000Z"),
     validUntil: new Date("2026-05-05T18:00:00.000Z"),
     ...overrides
@@ -99,6 +103,8 @@ function attendanceRecord(overrides: Record<string, unknown> = {}) {
     checkOutQrTokenId: null,
     markedById: actorUserId,
     updatedById: null,
+    leaveApplicationId: null,
+    calendarEntryId: null,
     correctionReason: null,
     branch: { id: branchId, timezone: "Asia/Kolkata", status: "ACTIVE" },
     ...overrides
@@ -106,10 +112,12 @@ function attendanceRecord(overrides: Record<string, unknown> = {}) {
 }
 
 function resetMocks() {
+  mocks.tx.academicCalendarEntry.findFirst.mockReset();
   mocks.tx.attendanceSetting.findFirst.mockReset();
   mocks.tx.branch.findFirst.mockReset();
   mocks.tx.staffAttendanceQrToken.create.mockReset();
   mocks.tx.staffAttendanceQrToken.findFirst.mockReset();
+  mocks.tx.staffAttendanceQrToken.findMany.mockReset();
   mocks.tx.staffAttendanceQrToken.update.mockReset();
   mocks.tx.staffAttendanceRecord.create.mockReset();
   mocks.tx.staffAttendanceRecord.findFirst.mockReset();
@@ -122,6 +130,8 @@ function resetMocks() {
   mocks.requirePermission.mockResolvedValue(true);
   mocks.writeAuditLog.mockReset();
   mocks.writeAuditLog.mockResolvedValue({ id: "audit-id" });
+  mocks.tx.academicCalendarEntry.findFirst.mockResolvedValue(null);
+  mocks.tx.staffAttendanceQrToken.findMany.mockResolvedValue([]);
   mocks.tx.branch.findFirst.mockResolvedValue({ id: branchId });
   mocks.tx.attendanceSetting.findFirst.mockResolvedValue({
     staffQrAttendanceEnabled: true,
@@ -189,8 +199,7 @@ describe("StaffBoard Lite tenant isolation", () => {
     expect(mocks.tx.attendanceSetting.findFirst).toHaveBeenCalledWith({
       where: { tenantId, branchId },
       select: {
-        staffQrAttendanceEnabled: true,
-        staffQrTokenValiditySeconds: true
+        staffQrAttendanceEnabled: true
       }
     });
     expect(mocks.tx.staffAttendanceQrToken.create).toHaveBeenCalledWith(expect.objectContaining({

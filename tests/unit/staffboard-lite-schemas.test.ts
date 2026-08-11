@@ -112,7 +112,11 @@ describe("StaffBoard Lite schemas", () => {
 
   it("accepts CHECK_IN and CHECK_OUT QR generation input", () => {
     expect(generateStaffQrSchema.safeParse({ purpose: "CHECK_IN" }).success).toBe(true);
-    expect(generateStaffQrSchema.safeParse({ branchId, purpose: "CHECK_OUT", validForSeconds: 180 }).success).toBe(true);
+    expect(generateStaffQrSchema.safeParse({ branchId, purpose: "CHECK_OUT" }).success).toBe(true);
+  });
+
+  it("rejects client-controlled QR validity", () => {
+    expect(generateStaffQrSchema.safeParse({ purpose: "CHECK_IN", validForSeconds: 180 }).success).toBe(false);
   });
 
   it("rejects invalid QR purpose", () => {

@@ -57,6 +57,7 @@ export async function correctStaffAttendance(
     if (!before) throw notFound("STAFF_ATTENDANCE_RECORD_NOT_FOUND");
     if (before.branch.status === "ARCHIVED") throw notFound("STAFF_ATTENDANCE_RECORD_NOT_FOUND");
     if (before.leaveApplicationId) throw validationError("STAFF_ATTENDANCE_MANAGED_BY_LEAVE");
+    if (before.calendarEntryId) throw validationError("STAFF_ATTENDANCE_MANAGED_BY_CALENDAR");
 
     await requireBranchPermission(ctx, "staffboard.attendance.correct", before.branchId);
 

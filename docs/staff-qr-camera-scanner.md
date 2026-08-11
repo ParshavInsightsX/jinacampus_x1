@@ -2,8 +2,8 @@
 
 ## Status
 
-- Date: 2026-05-19
-- Status: Implemented for mobile web browser QA
+- Date: 2026-08-11
+- Status: Automatic square scanner implemented; approved-HTTPS real-device QA remains pending
 - Route: `/staffboard/attendance/scan`
 - Native mobile app: not required
 - File upload/storage changes: not included
@@ -16,12 +16,27 @@ No passwords, raw QR payloads, QR tokens, token hashes, session secrets, or real
 2. Staff opens StaffBoard Lite > Scan QR.
 3. Staff taps Start Camera.
 4. Browser requests camera permission.
-5. Staff points the camera at the active QR displayed by the school office or gate.
-6. The browser decodes the QR payload.
-7. The page extracts the raw token in memory only.
-8. The existing `scanStaffAttendanceQrAction` submits the token.
-9. The existing StaffBoard service validates tenant, branch, authenticated user, staff profile, token expiry, purpose, and duplicate scan rules.
-10. The page shows the same safe success/error result card used by manual token entry.
+5. Staff places the live QR inside the centered 1:1 scanning frame.
+6. `jsQR` continuously decodes the matching square video region; no capture button is required.
+7. The page keeps the decoded raw payload in memory only and locks further submissions while it is processed.
+8. The existing `scanStaffAttendanceQrAction` submits the payload.
+9. The existing StaffBoard service resolves identity and scope from the session, then validates permission, tenant, branch, staff profile, token hash, lifecycle, purpose, attendance date, holiday/leave state, and duplicate rules.
+10. Success redirects to `/staffboard/attendance/me`, which shows confirmation, today's status, institution/branch context, and a bounded personal attendance history. Safe failures stay on the scanner for retry.
+
+## Automatic Scanner UX - 2026-08-11
+
+- The live preview is a mobile-first 1:1 square with a centered scan guide and automatic frame decoding.
+- The rear-facing camera is preferred. A generic video constraint fallback remains available when browser camera constraints fail.
+- Camera requests retain the 12-second timeout so the interface cannot remain indefinitely on a permission state.
+- Camera switching appears only when the browser reports multiple video inputs.
+- Flashlight control appears only when the active track reports torch capability; unsupported browsers continue without it.
+- Start, stop, retry, page hide, tab hide, route change, and component unmount all stop active media tracks safely.
+- A processing lock prevents repeated camera detections and duplicate client submissions while the server action is running.
+- Invalid, expired, wrong-branch, duplicate, check-in-required, permission, holiday, leave, offline, and camera errors use safe user-facing states.
+- QR image upload and manual token entry remain controlled fallbacks and use the same server validation path.
+- Scanner, Today, and History navigation is permission-aware; server-side RBAC remains authoritative.
+
+The scanner does not send client-provided tenant, branch, staff, role, or attendance-status claims. No raw QR payload is stored in browser persistence or placed in redirect URLs.
 
 ## Manual Fallback
 
@@ -38,6 +53,18 @@ The fallback accepts the same raw token or `STAFF_ATTENDANCE_QR` JSON payload ge
 ## HTTPS Requirement
 
 Camera access requires HTTPS in deployed environments. Localhost works for development.
+
+## QR Console and PWA Update - 2026-08-10
+
+- The QR display route is now the dedicated **QR Attendance Console** at `/staffboard/attendance/qr`.
+- Server access requires a Principal or an Office Staff QR Operator with `staffboard.attendance.qr.generate` for the branch.
+- Newly generated codes use a fixed five-hour window; regeneration deactivates the prior active code for the same branch and purpose.
+- The console shows generated time, expiry time, lifecycle status, and remaining validity, and supports explicit deactivation.
+- Expired and deactivated codes remain rejected by the server regardless of browser state.
+- The authenticated mobile drawer provides a browser install prompt when supported and Safari Add to Home Screen guidance otherwise.
+- Installed PWA use remains online-first and keeps the same secure login, camera, tenant, branch, permission, and audit checks.
+
+See `docs/qr-attendance-console-pwa.md` for lifecycle, migration, and device QA details.
 
 ## Android / iOS QA
 

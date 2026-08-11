@@ -47,6 +47,7 @@ describe("StaffBoard Lite Prisma schema", () => {
     ]);
     expect(getEnumValues("StaffAttendanceSource")).toEqual(["QR_SCAN", "MANUAL_ADMIN", "IMPORT", "BIOMETRIC"]);
     expect(getEnumValues("StaffQrPurpose")).toEqual(["CHECK_IN", "CHECK_OUT"]);
+    expect(getEnumValues("StaffQrTokenStatus")).toEqual(["ACTIVE", "DEACTIVATED", "EXPIRED"]);
   });
 
   it("defines tenant-safe staff profile constraints and indexes", () => {
@@ -81,14 +82,16 @@ describe("StaffBoard Lite Prisma schema", () => {
   it("stores only QR token hashes and indexes token lookup windows", () => {
     const model = getModelBlock("StaffAttendanceQrToken");
 
-    expect(model).toContain("tokenHash     String");
-    expect(model).toContain("tokenHash     String         @unique");
+    expect(model).toMatch(/tokenHash\s+String\s+@unique/);
     expect(model).not.toMatch(/\brawToken\b/i);
     expect(model).not.toMatch(/\btoken\s+String\b/);
-    expect(model).toContain("purpose       StaffQrPurpose");
-    expect(model).toContain("consumedCount Int            @default(0)");
+    expect(model).toMatch(/purpose\s+StaffQrPurpose/);
+    expect(model).toMatch(/status\s+StaffQrTokenStatus\s+@default\(ACTIVE\)/);
+    expect(model).toMatch(/consumedCount\s+Int\s+@default\(0\)/);
+    expect(model).toMatch(/lastUsedAt\s+DateTime\?/);
+    expect(model).toMatch(/deactivatedById\s+String\?/);
     expect(model).toContain("@@index([tenantId, branchId, validFrom, validUntil])");
-    expect(model).toContain("@@index([tenantId, branchId, purpose])");
+    expect(model).toContain("@@index([tenantId, branchId, status, purpose, validUntil]");
   });
 
   it("does not introduce out-of-scope HR models", () => {

@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
-import { requirePermission } from "@/lib/rbac/require-permission";
 import type { TenantContext } from "@/lib/tenant/context";
+import { hasStaffQrOperatorRole, requireStaffQrOperatorAccess } from "@/modules/staffboard-lite/staff-qr-access";
 
 export type StaffQrBranchOption = {
   id: string;
@@ -14,7 +14,7 @@ function isForbiddenPermissionError(error: unknown) {
 }
 
 export async function listStaffQrBranchOptions(ctx: TenantContext): Promise<StaffQrBranchOption[]> {
-  if (ctx.accessibleBranchIds.length === 0) return [];
+  if (!hasStaffQrOperatorRole(ctx.roleCodes ?? []) || ctx.accessibleBranchIds.length === 0) return [];
 
   const branches = await db.branch.findMany({
     where: {
@@ -34,7 +34,7 @@ export async function listStaffQrBranchOptions(ctx: TenantContext): Promise<Staf
   const allowedBranches: StaffQrBranchOption[] = [];
   for (const branch of branches) {
     try {
-      await requirePermission({ ctx, permission: "staffboard.attendance.qr.generate", branchId: branch.id });
+      await requireStaffQrOperatorAccess(ctx, branch.id);
       allowedBranches.push(branch);
     } catch (error) {
       if (isForbiddenPermissionError(error)) continue;

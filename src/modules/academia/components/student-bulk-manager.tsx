@@ -7,7 +7,14 @@ type PreviewError = { row: number; field: string; message: string };
 type PreviewResult = {
   success: boolean;
   error?: string;
-  summary?: { totalRows: number; validRows: number; invalidRows: number; canImport: boolean };
+  summary?: {
+    totalRows: number;
+    validRows: number;
+    invalidRows: number;
+    canImport: boolean;
+    importedRows?: number;
+    incompleteProfiles?: number;
+  };
   errors?: PreviewError[];
   truncatedErrors?: boolean;
 };
@@ -50,7 +57,7 @@ export function StudentBulkManager({
       }
       if (operation === "import") {
         setMessage(result.message ?? "Student records imported successfully.");
-        setPreview(null);
+        setPreview(result);
         setFile(null);
       }
     } catch {
@@ -71,7 +78,7 @@ export function StudentBulkManager({
       <section className="premium-card p-4">
         <h2 className="text-base font-semibold text-slate-950">1. Download a template or current records</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Excel templates include reference values. CSV files open directly in Google Sheets.
+          Download a seven-column template. Excel includes active class references; CSV opens directly in Google Sheets.
         </p>
         <label className="mt-4 block max-w-md text-sm font-medium text-slate-700">
           Branch
@@ -86,8 +93,8 @@ export function StudentBulkManager({
         <div className="mt-4 flex flex-wrap gap-2">
           {canImport ? (
             <>
-              <a href={`/api/academia/students/template?${query.toString()}&format=xlsx`} className="premium-secondary-button min-h-11">Excel template</a>
-              <a href={`/api/academia/students/template?${query.toString()}&format=csv`} className="premium-secondary-button min-h-11">CSV template</a>
+              <a href={`/api/academia/students/template?${query.toString()}&format=xlsx`} className="premium-secondary-button min-h-11">Simple Excel template</a>
+              <a href={`/api/academia/students/template?${query.toString()}&format=csv`} className="premium-secondary-button min-h-11">Simple CSV template</a>
             </>
           ) : null}
           <a href={`/api/academia/students/export?${query.toString()}&format=xlsx`} className="premium-secondary-button min-h-11">Export Excel</a>
@@ -99,8 +106,18 @@ export function StudentBulkManager({
         <section className="premium-card p-4">
           <h2 className="text-base font-semibold text-slate-950">2. Preview and import students</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Up to 5,000 rows per file. No records are written until every row passes preview and the import is confirmed.
+            Up to 5,000 rows per file. Valid rows can be imported even when other rows need correction.
           </p>
+          <div className="mt-3 grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 md:grid-cols-2">
+            <div>
+              <p className="font-semibold text-slate-900">Mandatory import fields</p>
+              <p className="mt-1">Scholar Number, Student Name, Date of Birth, Current Class, Contact Number, Father&apos;s Name, and Mother&apos;s Name.</p>
+            </div>
+            <div>
+              <p className="font-semibold text-slate-900">Optional profile fields</p>
+              <p className="mt-1">Leave unavailable cells blank. They are stored as empty values and can be completed later from the student profile.</p>
+            </div>
+          </div>
           <label className="mt-4 block text-sm font-medium text-slate-700">
             Student spreadsheet
             <input
@@ -140,28 +157,44 @@ export function StudentBulkManager({
 
       {preview?.summary ? (
         <section className="premium-card p-4">
-          <h2 className="text-base font-semibold text-slate-950">Preview result</h2>
+          <h2 className="text-base font-semibold text-slate-950">
+            {preview.summary.importedRows !== undefined ? "Import result" : "Preview result"}
+          </h2>
           <div className="mt-3 grid grid-cols-3 gap-2">
             <div className="rounded-lg border border-slate-200 p-3"><p className="text-xs text-slate-500">Rows</p><p className="mt-1 text-xl font-semibold tabular-nums">{preview.summary.totalRows}</p></div>
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3"><p className="text-xs text-emerald-700">Valid</p><p className="mt-1 text-xl font-semibold tabular-nums text-emerald-900">{preview.summary.validRows}</p></div>
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3"><p className="text-xs text-emerald-700">{preview.summary.importedRows !== undefined ? "Imported" : "Valid"}</p><p className="mt-1 text-xl font-semibold tabular-nums text-emerald-900">{preview.summary.importedRows ?? preview.summary.validRows}</p></div>
             <div className="rounded-lg border border-red-200 bg-red-50 p-3"><p className="text-xs text-red-700">Invalid</p><p className="mt-1 text-xl font-semibold tabular-nums text-red-900">{preview.summary.invalidRows}</p></div>
           </div>
           {preview.errors?.length ? (
-            <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200">
-              <table className="min-w-full text-left text-sm">
-                <thead className="bg-slate-50 text-slate-600"><tr><th className="px-3 py-2">Row</th><th className="px-3 py-2">Field</th><th className="px-3 py-2">Issue</th></tr></thead>
-                <tbody className="divide-y divide-slate-200">
-                  {preview.errors.map((error, index) => (
-                    <tr key={`${error.row}-${error.field}-${index}`}><td className="px-3 py-2 tabular-nums">{error.row}</td><td className="px-3 py-2 font-medium">{error.field}</td><td className="px-3 py-2">{error.message}</td></tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <>
+              <p className="mt-4 text-sm text-slate-600">
+                {preview.summary.importedRows !== undefined
+                  ? "These rows were not imported. Correct them in the spreadsheet and upload them again."
+                  : "These rows will be skipped. You can import the valid rows now, then correct and re-upload these rows."}
+              </p>
+              <div className="mt-2 overflow-x-auto rounded-lg border border-slate-200">
+                <table className="min-w-full text-left text-sm">
+                  <thead className="bg-slate-50 text-slate-600"><tr><th className="px-3 py-2">Row</th><th className="px-3 py-2">Field</th><th className="px-3 py-2">Issue</th></tr></thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {preview.errors.map((error, index) => (
+                      <tr key={`${error.row}-${error.field}-${index}`}><td className="px-3 py-2 tabular-nums">{error.row}</td><td className="px-3 py-2 font-medium">{error.field}</td><td className="px-3 py-2">{error.message}</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           ) : (
             <p className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
-              Every row passed validation. You can import the file.
+              {preview.summary.importedRows !== undefined
+                ? "All validated rows were imported successfully."
+                : "Every row passed validation. You can import the file."}
             </p>
           )}
+          {preview.summary.importedRows !== undefined && preview.summary.incompleteProfiles ? (
+            <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+              {preview.summary.incompleteProfiles} imported student profiles need additional admission information.
+            </p>
+          ) : null}
           {preview.truncatedErrors ? <p className="mt-2 text-xs text-slate-500">Only the first 250 issues are shown.</p> : null}
         </section>
       ) : null}

@@ -186,6 +186,13 @@ export function AttendanceMarkForm({ classSections, defaultDate }: AttendanceMar
 
       {error ? <ErrorState title="Attendance action could not be completed" description={error} /> : null}
 
+      {loadedState?.calendarEntry ? (
+        <div role="status" className="rounded-lg border border-cyan-200 bg-cyan-50 p-4 text-sm text-cyan-950">
+          <p className="font-semibold">{loadedState.calendarEntry.name}</p>
+          <p className="mt-1">Student attendance is not required on this {loadedState.calendarEntry.entryType === "HOLIDAY" ? "holiday" : "non-working day"}.</p>
+        </div>
+      ) : null}
+
       <AttendanceSummaryCard summary={summary} />
 
       {isLocked ? <AttendanceLockedAlert /> : null}
@@ -249,14 +256,16 @@ export function AttendanceMarkForm({ classSections, defaultDate }: AttendanceMar
             classSections.length === 0
               ? "No class sections available"
               : loadedState
-                ? "No active enrolled students"
+                ? loadedState.calendarEntry ? "Attendance not required" : "No active enrolled students"
                 : "No students loaded"
           }
           description={
             classSections.length === 0
               ? "Configure class sections and active enrollments before marking attendance."
               : loadedState
-                ? "Add active enrollments for this class-section before marking attendance."
+                ? loadedState.calendarEntry
+                  ? "This date is excluded from student working-day and attendance-percentage calculations."
+                  : "Add active enrollments for this class-section before marking attendance."
               : "Select a class-section and date, then load active enrolled students."
           }
           kind={classSections.length === 0 || Boolean(loadedState) ? "prerequisite" : "empty"}

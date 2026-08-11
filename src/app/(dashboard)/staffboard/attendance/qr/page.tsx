@@ -19,8 +19,8 @@ export default async function StaffQrAttendancePage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Staff QR Attendance"
-        description="Generate secure QR codes for staff check-in and check-out."
+        title="QR Attendance Console"
+        description="Authorised Principals and Office Staff QR Operators can generate and control five-hour attendance codes."
       />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">

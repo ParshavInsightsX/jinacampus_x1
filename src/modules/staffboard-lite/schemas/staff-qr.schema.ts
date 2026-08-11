@@ -3,8 +3,11 @@ import { idSchema, staffQrPurposeSchema, trimmedString } from "./shared";
 
 export const generateStaffQrSchema = z.object({
   branchId: idSchema.optional(),
-  purpose: staffQrPurposeSchema,
-  validForSeconds: z.coerce.number().int().positive().max(900).optional()
+  purpose: staffQrPurposeSchema
+}).strict();
+
+export const deactivateStaffQrSchema = z.object({
+  qrTokenId: idSchema
 }).strict();
 
 export const scanStaffQrSchema = z.object({
@@ -16,5 +19,6 @@ export const scanStaffQrPayloadSchema = z.object({
 }).strict();
 
 export type GenerateStaffQrInput = z.infer<typeof generateStaffQrSchema>;
+export type DeactivateStaffQrInput = z.infer<typeof deactivateStaffQrSchema>;
 export type ScanStaffQrInput = z.infer<typeof scanStaffQrSchema>;
 export type ScanStaffQrPayloadInput = z.infer<typeof scanStaffQrPayloadSchema>;

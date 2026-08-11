@@ -8,6 +8,7 @@ import {
   formatEnumLabel
 } from "@/components/ui/table-primitives";
 import type { AcademiaListPageConfig } from "@/modules/academia/ui-config";
+import type { StudentProfileStatus } from "@/modules/academia/student-profile-completeness";
 
 type PageHeaderProps = {
   title: string;
@@ -120,6 +121,18 @@ export function ListPageShell({ config, search, rowCount, children }: ListPageSh
 
 export function StatusPill({ value }: { value?: string | null }) {
   return <StatusBadge value={value} />;
+}
+
+export function ProfileReadinessPill({ value }: { value: StudentProfileStatus }) {
+  return value === "COMPLETE" ? (
+    <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+      Profile Complete
+    </span>
+  ) : (
+    <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800">
+      Profile Incomplete
+    </span>
+  );
 }
 
 export function ReadOnlyAction() {

@@ -1,5 +1,5 @@
 import type { Prisma, StaffAttendanceStatus } from "@prisma/client";
-import { forbidden } from "@/lib/errors";
+import { AppError, forbidden } from "@/lib/errors";
 import { requirePermission } from "@/lib/rbac/require-permission";
 import { db } from "@/lib/db";
 import type { TenantContext } from "@/lib/tenant/context";
@@ -28,6 +28,7 @@ export type StaffAttendanceAdminRow = {
   workingMinutes: number | null;
   source: string;
   correctionReason: string | null;
+  calendarManaged: boolean;
 };
 
 export type StaffAttendanceDailySummary = {
@@ -49,6 +50,14 @@ export type StaffAttendanceAdminData = {
   totalRows: number;
   page: number;
   pageSize: number;
+};
+
+export type StaffSelfAttendanceHistoryRow = {
+  attendanceDate: string;
+  status: StaffAttendanceStatus;
+  checkInAt: string | null;
+  checkOutAt: string | null;
+  workingMinutes: number | null;
 };
 
 const EMPTY_SUMMARY: StaffAttendanceDailySummary = {
@@ -73,8 +82,9 @@ function staffName(staff: { firstName: string; middleName: string | null; lastNa
   return [staff.firstName, staff.middleName, staff.lastName].map((part) => part?.trim()).filter(Boolean).join(" ");
 }
 
-function sourceLabel(record: { checkInSource: string | null; checkOutSource: string | null } | null) {
+function sourceLabel(record: { checkInSource: string | null; checkOutSource: string | null; calendarEntryId: string | null } | null) {
   if (!record) return "-";
+  if (record.calendarEntryId) return "ACADEMIC_CALENDAR";
   const sources = [record.checkInSource, record.checkOutSource].filter(Boolean);
   return sources.length > 0 ? Array.from(new Set(sources)).join(" / ") : "-";
 }
@@ -204,7 +214,8 @@ export async function listStaffAttendanceForDate(
           workingMinutes: true,
           checkInSource: true,
           checkOutSource: true,
-          correctionReason: true
+          correctionReason: true,
+          calendarEntryId: true
         },
         take: 1
       }
@@ -227,7 +238,8 @@ export async function listStaffAttendanceForDate(
       checkOutAt: record?.checkOutAt?.toISOString() ?? null,
       workingMinutes: record?.workingMinutes ?? null,
       source: sourceLabel(record),
-      correctionReason: record?.correctionReason ?? null
+      correctionReason: record?.correctionReason ?? null,
+      calendarManaged: Boolean(record?.calendarEntryId)
     };
   });
   const summary = summarize(allRows);
@@ -247,3 +259,59 @@ export async function listStaffAttendanceForDate(
 }
 
 export const getStaffAttendanceAdminPageData = listStaffAttendanceForDate;
+
+export async function listMyStaffAttendanceHistory(
+  ctx: TenantContext,
+  limit = 14
+): Promise<StaffSelfAttendanceHistoryRow[]> {
+  const staffProfile = await db.staffProfile.findFirst({
+    where: {
+      tenantId: ctx.tenantId,
+      userId: ctx.userId,
+      employmentStatus: "ACTIVE"
+    },
+    select: {
+      id: true,
+      branchId: true,
+      branch: { select: { status: true } }
+    }
+  });
+
+  if (!staffProfile) {
+    throw new AppError("ACTIVE_STAFF_PROFILE_NOT_FOUND", "ACTIVE_STAFF_PROFILE_NOT_FOUND", 400);
+  }
+  if (staffProfile.branch.status !== "ACTIVE") {
+    throw new AppError("STAFF_BRANCH_INACTIVE", "STAFF_BRANCH_INACTIVE", 400);
+  }
+
+  await requirePermission({
+    ctx,
+    permission: "staffboard.attendance.self_view",
+    branchId: staffProfile.branchId
+  });
+
+  const records = await db.staffAttendanceRecord.findMany({
+    where: {
+      tenantId: ctx.tenantId,
+      branchId: staffProfile.branchId,
+      staffId: staffProfile.id
+    },
+    select: {
+      attendanceDate: true,
+      status: true,
+      checkInAt: true,
+      checkOutAt: true,
+      workingMinutes: true
+    },
+    orderBy: [{ attendanceDate: "desc" }],
+    take: Math.min(Math.max(limit, 1), 31)
+  });
+
+  return records.map((record) => ({
+    attendanceDate: toDateOnlyString(record.attendanceDate),
+    status: record.status,
+    checkInAt: record.checkInAt?.toISOString() ?? null,
+    checkOutAt: record.checkOutAt?.toISOString() ?? null,
+    workingMinutes: record.workingMinutes
+  }));
+}

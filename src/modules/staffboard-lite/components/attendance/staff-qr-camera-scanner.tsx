@@ -2,10 +2,22 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import jsQR from "jsqr";
-import { Camera, ImageUp, Loader2, Square, VideoOff } from "lucide-react";
+import {
+  Camera,
+  Flashlight,
+  FlashlightOff,
+  ImageUp,
+  Loader2,
+  RotateCcw,
+  ScanLine,
+  Square,
+  SwitchCamera,
+  VideoOff
+} from "lucide-react";
 
 type StaffQrCameraScannerProps = {
   disabled?: boolean;
+  processing?: boolean;
   variant?: "default" | "mobile";
   onQrPayloadDetected: (qrPayload: string) => void;
 };
@@ -15,6 +27,7 @@ type ScannerStatus =
   | "checking-support"
   | "requesting-permission"
   | "camera-active"
+  | "processing"
   | "detected"
   | "unsupported"
   | "in-app-browser"
@@ -35,21 +48,36 @@ type CameraDiagnostics = {
 
 type ImageDecodeStatus = "idle" | "decoding" | "error";
 
-const CAMERA_REQUEST_TIMEOUT_MS = 12_000;
-
-const PREFERRED_CAMERA_CONSTRAINTS: MediaStreamConstraints = {
-  audio: false,
-  video: {
-    facingMode: { ideal: "environment" },
-    width: { ideal: 1280 },
-    height: { ideal: 720 }
-  }
+type CameraDevice = {
+  deviceId: string;
+  label: string;
 };
+
+type TorchCapabilities = MediaTrackCapabilities & {
+  torch?: boolean;
+};
+
+type TorchConstraintSet = MediaTrackConstraintSet & {
+  torch?: boolean;
+};
+
+const CAMERA_REQUEST_TIMEOUT_MS = 12_000;
 
 const FALLBACK_CAMERA_CONSTRAINTS: MediaStreamConstraints = {
   audio: false,
   video: true
 };
+
+function preferredCameraConstraints(deviceId?: string): MediaStreamConstraints {
+  return {
+    audio: false,
+    video: {
+      ...(deviceId ? { deviceId: { exact: deviceId } } : { facingMode: { ideal: "environment" } }),
+      width: { ideal: 1280 },
+      height: { ideal: 1280 }
+    }
+  };
+}
 
 class CameraTimeoutError extends Error {
   constructor() {
@@ -140,9 +168,9 @@ function isConstraintFailure(error: unknown) {
   );
 }
 
-async function requestCameraStream(mediaDevices: MediaDevices) {
+async function requestCameraStream(mediaDevices: MediaDevices, deviceId?: string) {
   try {
-    return await getUserMediaWithTimeout(mediaDevices, PREFERRED_CAMERA_CONSTRAINTS);
+    return await getUserMediaWithTimeout(mediaDevices, preferredCameraConstraints(deviceId));
   } catch (error) {
     if (isConstraintFailure(error)) {
       return getUserMediaWithTimeout(mediaDevices, FALLBACK_CAMERA_CONSTRAINTS);
@@ -201,6 +229,8 @@ function statusLabel(status: ScannerStatus) {
       return "Requesting camera permission";
     case "camera-active":
       return "Camera active";
+    case "processing":
+      return "Verifying attendance";
     case "https-required":
       return "HTTPS required";
     case "permission-denied":
@@ -227,17 +257,37 @@ function decodeQrFromCanvas(
   canvas: HTMLCanvasElement,
   source: HTMLVideoElement | HTMLImageElement,
   width: number,
-  height: number
+  height: number,
+  cropToSquare = false
 ) {
   if (width <= 0 || height <= 0) return null;
 
-  canvas.width = width;
-  canvas.height = height;
+  const sourceSize = cropToSquare ? Math.min(width, height) : null;
+  const sourceX = sourceSize ? Math.max(0, (width - sourceSize) / 2) : 0;
+  const sourceY = sourceSize ? Math.max(0, (height - sourceSize) / 2) : 0;
+  const sourceWidth = sourceSize ?? width;
+  const sourceHeight = sourceSize ?? height;
+  const scale = Math.min(1, 960 / Math.max(sourceWidth, sourceHeight));
+  const canvasWidth = Math.max(1, Math.round(sourceWidth * scale));
+  const canvasHeight = Math.max(1, Math.round(sourceHeight * scale));
+
+  canvas.width = canvasWidth;
+  canvas.height = canvasHeight;
   const context = canvas.getContext("2d", { willReadFrequently: true });
   if (!context) return null;
 
-  context.drawImage(source, 0, 0, width, height);
-  const imageData = context.getImageData(0, 0, width, height);
+  context.drawImage(
+    source,
+    sourceX,
+    sourceY,
+    sourceWidth,
+    sourceHeight,
+    0,
+    0,
+    canvasWidth,
+    canvasHeight
+  );
+  const imageData = context.getImageData(0, 0, canvasWidth, canvasHeight);
   const qrCode = jsQR(imageData.data, imageData.width, imageData.height, {
     inversionAttempts: "attemptBoth"
   });
@@ -254,7 +304,12 @@ function loadImageFromObjectUrl(url: string) {
   });
 }
 
-export function StaffQrCameraScanner({ disabled, variant = "default", onQrPayloadDetected }: StaffQrCameraScannerProps) {
+export function StaffQrCameraScanner({
+  disabled,
+  processing = false,
+  variant = "default",
+  onQrPayloadDetected
+}: StaffQrCameraScannerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -269,6 +324,11 @@ export function StaffQrCameraScanner({ disabled, variant = "default", onQrPayloa
   const [diagnostics, setDiagnostics] = useState<CameraDiagnostics | null>(null);
   const [imageDecodeStatus, setImageDecodeStatus] = useState<ImageDecodeStatus>("idle");
   const [imageDecodeMessage, setImageDecodeMessage] = useState<string | null>(null);
+  const [availableCameras, setAvailableCameras] = useState<CameraDevice[]>([]);
+  const [activeCameraDeviceId, setActiveCameraDeviceId] = useState<string | null>(null);
+  const [torchSupported, setTorchSupported] = useState(false);
+  const [torchEnabled, setTorchEnabled] = useState(false);
+  const [cameraControlMessage, setCameraControlMessage] = useState<string | null>(null);
 
   const clearVideoPreview = useCallback(() => {
     const videoElement = videoRef.current;
@@ -292,6 +352,8 @@ export function StaffQrCameraScanner({ disabled, variant = "default", onQrPayloa
     stopMediaStream(streamRef.current);
     streamRef.current = null;
     clearVideoPreview();
+    setTorchEnabled(false);
+    setTorchSupported(false);
   }, [clearVideoPreview, stopDecodeLoop]);
 
   const stopCameraSession = useCallback(() => {
@@ -319,7 +381,13 @@ export function StaffQrCameraScanner({ disabled, variant = "default", onQrPayloa
     if (videoElement && videoElement.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
       const canvas = canvasRef.current ?? document.createElement("canvas");
       canvasRef.current = canvas;
-      const qrPayload = decodeQrFromCanvas(canvas, videoElement, videoElement.videoWidth, videoElement.videoHeight);
+      const qrPayload = decodeQrFromCanvas(
+        canvas,
+        videoElement,
+        videoElement.videoWidth,
+        videoElement.videoHeight,
+        true
+      );
       if (qrPayload) {
         submitDetectedPayload(qrPayload);
         return;
@@ -334,6 +402,39 @@ export function StaffQrCameraScanner({ disabled, variant = "default", onQrPayloa
     animationFrameRef.current = window.requestAnimationFrame(scanVideoFrame);
   }, [scanVideoFrame, stopDecodeLoop]);
 
+  const updateCameraControls = useCallback(
+    async (stream: MediaStream, mediaDevices: MediaDevices, requestId: number) => {
+      const videoTrack = stream.getVideoTracks()[0];
+      if (!videoTrack) return;
+
+      const settings = videoTrack.getSettings();
+      const capabilities =
+        typeof videoTrack.getCapabilities === "function"
+          ? (videoTrack.getCapabilities() as TorchCapabilities)
+          : ({} as TorchCapabilities);
+      let cameraDevices: CameraDevice[] = [];
+
+      try {
+        const devices = await mediaDevices.enumerateDevices();
+        cameraDevices = devices
+          .filter((device) => device.kind === "videoinput" && Boolean(device.deviceId))
+          .map((device, index) => ({
+            deviceId: device.deviceId,
+            label: device.label || `Camera ${index + 1}`
+          }));
+      } catch {
+        cameraDevices = [];
+      }
+
+      if (!mountedRef.current || cameraRequestIdRef.current !== requestId) return;
+      setAvailableCameras(cameraDevices);
+      setActiveCameraDeviceId(settings.deviceId ?? cameraDevices[0]?.deviceId ?? null);
+      setTorchSupported(capabilities.torch === true);
+      setTorchEnabled(false);
+    },
+    []
+  );
+
   const stopScanner = useCallback((nextStatus: ScannerStatus = "idle") => {
     stopCameraSession();
     setStatus(nextStatus);
@@ -343,6 +444,7 @@ export function StaffQrCameraScanner({ disabled, variant = "default", onQrPayloa
   }, [stopCameraSession]);
 
   useEffect(() => {
+    mountedRef.current = true;
     setDiagnostics(getCameraDiagnostics());
     return () => {
       mountedRef.current = false;
@@ -352,10 +454,10 @@ export function StaffQrCameraScanner({ disabled, variant = "default", onQrPayloa
 
   useEffect(() => {
     const stopForPageLifecycle = () => {
-      stopCameraSession();
+      stopScanner("idle");
     };
     const stopWhenHidden = () => {
-      if (document.visibilityState === "hidden") stopCameraSession();
+      if (document.visibilityState === "hidden") stopScanner("idle");
     };
 
     window.addEventListener("pagehide", stopForPageLifecycle);
@@ -364,10 +466,18 @@ export function StaffQrCameraScanner({ disabled, variant = "default", onQrPayloa
       window.removeEventListener("pagehide", stopForPageLifecycle);
       document.removeEventListener("visibilitychange", stopWhenHidden);
     };
-  }, [stopCameraSession]);
+  }, [stopScanner]);
 
-  async function startCamera() {
-    if (disabled || status === "checking-support" || status === "requesting-permission" || status === "camera-active") return;
+  async function startCamera(deviceId?: string, replaceActiveCamera = false) {
+    if (
+      disabled ||
+      processing ||
+      status === "checking-support" ||
+      status === "requesting-permission" ||
+      (status === "camera-active" && !replaceActiveCamera)
+    ) {
+      return;
+    }
 
     const requestId = cameraRequestIdRef.current + 1;
     cameraRequestIdRef.current = requestId;
@@ -379,6 +489,7 @@ export function StaffQrCameraScanner({ disabled, variant = "default", onQrPayloa
     setStatus("checking-support");
     setCameraError(null);
     setImageDecodeMessage(null);
+    setCameraControlMessage(null);
     setMessage("Checking camera support...");
 
     await waitForPaint();
@@ -417,7 +528,7 @@ export function StaffQrCameraScanner({ disabled, variant = "default", onQrPayloa
     let stream: MediaStream | null = null;
     try {
       stopActiveCamera();
-      stream = await requestCameraStream(mediaDevices);
+      stream = await requestCameraStream(mediaDevices, deviceId);
 
       if (!mountedRef.current || cameraRequestIdRef.current !== requestId) {
         stopMediaStream(stream);
@@ -458,6 +569,7 @@ export function StaffQrCameraScanner({ disabled, variant = "default", onQrPayloa
       setStatus("camera-active");
       setMessage("Point your camera at the staff attendance QR. The scan submits automatically when detected.");
       startDecodeLoop();
+      void updateCameraControls(stream, mediaDevices, requestId);
     } catch (error) {
       if (cameraRequestIdRef.current !== requestId) {
         stopMediaStream(stream);
@@ -479,8 +591,39 @@ export function StaffQrCameraScanner({ disabled, variant = "default", onQrPayloa
     }
   }
 
+  async function switchCamera() {
+    if (disabled || processing || availableCameras.length < 2) return;
+
+    const currentIndex = availableCameras.findIndex((camera) => camera.deviceId === activeCameraDeviceId);
+    const nextCamera = availableCameras[(currentIndex + 1 + availableCameras.length) % availableCameras.length];
+    if (!nextCamera) return;
+
+    setCameraControlMessage(`Switching to ${nextCamera.label}...`);
+    await startCamera(nextCamera.deviceId, true);
+  }
+
+  async function toggleTorch() {
+    if (disabled || processing || !torchSupported) return;
+
+    const videoTrack = streamRef.current?.getVideoTracks()[0];
+    if (!videoTrack) return;
+
+    const nextTorchState = !torchEnabled;
+    try {
+      await videoTrack.applyConstraints({
+        advanced: [{ torch: nextTorchState } as TorchConstraintSet]
+      });
+      setTorchEnabled(nextTorchState);
+      setCameraControlMessage(nextTorchState ? "Flashlight on." : "Flashlight off.");
+    } catch {
+      setTorchSupported(false);
+      setTorchEnabled(false);
+      setCameraControlMessage("Flashlight control is not available in this browser.");
+    }
+  }
+
   async function decodeUploadedImage(file: File) {
-    if (disabled || imageDecodeStatus === "decoding") return;
+    if (disabled || processing || imageDecodeStatus === "decoding") return;
 
     setImageDecodeStatus("decoding");
     setImageDecodeMessage("Reading QR image...");
@@ -500,7 +643,8 @@ export function StaffQrCameraScanner({ disabled, variant = "default", onQrPayloa
 
       setImageDecodeStatus("idle");
       setImageDecodeMessage("QR image decoded. Submitting attendance...");
-      onQrPayloadDetected(qrPayload);
+      decodedRef.current = false;
+      submitDetectedPayload(qrPayload);
     } catch {
       setImageDecodeStatus("error");
       setImageDecodeMessage("Could not read a staff attendance QR from this image. Use a fresh QR photo or manual token entry.");
@@ -515,8 +659,11 @@ export function StaffQrCameraScanner({ disabled, variant = "default", onQrPayloa
   const isCheckingSupport = status === "checking-support";
   const isRequestingPermission = status === "requesting-permission";
   const isCameraActive = status === "camera-active";
-  const startDisabled = disabled || isCheckingSupport || isRequestingPermission || isCameraActive;
-  const startLabel = isCheckingSupport
+  const visibleStatus: ScannerStatus = processing ? "processing" : status;
+  const startDisabled = disabled || processing || isCheckingSupport || isRequestingPermission || isCameraActive;
+  const startLabel = processing
+    ? "Verifying..."
+    : isCheckingSupport
     ? "Checking..."
     : isRequestingPermission
       ? "Requesting..."
@@ -525,73 +672,144 @@ export function StaffQrCameraScanner({ disabled, variant = "default", onQrPayloa
         : "Start Camera";
   const isMobile = variant === "mobile";
   const sectionClassName = isMobile ? "space-y-4" : "premium-card p-4 sm:p-5";
-  const previewClassName = isMobile
-    ? "min-h-[42vh] w-full bg-slate-950 object-cover"
-    : "aspect-[4/3] w-full max-h-[70vh] bg-slate-950 object-cover";
 
   return (
     <section className={sectionClassName} aria-labelledby="staff-camera-scanner-title">
-      <div className={`flex flex-col gap-4 ${isMobile ? "" : "sm:flex-row sm:items-start sm:justify-between"}`}>
+      <div className="flex flex-col gap-2">
         <div>
           <h2 id="staff-camera-scanner-title" className={isMobile ? "text-base font-semibold text-slate-950" : "text-lg font-semibold text-slate-950"}>
             Scan QR
           </h2>
           <p className="mt-1 text-sm leading-6 text-slate-500">
-            Allow camera access to scan the QR code displayed at the school office or gate.
+            Place the live school QR inside the square. Attendance submits automatically when the code is detected.
           </p>
-        </div>
-        <div className={`grid gap-2 ${isMobile ? "grid-cols-1" : "sm:flex sm:items-center"}`}>
-          <button
-            type="button"
-            onClick={startCamera}
-            disabled={startDisabled}
-            className={`premium-primary-button min-h-12 w-full gap-2 premium-focus ${isMobile ? "text-base" : "sm:w-auto"}`}
-          >
-            {isCheckingSupport || isRequestingPermission ? (
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-            ) : (
-              <Camera className="h-4 w-4" aria-hidden="true" />
-            )}
-            {startLabel}
-          </button>
-          <button
-            type="button"
-            onClick={() => stopScanner()}
-            disabled={!isRequestingPermission && !isCameraActive}
-            className={`premium-secondary-button min-h-12 w-full gap-2 premium-focus ${isMobile ? "text-base" : "sm:w-auto"}`}
-          >
-            <Square className="h-4 w-4" aria-hidden="true" />
-            Stop
-          </button>
         </div>
       </div>
 
-      <div className={`${isMobile ? "" : "mt-5"} overflow-hidden rounded-3xl border border-slate-200 bg-slate-950 shadow-inner`}>
+      <div
+        className={`${isMobile ? "" : "mt-5"} relative mx-auto aspect-square w-full max-w-[36rem] overflow-hidden rounded-lg border border-slate-700 bg-slate-950 shadow-inner`}
+        data-qr-scan-frame="true"
+      >
         <video
           ref={videoRef}
           muted
           playsInline
           autoPlay
           {...{ "webkit-playsinline": "true" }}
-          className={previewClassName}
+          className="absolute inset-0 h-full w-full object-cover"
           aria-label="Staff QR camera preview"
         />
+
+        <div className="pointer-events-none absolute inset-[11%]" aria-hidden="true">
+          <span className="absolute left-0 top-0 h-12 w-12 border-l-4 border-t-4 border-white" />
+          <span className="absolute right-0 top-0 h-12 w-12 border-r-4 border-t-4 border-white" />
+          <span className="absolute bottom-0 left-0 h-12 w-12 border-b-4 border-l-4 border-white" />
+          <span className="absolute bottom-0 right-0 h-12 w-12 border-b-4 border-r-4 border-white" />
+          {isCameraActive ? (
+            <span className="absolute left-3 right-3 top-1/2 h-0.5 bg-cyan-300 shadow-[0_0_14px_rgba(103,232,249,0.9)] motion-safe:animate-pulse" />
+          ) : null}
+        </div>
+
+        {!isCameraActive ? (
+          <div className="absolute inset-0 flex items-center justify-center bg-slate-950/72 px-8 text-center text-white">
+            <div>
+              {processing || isCheckingSupport || isRequestingPermission ? (
+                <Loader2 className="mx-auto h-8 w-8 animate-spin" aria-hidden="true" />
+              ) : (
+                <ScanLine className="mx-auto h-10 w-10 text-cyan-300" aria-hidden="true" />
+              )}
+              <p className="mt-3 text-sm font-semibold">{statusLabel(visibleStatus)}</p>
+              <p className="mt-1 text-xs leading-5 text-slate-300">
+                {processing ? "Do not close this page while attendance is verified." : "Camera starts only after you tap the button below."}
+              </p>
+            </div>
+          </div>
+        ) : null}
+
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2">
+          <span className="inline-flex min-h-8 items-center whitespace-nowrap rounded-full bg-slate-950/80 px-3 text-xs font-semibold text-white backdrop-blur">
+            {statusLabel(visibleStatus)}
+          </span>
+        </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white/88 p-3 text-sm leading-6 text-slate-600">
-        <p className="mb-2 inline-flex min-h-8 items-center rounded-full bg-brand-50 px-3 text-xs font-semibold text-brand-700">
-          {statusLabel(status)}
-        </p>
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={() => void startCamera()}
+          disabled={startDisabled}
+          className={`premium-primary-button min-h-12 w-full gap-2 premium-focus ${isMobile ? "text-base" : ""}`}
+        >
+          {processing || isCheckingSupport || isRequestingPermission ? (
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+          ) : (
+            <Camera className="h-4 w-4" aria-hidden="true" />
+          )}
+          {startLabel}
+        </button>
+        <button
+          type="button"
+          onClick={() => stopScanner()}
+          disabled={processing || (!isRequestingPermission && !isCameraActive)}
+          className={`premium-secondary-button min-h-12 w-full gap-2 premium-focus ${isMobile ? "text-base" : ""}`}
+        >
+          <Square className="h-4 w-4" aria-hidden="true" />
+          Stop
+        </button>
+      </div>
+
+      {isCameraActive && (availableCameras.length > 1 || torchSupported) ? (
+        <div className="flex items-center justify-center gap-2" aria-label="Camera controls">
+          {availableCameras.length > 1 ? (
+            <button
+              type="button"
+              onClick={() => void switchCamera()}
+              disabled={disabled || processing}
+              className="premium-secondary-button min-h-11 gap-2 premium-focus"
+              aria-label="Switch camera"
+              title="Switch camera"
+            >
+              <SwitchCamera className="h-4 w-4" aria-hidden="true" />
+              Switch
+            </button>
+          ) : null}
+          {torchSupported ? (
+            <button
+              type="button"
+              onClick={() => void toggleTorch()}
+              disabled={disabled || processing}
+              className="premium-secondary-button min-h-11 gap-2 premium-focus"
+              aria-label={torchEnabled ? "Turn flashlight off" : "Turn flashlight on"}
+              title={torchEnabled ? "Turn flashlight off" : "Turn flashlight on"}
+            >
+              {torchEnabled ? (
+                <FlashlightOff className="h-4 w-4" aria-hidden="true" />
+              ) : (
+                <Flashlight className="h-4 w-4" aria-hidden="true" />
+              )}
+              Light
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
+      <div className="rounded-lg border border-slate-200 bg-white/88 p-3 text-sm leading-6 text-slate-600">
         <p aria-live="polite">{message}</p>
+        {cameraControlMessage ? <p className="mt-1 text-xs text-slate-500">{cameraControlMessage}</p> : null}
         <p className="mt-2 text-xs text-slate-500">Camera scanning requires HTTPS in deployed environments. Localhost works for development.</p>
+        <a href="#manual-qr-entry" className="mt-2 inline-flex min-h-11 items-center font-semibold text-brand-700 premium-focus">
+          Use manual token entry
+        </a>
       </div>
 
-      <div
-        className="rounded-2xl border border-slate-200 bg-white/80 p-3 text-xs leading-5 text-slate-600"
+      <details
+        className="rounded-lg border border-slate-200 bg-white/80 text-xs leading-5 text-slate-600"
         data-camera-diagnostics="true"
       >
-        <p className="font-semibold text-slate-800">Camera diagnostics</p>
-        <dl className="mt-2 grid gap-1 sm:grid-cols-2">
+        <summary className="min-h-11 cursor-pointer px-3 py-3 font-semibold text-slate-800 premium-focus">
+          Camera diagnostics
+        </summary>
+        <dl className="grid gap-1 border-t border-slate-200 px-3 py-3 sm:grid-cols-2">
           <div>
             <dt className="font-medium text-slate-700">Secure context</dt>
             <dd>{diagnostics?.isSecureContext ? "Yes" : "No"}</dd>
@@ -612,23 +830,34 @@ export function StaffQrCameraScanner({ disabled, variant = "default", onQrPayloa
             <dt className="font-medium text-slate-700">Current origin</dt>
             <dd className="break-all">{diagnostics?.origin ?? "Checking in browser..."}</dd>
           </div>
+          <div className="sm:col-span-2">
+            <dt className="font-medium text-slate-700">Browser user agent</dt>
+            <dd className="break-words">{diagnostics?.userAgent ?? "Checking in browser..."}</dd>
+          </div>
         </dl>
-        <details className="mt-2">
-          <summary className="cursor-pointer font-medium text-slate-700">Browser user agent</summary>
-          <p className="mt-1 break-words">{diagnostics?.userAgent ?? "Checking in browser..."}</p>
-        </details>
-      </div>
+      </details>
 
       {cameraError ? (
-        <div className="mt-4 flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-900">
+        <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-900">
+          <div className="flex gap-3">
           <VideoOff className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           <p>{cameraError}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void startCamera()}
+            disabled={startDisabled}
+            className="premium-secondary-button mt-3 min-h-11 w-full gap-2 premium-focus sm:w-auto"
+          >
+            <RotateCcw className="h-4 w-4" aria-hidden="true" />
+            Retry camera
+          </button>
         </div>
       ) : null}
 
       {diagnostics && !diagnostics.isSecureContext ? (
         <div
-          className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-900"
+          className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-900"
           data-camera-https-warning="true"
         >
           Camera requires a secure HTTPS connection. Please open the approved HTTPS pilot link.
@@ -637,14 +866,14 @@ export function StaffQrCameraScanner({ disabled, variant = "default", onQrPayloa
 
       {diagnostics?.isLikelyInAppBrowser ? (
         <div
-          className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-900"
+          className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-900"
           data-camera-inapp-warning="true"
         >
           This looks like an in-app browser. Open the approved HTTPS link in Safari or Chrome for camera access.
         </div>
       ) : null}
 
-      <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/90 p-3 text-sm leading-6 text-slate-600">
+      <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50/90 p-3 text-sm leading-6 text-slate-600">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="font-semibold text-slate-900">Upload QR image/photo</p>
@@ -655,7 +884,7 @@ export function StaffQrCameraScanner({ disabled, variant = "default", onQrPayloa
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            disabled={disabled || imageDecodeStatus === "decoding"}
+            disabled={disabled || processing || imageDecodeStatus === "decoding"}
             className="premium-secondary-button w-full gap-2 sm:w-auto premium-focus"
           >
             <ImageUp className="h-4 w-4" aria-hidden="true" />
@@ -665,7 +894,7 @@ export function StaffQrCameraScanner({ disabled, variant = "default", onQrPayloa
             ref={fileInputRef}
             type="file"
             accept="image/*"
-            disabled={disabled || imageDecodeStatus === "decoding"}
+            disabled={disabled || processing || imageDecodeStatus === "decoding"}
             className="sr-only"
             aria-label="Upload QR image for attendance scan"
             onChange={(event) => {

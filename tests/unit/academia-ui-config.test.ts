@@ -12,6 +12,7 @@ describe("Academia UI route config", () => {
     expect(academiaModuleCards.map((card) => card.href).filter(Boolean)).toEqual([
       "/academia/setup",
       "/academia/students",
+      "/academia/promotions",
       "/academia/attendance"
     ]);
   });

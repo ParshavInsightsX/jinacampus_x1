@@ -2,8 +2,10 @@ import { createHash } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { STAFFBOARD_LITE_AUDIT_EVENTS } from "@/modules/staffboard-lite/audit-events";
 import {
+  deactivateStaffAttendanceQrToken,
   generateStaffAttendanceQrToken,
-  hashStaffAttendanceQrToken
+  hashStaffAttendanceQrToken,
+  STAFF_QR_TOKEN_VALIDITY_SECONDS
 } from "@/modules/staffboard-lite/services/staff-qr.service";
 import type { TenantContext } from "@/lib/tenant/context";
 
@@ -12,7 +14,12 @@ const mocks = vi.hoisted(() => {
     auditLog: { create: vi.fn() },
     branch: { findFirst: vi.fn() },
     attendanceSetting: { findFirst: vi.fn() },
-    staffAttendanceQrToken: { create: vi.fn() }
+    staffAttendanceQrToken: {
+      create: vi.fn(),
+      findFirst: vi.fn(),
+      findMany: vi.fn(),
+      update: vi.fn()
+    }
   };
   const db = {
     ...tx,
@@ -38,7 +45,8 @@ const ctx: TenantContext = {
   userType: "STAFF",
   activeBranchId: branchId,
   accessibleBranchIds: [branchId],
-  activeAcademicYearId: "00000000-0000-0000-0000-000000000004"
+  activeAcademicYearId: "00000000-0000-0000-0000-000000000004",
+  roleCodes: ["PRINCIPAL"]
 };
 
 function resetMocks() {
@@ -55,17 +63,54 @@ function resetMocks() {
   mocks.writeAuditLog.mockResolvedValue({ id: "audit-id" });
   mocks.tx.branch.findFirst.mockResolvedValue({ id: branchId });
   mocks.tx.attendanceSetting.findFirst.mockResolvedValue(null);
+  mocks.tx.staffAttendanceQrToken.findFirst.mockResolvedValue(null);
+  mocks.tx.staffAttendanceQrToken.findMany.mockResolvedValue([]);
+  mocks.tx.staffAttendanceQrToken.update.mockImplementation(({ data }) => ({
+    id: qrTokenId,
+    branchId,
+    purpose: "CHECK_IN",
+    status: data.status ?? "ACTIVE",
+    validFrom: new Date("2026-05-05T04:30:00.000Z"),
+    validUntil: new Date("2026-05-05T09:30:00.000Z"),
+    consumedCount: 0,
+    lastUsedAt: null,
+    expiredAt: data.expiredAt ?? null,
+    deactivatedAt: data.deactivatedAt ?? null,
+    deactivationReason: data.deactivationReason ?? null,
+    createdAt: new Date("2026-05-05T04:30:00.000Z"),
+    updatedAt: new Date("2026-05-05T04:30:00.000Z")
+  }));
   mocks.tx.staffAttendanceQrToken.create.mockImplementation(({ data }) => ({
     id: qrTokenId,
     purpose: data.purpose,
     branchId: data.branchId,
     validFrom: data.validFrom,
-    validUntil: data.validUntil
+    validUntil: data.validUntil,
+    status: data.status
   }));
 }
 
 function parseQrPayload(result: Awaited<ReturnType<typeof generateStaffAttendanceQrToken>>) {
   return JSON.parse(result.qrPayload) as { type: string; token: string };
+}
+
+function lifecycleToken(overrides: Record<string, unknown> = {}) {
+  return {
+    id: qrTokenId,
+    branchId,
+    purpose: "CHECK_IN",
+    status: "ACTIVE",
+    validFrom: new Date("2026-05-05T04:00:00.000Z"),
+    validUntil: new Date("2026-05-05T09:00:00.000Z"),
+    consumedCount: 0,
+    lastUsedAt: null,
+    expiredAt: null,
+    deactivatedAt: null,
+    deactivationReason: null,
+    createdAt: new Date("2026-05-05T04:00:00.000Z"),
+    updatedAt: new Date("2026-05-05T04:00:00.000Z"),
+    ...overrides
+  };
 }
 
 describe("StaffBoard Lite QR generation service", () => {
@@ -89,16 +134,17 @@ describe("StaffBoard Lite QR generation service", () => {
   });
 
   it("generates a secure CHECK_IN QR token", async () => {
-    const result = await generateStaffAttendanceQrToken(ctx, { purpose: "CHECK_IN", validForSeconds: 120 });
+    const result = await generateStaffAttendanceQrToken(ctx, { purpose: "CHECK_IN" });
     const payload = parseQrPayload(result);
 
     expect(result).toEqual(expect.objectContaining({
       qrTokenId,
       purpose: "CHECK_IN",
       branchId,
-      expiresInSeconds: 120,
+      expiresInSeconds: 18000,
+      status: "ACTIVE",
       validFrom: "2026-05-05T04:30:00.000Z",
-      validUntil: "2026-05-05T04:32:00.000Z"
+      validUntil: "2026-05-05T09:30:00.000Z"
     }));
     expect(payload.type).toBe("STAFF_ATTENDANCE_QR");
     expect(payload.token).toHaveLength(43);
@@ -107,7 +153,7 @@ describe("StaffBoard Lite QR generation service", () => {
   it("generates a CHECK_OUT QR token", async () => {
     await expect(generateStaffAttendanceQrToken(ctx, { purpose: "CHECK_OUT" })).resolves.toMatchObject({
       purpose: "CHECK_OUT",
-      expiresInSeconds: 180
+      expiresInSeconds: 18000
     });
 
     expect(mocks.tx.staffAttendanceQrToken.create).toHaveBeenCalledWith(expect.objectContaining({
@@ -128,6 +174,31 @@ describe("StaffBoard Lite QR generation service", () => {
       branchId
     });
     expect(mocks.db.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("rejects non-operator roles even if a permission mock would allow generation", async () => {
+    await expect(generateStaffAttendanceQrToken(
+      { ...ctx, roleCodes: ["TEACHER"] },
+      { purpose: "CHECK_IN" }
+    )).rejects.toMatchObject({
+      code: "STAFF_QR_OPERATOR_ACCESS_REQUIRED",
+      status: 403
+    });
+
+    expect(mocks.requirePermission).not.toHaveBeenCalled();
+    expect(mocks.db.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("allows an Office Staff QR Operator with explicit permission", async () => {
+    await expect(generateStaffAttendanceQrToken(
+      { ...ctx, roleCodes: ["OFFICE_STAFF"] },
+      { purpose: "CHECK_IN" }
+    )).resolves.toMatchObject({ status: "ACTIVE", expiresInSeconds: 18_000 });
+
+    expect(mocks.requirePermission).toHaveBeenCalledWith(expect.objectContaining({
+      permission: "staffboard.attendance.qr.generate",
+      branchId
+    }));
   });
 
   it("uses tenantId and actor user from server context", async () => {
@@ -180,8 +251,7 @@ describe("StaffBoard Lite QR generation service", () => {
 
   it("rejects generation when StaffBoard QR attendance is disabled", async () => {
     mocks.tx.attendanceSetting.findFirst.mockResolvedValue({
-      staffQrAttendanceEnabled: false,
-      staffQrTokenValiditySeconds: 180
+      staffQrAttendanceEnabled: false
     });
 
     await expect(generateStaffAttendanceQrToken(ctx, { purpose: "CHECK_IN" })).rejects.toMatchObject({
@@ -192,38 +262,31 @@ describe("StaffBoard Lite QR generation service", () => {
     expect(mocks.tx.staffAttendanceQrToken.create).not.toHaveBeenCalled();
   });
 
-  it("uses AttendanceSetting.staffQrTokenValiditySeconds when input validity is absent", async () => {
+  it("uses the fixed five-hour validity even when legacy settings differ", async () => {
     mocks.tx.attendanceSetting.findFirst.mockResolvedValue({
-      staffQrAttendanceEnabled: true,
-      staffQrTokenValiditySeconds: 240
+      staffQrAttendanceEnabled: true
     });
 
     await expect(generateStaffAttendanceQrToken(ctx, { purpose: "CHECK_IN" })).resolves.toMatchObject({
-      expiresInSeconds: 240,
-      validUntil: "2026-05-05T04:34:00.000Z"
+      expiresInSeconds: STAFF_QR_TOKEN_VALIDITY_SECONDS,
+      validUntil: "2026-05-05T09:30:00.000Z"
     });
   });
 
-  it("uses default 180 second validity when no AttendanceSetting exists", async () => {
+  it("uses five-hour validity when no AttendanceSetting exists", async () => {
     await expect(generateStaffAttendanceQrToken(ctx, { purpose: "CHECK_IN" })).resolves.toMatchObject({
-      expiresInSeconds: 180,
-      validUntil: "2026-05-05T04:33:00.000Z"
+      expiresInSeconds: 18000,
+      validUntil: "2026-05-05T09:30:00.000Z"
     });
   });
 
-  it("rejects too-short validity", async () => {
+  it("rejects client-controlled validity", async () => {
     await expect(generateStaffAttendanceQrToken(ctx, { purpose: "CHECK_IN", validForSeconds: 10 })).rejects.toMatchObject({
-      code: "INVALID_STAFF_QR_TOKEN_VALIDITY_SECONDS"
+      name: "ZodError"
     });
 
     expect(mocks.tx.staffAttendanceQrToken.create).not.toHaveBeenCalled();
-  });
-
-  it("rejects too-long validity", async () => {
-    await expect(generateStaffAttendanceQrToken(ctx, { purpose: "CHECK_IN", validForSeconds: 901 })).rejects.toThrow();
-
     expect(mocks.requirePermission).not.toHaveBeenCalled();
-    expect(mocks.tx.staffAttendanceQrToken.create).not.toHaveBeenCalled();
   });
 
   it("stores tokenHash but never stores the raw token", async () => {
@@ -261,11 +324,9 @@ describe("StaffBoard Lite QR generation service", () => {
       entityId: qrTokenId,
       branchId,
       metadata: expect.objectContaining({
-        tenantId: ctx.tenantId,
-        branchId,
-        actorUserId: ctx.userId,
-        qrTokenId,
-        purpose: "CHECK_IN"
+        purpose: "CHECK_IN",
+        expiresInSeconds: 18000,
+        replacedTokenCount: 0
       })
     }));
     expect(serializedAudit).not.toContain(payload.token);
@@ -274,14 +335,74 @@ describe("StaffBoard Lite QR generation service", () => {
   });
 
   it("creates validFrom and validUntil correctly", async () => {
-    await generateStaffAttendanceQrToken(ctx, { purpose: "CHECK_IN", validForSeconds: 300 });
+    await generateStaffAttendanceQrToken(ctx, { purpose: "CHECK_IN" });
 
     expect(mocks.tx.staffAttendanceQrToken.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({
         validFrom: new Date("2026-05-05T04:30:00.000Z"),
-        validUntil: new Date("2026-05-05T04:35:00.000Z"),
+        validUntil: new Date("2026-05-05T09:30:00.000Z"),
         consumedCount: 0
       })
     }));
+  });
+
+  it("deactivates the previous active token when regenerating the same purpose", async () => {
+    const previous = lifecycleToken();
+    mocks.tx.staffAttendanceQrToken.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([previous]);
+
+    await generateStaffAttendanceQrToken(ctx, { purpose: "CHECK_IN" });
+
+    expect(mocks.tx.staffAttendanceQrToken.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: qrTokenId },
+      data: expect.objectContaining({
+        status: "DEACTIVATED",
+        deactivatedById: ctx.userId,
+        deactivationReason: "REGENERATED"
+      })
+    }));
+    expect(mocks.writeAuditLog).toHaveBeenCalledWith(expect.objectContaining({
+      action: STAFFBOARD_LITE_AUDIT_EVENTS.STAFF_ATTENDANCE_QR_REGENERATED,
+      metadata: expect.objectContaining({ replacedTokenCount: 1 })
+    }), mocks.tx);
+  });
+
+  it("reconciles stale active tokens as expired before generation", async () => {
+    const stale = lifecycleToken({ validUntil: new Date("2026-05-05T04:29:59.000Z") });
+    mocks.tx.staffAttendanceQrToken.findMany
+      .mockResolvedValueOnce([stale])
+      .mockResolvedValueOnce([]);
+
+    await generateStaffAttendanceQrToken(ctx, { purpose: "CHECK_IN" });
+
+    expect(mocks.tx.staffAttendanceQrToken.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: qrTokenId },
+      data: {
+        status: "EXPIRED",
+        expiredAt: stale.validUntil
+      }
+    }));
+    expect(mocks.writeAuditLog).toHaveBeenCalledWith(expect.objectContaining({
+      action: STAFFBOARD_LITE_AUDIT_EVENTS.STAFF_ATTENDANCE_QR_EXPIRED
+    }), mocks.tx);
+  });
+
+  it("deactivates a tenant-scoped token through the operator service", async () => {
+    const current = lifecycleToken();
+    mocks.tx.staffAttendanceQrToken.findFirst.mockResolvedValue(current);
+
+    await expect(deactivateStaffAttendanceQrToken(ctx, { qrTokenId })).resolves.toMatchObject({
+      qrTokenId,
+      status: "DEACTIVATED"
+    });
+
+    expect(mocks.tx.staffAttendanceQrToken.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ id: qrTokenId, tenantId: ctx.tenantId })
+    }));
+    expect(mocks.writeAuditLog).toHaveBeenCalledWith(expect.objectContaining({
+      action: STAFFBOARD_LITE_AUDIT_EVENTS.STAFF_ATTENDANCE_QR_DEACTIVATED,
+      metadata: expect.objectContaining({ purpose: "CHECK_IN", reason: "OPERATOR_DEACTIVATED" })
+    }), mocks.tx);
   });
 });

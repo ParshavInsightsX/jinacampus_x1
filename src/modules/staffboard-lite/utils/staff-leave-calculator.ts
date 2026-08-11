@@ -16,14 +16,19 @@ export function todayForTimeZone(now: Date, timeZone: string) {
   return new Date(Date.UTC(Number(values.get("year")), Number(values.get("month")) - 1, Number(values.get("day"))));
 }
 
-export function enumerateLeaveDates(startDate: Date, endDate: Date, nonWorkingWeekdays: readonly number[]) {
+export function enumerateLeaveDates(
+  startDate: Date,
+  endDate: Date,
+  nonWorkingWeekdays: readonly number[],
+  excludedDateKeys: ReadonlySet<string> = new Set()
+) {
   const start = dateOnlyUtc(startDate);
   const end = dateOnlyUtc(endDate);
   const excluded = new Set(nonWorkingWeekdays);
   const dates: Date[] = [];
 
   for (let cursor = start; cursor <= end; cursor = new Date(cursor.getTime() + DAY_MS)) {
-    if (!excluded.has(cursor.getUTCDay())) dates.push(cursor);
+    if (!excluded.has(cursor.getUTCDay()) && !excludedDateKeys.has(formatLeaveDate(cursor))) dates.push(cursor);
   }
   return dates;
 }
@@ -33,8 +38,14 @@ export function calculateStaffLeaveDays(input: {
   endDate: Date;
   duration: StaffLeaveDuration;
   nonWorkingWeekdays: readonly number[];
+  excludedDateKeys?: ReadonlySet<string>;
 }) {
-  const dates = enumerateLeaveDates(input.startDate, input.endDate, input.nonWorkingWeekdays);
+  const dates = enumerateLeaveDates(
+    input.startDate,
+    input.endDate,
+    input.nonWorkingWeekdays,
+    input.excludedDateKeys
+  );
   if (input.duration !== "FULL_DAY") return dates.length === 1 ? 0.5 : 0;
   return dates.length;
 }

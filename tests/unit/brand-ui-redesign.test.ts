@@ -74,7 +74,7 @@ describe("JinaCampus brand and UI redesign", () => {
     expect(layout).toContain("Nunito_Sans");
   });
 
-  it("keeps the responsive shell permission-aware and avoids invented modules", () => {
+  it("keeps the responsive shell permission- and feature-aware", () => {
     const navigation = source("src/components/app-shell/navigation.ts");
     const desktop = source("src/components/app-shell/desktop-navigation-dock.tsx");
     const navbar = source("src/components/app-shell/app-navbar.tsx");
@@ -85,11 +85,13 @@ describe("JinaCampus brand and UI redesign", () => {
     expect(desktop).toContain("backdrop-blur-2xl");
     expect(navbar).toContain("<BrandLogo");
     expect(dashboardLayout).not.toContain("DesktopShell");
-    expect(dashboardLayout).toContain("getMobileBottomNavigationItems(permissions, ctx.roleCodes ?? [])");
+    expect(dashboardLayout).toContain("getMobileBottomNavigationItems(");
+    expect(dashboardLayout).toContain("{ gradebookEnabled }");
     expect(mobile).toContain("items: readonly MobileBottomNavItem[]");
     expect(mobile).toContain('aria-label="Mobile primary navigation"');
-    expect(navigation).toContain("requiredPermission");
-    expect(navigation).not.toMatch(/FeeDesk|GradeBook|SchoolCast|InsightBoard/);
+    expect(navigation).toContain("PermissionCode");
+    expect(navigation).toContain('title: "GradeBook"');
+    expect(navigation).not.toMatch(/FeeDesk|SchoolCast|InsightBoard/);
   });
 
   it("uses the new PWA identity without exposing authentication internals", () => {

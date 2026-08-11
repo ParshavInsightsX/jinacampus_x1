@@ -988,7 +988,7 @@ export async function seedDemoTenant(db: PrismaClient) {
       staffLateAfterTime: "08:00",
       staffHalfDayBeforeMinutes: 240,
       staffMinimumWorkingMinutes: 360,
-      staffQrTokenValiditySeconds: 180
+      staffQrTokenValiditySeconds: 18000
     },
     update: {
       staffQrAttendanceEnabled: true,
@@ -996,7 +996,7 @@ export async function seedDemoTenant(db: PrismaClient) {
       staffLateAfterTime: "08:00",
       staffHalfDayBeforeMinutes: 240,
       staffMinimumWorkingMinutes: 360,
-      staffQrTokenValiditySeconds: 180
+      staffQrTokenValiditySeconds: 18000
     }
   });
 

@@ -1,18 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AppError } from "@/lib/errors";
-import { generateStaffAttendanceQrAction } from "@/modules/staffboard-lite/actions/staff-qr.actions";
+import {
+  deactivateStaffAttendanceQrAction,
+  generateStaffAttendanceQrAction
+} from "@/modules/staffboard-lite/actions/staff-qr.actions";
 import type { TenantContext } from "@/lib/tenant/context";
 
 const mocks = vi.hoisted(() => {
   const getTenantContext = vi.fn();
   const generateStaffAttendanceQrToken = vi.fn();
+  const deactivateStaffAttendanceQrToken = vi.fn();
   const revalidatePath = vi.fn();
-  return { generateStaffAttendanceQrToken, getTenantContext, revalidatePath };
+  return { deactivateStaffAttendanceQrToken, generateStaffAttendanceQrToken, getTenantContext, revalidatePath };
 });
 
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 vi.mock("@/lib/tenant/context", () => ({ getTenantContext: mocks.getTenantContext }));
 vi.mock("@/modules/staffboard-lite/services/staff-qr.service", () => ({
+  deactivateStaffAttendanceQrToken: mocks.deactivateStaffAttendanceQrToken,
   generateStaffAttendanceQrToken: mocks.generateStaffAttendanceQrToken
 }));
 
@@ -33,8 +38,9 @@ const serviceResult = {
   purpose: "CHECK_IN",
   branchId,
   validFrom: "2026-05-05T04:30:00.000Z",
-  validUntil: "2026-05-05T04:33:00.000Z",
-  expiresInSeconds: 180,
+  validUntil: "2026-05-05T09:30:00.000Z",
+  expiresInSeconds: 18000,
+  status: "ACTIVE" as const,
   qrPayload: "{\"type\":\"STAFF_ATTENDANCE_QR\",\"token\":\"raw-token\"}",
   tokenHash: "server-only-token-hash"
 };
@@ -44,6 +50,12 @@ beforeEach(() => {
   mocks.getTenantContext.mockResolvedValue(ctx);
   mocks.generateStaffAttendanceQrToken.mockReset();
   mocks.generateStaffAttendanceQrToken.mockResolvedValue(serviceResult);
+  mocks.deactivateStaffAttendanceQrToken.mockReset();
+  mocks.deactivateStaffAttendanceQrToken.mockResolvedValue({
+    qrTokenId: serviceResult.qrTokenId,
+    status: "DEACTIVATED",
+    deactivatedAt: "2026-05-05T04:35:00.000Z"
+  });
   mocks.revalidatePath.mockReset();
 });
 
@@ -60,6 +72,7 @@ describe("staff QR server action", () => {
         validFrom: serviceResult.validFrom,
         validUntil: serviceResult.validUntil,
         expiresInSeconds: serviceResult.expiresInSeconds,
+        status: serviceResult.status,
         qrPayload: serviceResult.qrPayload
       }
     });
@@ -136,5 +149,23 @@ describe("staff QR server action", () => {
       error: "Unable to generate staff attendance QR. Please try again."
     });
     expect(JSON.stringify(result)).not.toMatch(/tokenHash|rawToken|raw-token|tenantId|branchId|Prisma|tenant-secret|branch-secret/);
+  });
+
+  it("deactivates a QR through server-derived context and rejects client scope fields", async () => {
+    const deactivated = await deactivateStaffAttendanceQrAction({ qrTokenId: serviceResult.qrTokenId });
+
+    expect(deactivated).toMatchObject({
+      ok: true,
+      data: { qrTokenId: serviceResult.qrTokenId, status: "DEACTIVATED" }
+    });
+    expect(mocks.deactivateStaffAttendanceQrToken).toHaveBeenCalledWith(ctx, {
+      qrTokenId: serviceResult.qrTokenId
+    });
+
+    const rejected = await deactivateStaffAttendanceQrAction({
+      qrTokenId: serviceResult.qrTokenId,
+      tenantId: "00000000-0000-0000-0000-000000000099"
+    });
+    expect(rejected).toMatchObject({ ok: false, code: "VALIDATION_ERROR" });
   });
 });

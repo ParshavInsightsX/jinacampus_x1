@@ -1,12 +1,15 @@
 import { createHash, randomBytes } from "node:crypto";
-import type { StaffAttendanceStatus, StaffQrPurpose } from "@prisma/client";
+import type { Prisma, StaffAttendanceStatus, StaffQrPurpose, StaffQrTokenStatus } from "@prisma/client";
 import { db } from "@/lib/db";
-import { AppError } from "@/lib/errors";
+import { AppError, notFound } from "@/lib/errors";
 import { requirePermission } from "@/lib/rbac/require-permission";
 import { writeAuditLog } from "@/lib/audit/audit-log";
 import type { TenantContext } from "@/lib/tenant/context";
+import { findApplicableCalendarEntry } from "@/modules/campus-core/calendar/calendar-policy";
+import { staffCalendarAudience } from "@/modules/campus-core/calendar/calendar-utils";
 import { STAFFBOARD_LITE_AUDIT_EVENTS } from "@/modules/staffboard-lite/audit-events";
-import { generateStaffQrSchema, scanStaffQrSchema } from "@/modules/staffboard-lite/schemas";
+import { deactivateStaffQrSchema, generateStaffQrSchema, scanStaffQrSchema } from "@/modules/staffboard-lite/schemas";
+import { requireStaffQrOperatorAccess } from "@/modules/staffboard-lite/staff-qr-access";
 import {
   calculateCheckInStatus,
   calculateCheckOutStatus,
@@ -14,12 +17,10 @@ import {
   calculateWorkingMinutes,
   resolveStaffAttendanceCalculationSettings
 } from "@/modules/staffboard-lite/utils/attendance-calculator";
-import { conflict, ensureActiveBranch, requireBranchPermission, validationError } from "./shared";
+import { conflict, ensureActiveBranch, validationError } from "./shared";
 
 const STAFF_ATTENDANCE_QR_PAYLOAD_TYPE = "STAFF_ATTENDANCE_QR";
-const DEFAULT_QR_TOKEN_VALIDITY_SECONDS = 180;
-const MIN_QR_TOKEN_VALIDITY_SECONDS = 30;
-const MAX_QR_TOKEN_VALIDITY_SECONDS = 900;
+export const STAFF_QR_TOKEN_VALIDITY_SECONDS = 5 * 60 * 60;
 
 export type GenerateStaffAttendanceQrTokenResult = {
   qrTokenId: string;
@@ -28,7 +29,15 @@ export type GenerateStaffAttendanceQrTokenResult = {
   validFrom: string;
   validUntil: string;
   expiresInSeconds: number;
+  status: "ACTIVE";
   qrPayload: string;
+};
+
+export type DeactivateStaffAttendanceQrTokenResult = {
+  qrTokenId: string;
+  status: StaffQrTokenStatus;
+  deactivatedAt?: string;
+  expiredAt?: string;
 };
 
 export type ScanStaffAttendanceQrResult = {
@@ -59,20 +68,6 @@ function resolveQrBranchId(ctx: TenantContext, inputBranchId?: string) {
   if (ctx.activeBranchId) return ctx.activeBranchId;
   if (ctx.accessibleBranchIds.length === 1) return ctx.accessibleBranchIds[0];
   throw validationError("STAFF_QR_BRANCH_REQUIRED");
-}
-
-function resolveValiditySeconds(inputValidity: number | undefined, settingValidity: number | undefined) {
-  const expiresInSeconds = inputValidity ?? settingValidity ?? DEFAULT_QR_TOKEN_VALIDITY_SECONDS;
-
-  if (
-    !Number.isInteger(expiresInSeconds) ||
-    expiresInSeconds < MIN_QR_TOKEN_VALIDITY_SECONDS ||
-    expiresInSeconds > MAX_QR_TOKEN_VALIDITY_SECONDS
-  ) {
-    throw validationError("INVALID_STAFF_QR_TOKEN_VALIDITY_SECONDS");
-  }
-
-  return expiresInSeconds;
 }
 
 function zonedParts(date: Date, timeZone: string) {
@@ -111,6 +106,77 @@ function scanMessage(purpose: StaffQrPurpose) {
   return purpose === "CHECK_IN" ? "Check-in successful" : "Check-out successful";
 }
 
+function institutionAuditLabel(ctx: TenantContext) {
+  return ctx.institutionDisplayName ?? ctx.institutionName ?? ctx.tenantName ?? null;
+}
+
+const qrLifecycleSelect = {
+  id: true,
+  branchId: true,
+  purpose: true,
+  status: true,
+  validFrom: true,
+  validUntil: true,
+  consumedCount: true,
+  lastUsedAt: true,
+  expiredAt: true,
+  deactivatedAt: true,
+  deactivationReason: true,
+  createdAt: true,
+  updatedAt: true
+} as const satisfies Prisma.StaffAttendanceQrTokenSelect;
+
+type StaffQrLifecycleSnapshot = Prisma.StaffAttendanceQrTokenGetPayload<{
+  select: typeof qrLifecycleSelect;
+}>;
+
+async function expireStaleStaffQrTokens(
+  tx: Prisma.TransactionClient,
+  ctx: TenantContext,
+  input: { branchId: string; purpose?: StaffQrPurpose },
+  now: Date
+) {
+  const staleTokens = await tx.staffAttendanceQrToken.findMany({
+    where: {
+      tenantId: ctx.tenantId,
+      branchId: input.branchId,
+      purpose: input.purpose,
+      status: "ACTIVE",
+      validUntil: { lte: now }
+    },
+    select: qrLifecycleSelect
+  });
+
+  for (const before of staleTokens) {
+    const after = await tx.staffAttendanceQrToken.update({
+      where: { id: before.id },
+      data: {
+        status: "EXPIRED",
+        expiredAt: before.validUntil
+      },
+      select: qrLifecycleSelect
+    });
+
+    await writeAuditLog({
+      ctx,
+      action: STAFFBOARD_LITE_AUDIT_EVENTS.STAFF_ATTENDANCE_QR_EXPIRED,
+      entityType: "StaffAttendanceQrToken",
+      entityId: before.id,
+      branchId: before.branchId,
+      before,
+      after,
+      metadata: {
+        institutionName: institutionAuditLabel(ctx),
+        purpose: before.purpose,
+        validUntil: before.validUntil.toISOString(),
+        lifecycleTrigger: "SERVER_VALIDITY_CHECK"
+      }
+    }, tx);
+  }
+
+  return staleTokens.length;
+}
+
 export async function generateStaffAttendanceQrToken(
   ctx: TenantContext,
   input: unknown
@@ -118,7 +184,7 @@ export async function generateStaffAttendanceQrToken(
   const data = generateStaffQrSchema.parse(input);
   const branchId = resolveQrBranchId(ctx, data.branchId);
 
-  await requireBranchPermission(ctx, "staffboard.attendance.qr.generate", branchId);
+  await requireStaffQrOperatorAccess(ctx, branchId);
 
   return db.$transaction(async (tx) => {
     await ensureActiveBranch(tx, ctx, branchId);
@@ -126,8 +192,7 @@ export async function generateStaffAttendanceQrToken(
     const attendanceSetting = await tx.attendanceSetting.findFirst({
       where: { tenantId: ctx.tenantId, branchId },
       select: {
-        staffQrAttendanceEnabled: true,
-        staffQrTokenValiditySeconds: true
+        staffQrAttendanceEnabled: true
       }
     });
 
@@ -135,9 +200,40 @@ export async function generateStaffAttendanceQrToken(
       throw new AppError("STAFF_QR_ATTENDANCE_DISABLED", "STAFF_QR_ATTENDANCE_DISABLED", 403);
     }
 
-    const expiresInSeconds = resolveValiditySeconds(data.validForSeconds, attendanceSetting?.staffQrTokenValiditySeconds);
     const validFrom = new Date();
-    const validUntil = new Date(validFrom.getTime() + expiresInSeconds * 1000);
+    const validUntil = new Date(validFrom.getTime() + STAFF_QR_TOKEN_VALIDITY_SECONDS * 1000);
+
+    await expireStaleStaffQrTokens(tx, ctx, { branchId, purpose: data.purpose }, validFrom);
+
+    const activeTokens = await tx.staffAttendanceQrToken.findMany({
+      where: {
+        tenantId: ctx.tenantId,
+        branchId,
+        purpose: data.purpose,
+        status: "ACTIVE"
+      },
+      select: qrLifecycleSelect
+    });
+    const deactivatedTokens: Array<{
+      before: StaffQrLifecycleSnapshot;
+      after: StaffQrLifecycleSnapshot;
+    }> = [];
+    for (const token of activeTokens) {
+      deactivatedTokens.push({
+        before: token,
+        after: await tx.staffAttendanceQrToken.update({
+          where: { id: token.id },
+          data: {
+            status: "DEACTIVATED",
+            deactivatedAt: validFrom,
+            deactivatedById: ctx.userId,
+            deactivationReason: "REGENERATED"
+          },
+          select: qrLifecycleSelect
+        })
+      });
+    }
+
     const rawToken = generateRawQrToken();
     const tokenHash = hashStaffAttendanceQrToken(rawToken);
 
@@ -147,6 +243,7 @@ export async function generateStaffAttendanceQrToken(
         branchId,
         tokenHash,
         purpose: data.purpose,
+        status: "ACTIVE",
         validFrom,
         validUntil,
         consumedCount: 0,
@@ -157,25 +254,44 @@ export async function generateStaffAttendanceQrToken(
         purpose: true,
         branchId: true,
         validFrom: true,
-        validUntil: true
+        validUntil: true,
+        status: true
       }
     });
 
+    for (const token of deactivatedTokens) {
+      await writeAuditLog({
+        ctx,
+        action: STAFFBOARD_LITE_AUDIT_EVENTS.STAFF_ATTENDANCE_QR_DEACTIVATED,
+        entityType: "StaffAttendanceQrToken",
+        entityId: token.before.id,
+        branchId,
+        before: token.before,
+        after: token.after,
+        metadata: {
+          institutionName: institutionAuditLabel(ctx),
+          purpose: token.before.purpose,
+          reason: "REGENERATED",
+          replacementQrTokenId: qrToken.id
+        }
+      }, tx);
+    }
+
     await writeAuditLog({
       ctx,
-      action: STAFFBOARD_LITE_AUDIT_EVENTS.STAFF_ATTENDANCE_QR_GENERATED,
+      action: activeTokens.length > 0
+        ? STAFFBOARD_LITE_AUDIT_EVENTS.STAFF_ATTENDANCE_QR_REGENERATED
+        : STAFFBOARD_LITE_AUDIT_EVENTS.STAFF_ATTENDANCE_QR_GENERATED,
       entityType: "StaffAttendanceQrToken",
       entityId: qrToken.id,
       branchId,
       metadata: {
-        tenantId: ctx.tenantId,
-        branchId,
-        actorUserId: ctx.userId,
-        qrTokenId: qrToken.id,
+        institutionName: institutionAuditLabel(ctx),
         purpose: qrToken.purpose,
         validFrom: qrToken.validFrom.toISOString(),
         validUntil: qrToken.validUntil.toISOString(),
-        expiresInSeconds
+        expiresInSeconds: STAFF_QR_TOKEN_VALIDITY_SECONDS,
+        replacedTokenCount: activeTokens.length
       }
     }, tx);
 
@@ -185,8 +301,85 @@ export async function generateStaffAttendanceQrToken(
       branchId: qrToken.branchId,
       validFrom: qrToken.validFrom.toISOString(),
       validUntil: qrToken.validUntil.toISOString(),
-      expiresInSeconds,
+      expiresInSeconds: STAFF_QR_TOKEN_VALIDITY_SECONDS,
+      status: "ACTIVE",
       qrPayload: buildQrPayload(rawToken)
+    };
+  });
+}
+
+export async function deactivateStaffAttendanceQrToken(
+  ctx: TenantContext,
+  input: unknown
+): Promise<DeactivateStaffAttendanceQrTokenResult> {
+  const data = deactivateStaffQrSchema.parse(input);
+  const scopedToken = await db.staffAttendanceQrToken.findFirst({
+    where: {
+      id: data.qrTokenId,
+      tenantId: ctx.tenantId
+    },
+    select: {
+      id: true,
+      branchId: true
+    }
+  });
+  if (!scopedToken) throw notFound("STAFF_QR_NOT_FOUND");
+
+  await requireStaffQrOperatorAccess(ctx, scopedToken.branchId);
+
+  return db.$transaction(async (tx) => {
+    const now = new Date();
+    await expireStaleStaffQrTokens(tx, ctx, { branchId: scopedToken.branchId }, now);
+
+    const before = await tx.staffAttendanceQrToken.findFirst({
+      where: {
+        id: scopedToken.id,
+        tenantId: ctx.tenantId,
+        branchId: scopedToken.branchId
+      },
+      select: qrLifecycleSelect
+    });
+    if (!before) throw notFound("STAFF_QR_NOT_FOUND");
+
+    if (before.status !== "ACTIVE") {
+      return {
+        qrTokenId: before.id,
+        status: before.status,
+        ...(before.deactivatedAt ? { deactivatedAt: before.deactivatedAt.toISOString() } : {}),
+        ...(before.expiredAt ? { expiredAt: before.expiredAt.toISOString() } : {})
+      };
+    }
+
+    const after = await tx.staffAttendanceQrToken.update({
+      where: { id: before.id },
+      data: {
+        status: "DEACTIVATED",
+        deactivatedAt: now,
+        deactivatedById: ctx.userId,
+        deactivationReason: "OPERATOR_DEACTIVATED"
+      },
+      select: qrLifecycleSelect
+    });
+
+    await writeAuditLog({
+      ctx,
+      action: STAFFBOARD_LITE_AUDIT_EVENTS.STAFF_ATTENDANCE_QR_DEACTIVATED,
+      entityType: "StaffAttendanceQrToken",
+      entityId: before.id,
+      branchId: before.branchId,
+      before,
+      after,
+      metadata: {
+        institutionName: institutionAuditLabel(ctx),
+        purpose: before.purpose,
+        reason: "OPERATOR_DEACTIVATED"
+      }
+    }, tx);
+
+    return {
+      qrTokenId: after.id,
+      status: after.status,
+      deactivatedAt: after.deactivatedAt?.toISOString()
     };
   });
 }
@@ -201,7 +394,7 @@ export async function scanStaffAttendanceQr(
 
   if (!ctx.userId) throw validationError("ACTOR_REQUIRED");
 
-  return db.$transaction(async (tx) => {
+  const outcome = await db.$transaction(async (tx) => {
     const staffProfile = await tx.staffProfile.findFirst({
       where: {
         tenantId: ctx.tenantId,
@@ -212,7 +405,8 @@ export async function scanStaffAttendanceQr(
         id: true,
         tenantId: true,
         branchId: true,
-        branch: { select: { id: true, timezone: true, status: true } }
+        staffType: true,
+        branch: { select: { id: true, institutionId: true, timezone: true, status: true } }
       }
     });
     if (!staffProfile) throw validationError("ACTIVE_STAFF_PROFILE_NOT_FOUND");
@@ -230,13 +424,41 @@ export async function scanStaffAttendanceQr(
         tenantId: true,
         branchId: true,
         purpose: true,
+        status: true,
         validFrom: true,
         validUntil: true
       }
     });
     if (!qrToken) throw validationError("INVALID_STAFF_QR");
-    if (qrToken.validFrom > now || qrToken.validUntil < now) {
-      throw validationError("STAFF_QR_EXPIRED");
+    if (qrToken.status === "DEACTIVATED") throw validationError("INVALID_STAFF_QR");
+    if (qrToken.status === "EXPIRED" || qrToken.validFrom > now || qrToken.validUntil <= now) {
+      if (qrToken.status === "ACTIVE" && qrToken.validUntil <= now) {
+        const expiredToken = await tx.staffAttendanceQrToken.update({
+          where: { id: qrToken.id },
+          data: {
+            status: "EXPIRED",
+            expiredAt: qrToken.validUntil
+          },
+          select: qrLifecycleSelect
+        });
+
+        await writeAuditLog({
+          ctx,
+          action: STAFFBOARD_LITE_AUDIT_EVENTS.STAFF_ATTENDANCE_QR_EXPIRED,
+          entityType: "StaffAttendanceQrToken",
+          entityId: qrToken.id,
+          branchId: qrToken.branchId,
+          after: expiredToken,
+          metadata: {
+            institutionName: institutionAuditLabel(ctx),
+            purpose: qrToken.purpose,
+            validUntil: qrToken.validUntil.toISOString(),
+            lifecycleTrigger: "SCAN_VALIDITY_CHECK"
+          }
+        }, tx);
+      }
+
+      return { kind: "expired" as const };
     }
     if (qrToken.branchId !== staffProfile.branchId) {
       throw new AppError("STAFF_QR_BRANCH_MISMATCH", "STAFF_QR_BRANCH_MISMATCH", 403);
@@ -262,6 +484,15 @@ export async function scanStaffAttendanceQr(
       timeZone: staffProfile.branch.timezone
     });
     const attendanceDate = attendanceDateForBranch(now, calculationSettings.timeZone);
+    const holiday = await findApplicableCalendarEntry(tx, {
+      tenantId: ctx.tenantId,
+      institutionId: staffProfile.branch.institutionId,
+      branchId: staffProfile.branchId,
+      academicYearId: ctx.activeAcademicYearId,
+      attendanceDate,
+      audience: staffCalendarAudience(staffProfile.staffType)
+    });
+    if (holiday) throw new AppError("STAFF_ATTENDANCE_HOLIDAY", "STAFF_ATTENDANCE_HOLIDAY", 409);
     const existingRecord = await tx.staffAttendanceRecord.findFirst({
       where: {
         tenantId: ctx.tenantId,
@@ -270,6 +501,9 @@ export async function scanStaffAttendanceQr(
         attendanceDate
       }
     });
+    if (existingRecord?.calendarEntryId || existingRecord?.status === "HOLIDAY") {
+      throw new AppError("STAFF_ATTENDANCE_HOLIDAY", "STAFF_ATTENDANCE_HOLIDAY", 409);
+    }
     if (existingRecord?.leaveApplicationId) {
       throw new AppError("STAFF_ON_APPROVED_LEAVE", "STAFF_ON_APPROVED_LEAVE", 409);
     }
@@ -340,8 +574,27 @@ export async function scanStaffAttendanceQr(
 
     await tx.staffAttendanceQrToken.update({
       where: { id: qrToken.id },
-      data: { consumedCount: { increment: 1 } }
+      data: {
+        consumedCount: { increment: 1 },
+        lastUsedAt: now
+      }
     });
+
+    await writeAuditLog({
+      ctx,
+      action: STAFFBOARD_LITE_AUDIT_EVENTS.STAFF_ATTENDANCE_QR_USED,
+      entityType: "StaffAttendanceQrToken",
+      entityId: qrToken.id,
+      branchId: staffProfile.branchId,
+      academicYearId: after.academicYearId,
+      metadata: {
+        institutionId: staffProfile.branch.institutionId,
+        staffId: staffProfile.id,
+        attendanceRecordId: after.id,
+        purpose: qrToken.purpose,
+        usedAt: now.toISOString()
+      }
+    }, tx);
 
     await writeAuditLog({
       ctx,
@@ -377,14 +630,20 @@ export async function scanStaffAttendanceQr(
     }, tx);
 
     return {
-      success: true,
-      purpose: qrToken.purpose,
-      attendanceDate: toDateOnlyString(attendanceDate),
-      checkInAt: after.checkInAt?.toISOString(),
-      checkOutAt: after.checkOutAt?.toISOString(),
-      ...(typeof after.workingMinutes === "number" ? { workingMinutes: after.workingMinutes } : {}),
-      status: after.status,
-      message: scanMessage(qrToken.purpose)
+      kind: "success" as const,
+      result: {
+        success: true as const,
+        purpose: qrToken.purpose,
+        attendanceDate: toDateOnlyString(attendanceDate),
+        checkInAt: after.checkInAt?.toISOString(),
+        checkOutAt: after.checkOutAt?.toISOString(),
+        ...(typeof after.workingMinutes === "number" ? { workingMinutes: after.workingMinutes } : {}),
+        status: after.status,
+        message: scanMessage(qrToken.purpose)
+      }
     };
   });
+
+  if (outcome.kind === "expired") throw validationError("STAFF_QR_EXPIRED");
+  return outcome.result;
 }

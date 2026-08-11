@@ -1,10 +1,12 @@
-import { Prisma, type StaffLeaveApplicationStatus } from "@prisma/client";
+import { Prisma, type StaffLeaveApplicationStatus, type StaffType } from "@prisma/client";
 import { writeAuditLog } from "@/lib/audit/audit-log";
 import { db } from "@/lib/db";
 import { AppError, forbidden, getSafeErrorCode, notFound } from "@/lib/errors";
 import { requirePermission } from "@/lib/rbac/require-permission";
 import { hasPrincipalRole } from "@/lib/rbac/roles";
 import type { TenantContext } from "@/lib/tenant/context";
+import { listCalendarDateKeysForRange } from "@/modules/campus-core/calendar/calendar-policy";
+import { staffCalendarAudience } from "@/modules/campus-core/calendar/calendar-utils";
 import { queueNotificationOutboxItem } from "@/modules/notifications/services/notification-outbox.service";
 import {
   buildStaffLeaveStatusTemplatePayload,
@@ -81,11 +83,12 @@ async function requireSelfStaffProfile(ctx: TenantContext, permission: "staffboa
     select: {
       id: true,
       branchId: true,
+      staffType: true,
       userId: true,
       firstName: true,
       middleName: true,
       lastName: true,
-      branch: { select: { timezone: true, status: true } }
+      branch: { select: { timezone: true, status: true, institutionId: true } }
     }
   });
   if (!staff || staff.branch.status !== "ACTIVE") throw notFound("ACTIVE_STAFF_PROFILE_NOT_FOUND");
@@ -117,7 +120,7 @@ async function validateApplicationDates(
     endDate: Date;
     duration: "FULL_DAY" | "FIRST_HALF" | "SECOND_HALF";
   },
-  staff: { branchId: string; branch: { timezone: string } }
+  staff: { branchId: string; staffType: StaffType; branch: { timezone: string; institutionId: string } }
 ) {
   const [setting, leaveType] = await Promise.all([
     resolveLeaveSetting(client, ctx.tenantId, staff.branchId),
@@ -140,11 +143,20 @@ async function validateApplicationDates(
     throw validationError("STAFF_LEAVE_HALF_DAY_NOT_ALLOWED");
   }
 
+  const holidayDateKeys = await listCalendarDateKeysForRange(client, {
+    tenantId: ctx.tenantId,
+    institutionId: staff.branch.institutionId,
+    branchId: staff.branchId,
+    startDate: input.startDate,
+    endDate: input.endDate,
+    audience: staffCalendarAudience(staff.staffType)
+  });
   const totalDays = calculateStaffLeaveDays({
     startDate: input.startDate,
     endDate: input.endDate,
     duration: input.duration,
-    nonWorkingWeekdays: setting.nonWorkingWeekdays
+    nonWorkingWeekdays: setting.nonWorkingWeekdays,
+    excludedDateKeys: holidayDateKeys
   });
   if (totalDays <= 0) throw validationError("STAFF_LEAVE_NO_WORKING_DAYS");
   return { setting, leaveType, totalDays };
@@ -511,8 +523,28 @@ async function approveApplication(
     });
   }
 
-  const setting = await resolveLeaveSetting(tx, ctx.tenantId, application.branchId);
-  const leaveDates = enumerateLeaveDates(application.startDate, application.endDate, setting.nonWorkingWeekdays);
+  const [setting, staffScope] = await Promise.all([
+    resolveLeaveSetting(tx, ctx.tenantId, application.branchId),
+    tx.staffProfile.findFirst({
+      where: { id: application.staffId, tenantId: ctx.tenantId, branchId: application.branchId },
+      select: { staffType: true, branch: { select: { institutionId: true } } }
+    })
+  ]);
+  if (!staffScope) throw notFound("ACTIVE_STAFF_PROFILE_NOT_FOUND");
+  const holidayDateKeys = await listCalendarDateKeysForRange(tx, {
+    tenantId: ctx.tenantId,
+    institutionId: staffScope.branch.institutionId,
+    branchId: application.branchId,
+    startDate: application.startDate,
+    endDate: application.endDate,
+    audience: staffCalendarAudience(staffScope.staffType)
+  });
+  const leaveDates = enumerateLeaveDates(
+    application.startDate,
+    application.endDate,
+    setting.nonWorkingWeekdays,
+    holidayDateKeys
+  );
   const existingRows = await tx.staffAttendanceRecord.findMany({
     where: {
       tenantId: ctx.tenantId,

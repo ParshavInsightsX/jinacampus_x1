@@ -205,12 +205,13 @@ describe("StaffBoard Lite RBAC", () => {
   it("requires QR generate permission and does not accept attendance view/report as a substitute", async () => {
     mocks.requirePermission.mockRejectedValue(new Error("FORBIDDEN_PERMISSION:staffboard.attendance.qr.generate"));
 
-    await expect(generateStaffAttendanceQrToken(ctx, { purpose: "CHECK_IN" })).rejects.toThrow(
+    const operatorCtx = { ...ctx, roleCodes: ["OFFICE_STAFF"] };
+    await expect(generateStaffAttendanceQrToken(operatorCtx, { purpose: "CHECK_IN" })).rejects.toThrow(
       "FORBIDDEN_PERMISSION:staffboard.attendance.qr.generate"
     );
 
     expect(mocks.requirePermission).toHaveBeenCalledWith({
-      ctx,
+      ctx: operatorCtx,
       permission: "staffboard.attendance.qr.generate",
       branchId
     });

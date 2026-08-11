@@ -28,7 +28,7 @@ describe("Base MVP UI/UX modernization", () => {
     expect(globals).toContain("rounded-lg");
   });
 
-  it("modernizes the authenticated app shell without adding out-of-scope navigation", () => {
+  it("modernizes the authenticated app shell without adding unapproved navigation", () => {
     const shell = [
       source("src/app/layout.tsx"),
       source("src/app/(dashboard)/layout.tsx"),
@@ -58,7 +58,8 @@ describe("Base MVP UI/UX modernization", () => {
         "/icons/icon-1024x1024.png"
       ])
     );
-    expect(shell).not.toMatch(/FeeDesk|GradeBook|SchoolCast|payroll|biometric/i);
+    expect(shell).toContain("GradeBook");
+    expect(shell).not.toMatch(/FeeDesk|SchoolCast|payroll|biometric/i);
   });
 
   it("keeps auth screens premium, accessible, and password-safe", () => {

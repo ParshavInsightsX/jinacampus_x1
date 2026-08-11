@@ -1,5 +1,6 @@
 import {
   ACADEMIA_PERMISSIONS,
+  GRADEBOOK_PERMISSIONS,
   NOTIFICATION_PERMISSIONS,
   type PermissionCode
 } from "@/lib/rbac/permissions";
@@ -101,12 +102,14 @@ const principalPermissions = [
   "campuscore.institution.manage",
   "campuscore.branch.manage",
   "campuscore.academic_year.manage",
+  "campuscore.calendar.manage",
   ...userGovernancePermissions,
   "campuscore.role.view",
   "campuscore.settings.manage",
   "campuscore.audit.view",
   ...NOTIFICATION_PERMISSIONS,
   ...ACADEMIA_PERMISSIONS,
+  ...GRADEBOOK_PERMISSIONS,
   "staffboard.staff.view",
   "staffboard.staff.create",
   "staffboard.staff.update",
@@ -127,6 +130,9 @@ const teacherPermissions = [
   "academia.attendance.view",
   "academia.attendance.mark",
   "academia.attendance.report",
+  "gradebook.view",
+  "gradebook.marks.enter",
+  "gradebook.report",
   "staffboard.attendance.self_scan",
   "staffboard.attendance.self_view",
   "staffboard.leave.self_apply",

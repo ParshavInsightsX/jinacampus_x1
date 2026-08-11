@@ -11,6 +11,7 @@ import {
   studentAttendanceHistoryFilterSchema
 } from "@/modules/academia/schemas";
 import type { AttendanceClassSectionOption } from "./student-attendance.queries";
+import { findApplicableCalendarEntry } from "@/modules/campus-core/calendar/calendar-policy";
 
 type AttendanceReportScope = {
   branchId: string;
@@ -341,6 +342,14 @@ export async function listClassSectionsAttendanceStatusForDate(ctx: TenantContex
   if (!scope) return [];
 
   const attendanceDate = normalizeDateOnly(params.attendanceDate);
+  const holiday = await findApplicableCalendarEntry(db, {
+    tenantId: ctx.tenantId,
+    branchId: scope.branchId,
+    academicYearId: scope.academicYearId,
+    attendanceDate,
+    audience: "STUDENTS"
+  });
+  if (holiday) return [];
   const classSections = await db.classSection.findMany({
     where: {
       ...scope.classSectionFilter,

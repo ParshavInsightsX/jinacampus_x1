@@ -14,11 +14,13 @@ import type { TenantContext } from "@/lib/tenant/context";
 
 const mocks = vi.hoisted(() => {
   const tx = {
+    academicCalendarEntry: { findMany: vi.fn() },
     auditLog: { create: vi.fn() },
     branch: { findFirst: vi.fn() },
     passwordCredential: { create: vi.fn() },
     role: { findFirst: vi.fn() },
     session: { updateMany: vi.fn() },
+    staffAttendanceRecord: { createMany: vi.fn(), findMany: vi.fn(), updateMany: vi.fn() },
     staffProfile: {
       findFirst: vi.fn(),
       findMany: vi.fn(),
@@ -65,6 +67,7 @@ const ctx: TenantContext = {
 const branchId = "00000000-0000-0000-0000-000000000003";
 const otherBranchId = "00000000-0000-0000-0000-000000000004";
 const staffId = "00000000-0000-0000-0000-000000000005";
+const institutionId = "00000000-0000-0000-0000-000000000006";
 
 function staffProfile(overrides: Record<string, unknown> = {}) {
   return {
@@ -89,6 +92,10 @@ function staffProfile(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function calendarStaffProfile(profile = staffProfile()) {
+  return { ...profile, branch: { institutionId } };
+}
+
 function resetMocks() {
   for (const model of Object.values(mocks.tx)) {
     for (const method of Object.values(model)) {
@@ -103,6 +110,10 @@ function resetMocks() {
   mocks.hashPassword.mockResolvedValue("hashed-password");
   mocks.writeAuditLog.mockReset();
   mocks.writeAuditLog.mockResolvedValue({ id: "audit-id" });
+  mocks.tx.academicCalendarEntry.findMany.mockResolvedValue([]);
+  mocks.tx.staffAttendanceRecord.findMany.mockResolvedValue([]);
+  mocks.tx.staffAttendanceRecord.updateMany.mockResolvedValue({ count: 0 });
+  mocks.tx.staffAttendanceRecord.createMany.mockResolvedValue({ count: 0 });
   mocks.tx.branch.findFirst.mockResolvedValue({ id: branchId });
 }
 
@@ -124,7 +135,9 @@ describe("StaffBoard Lite staff profile services and queries", () => {
 
   it("createStaffProfile uses tenant and actor context from the server", async () => {
     const created = staffProfile();
-    mocks.tx.staffProfile.findFirst.mockResolvedValue(null);
+    mocks.tx.staffProfile.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(calendarStaffProfile(created));
     mocks.tx.staffProfile.create.mockResolvedValue(created);
 
     await expect(createStaffProfile(ctx, {
@@ -154,8 +167,11 @@ describe("StaffBoard Lite staff profile services and queries", () => {
   });
 
   it("createStaffProfile verifies branch access and requires create permission", async () => {
-    mocks.tx.staffProfile.findFirst.mockResolvedValue(null);
-    mocks.tx.staffProfile.create.mockResolvedValue(staffProfile());
+    const created = staffProfile();
+    mocks.tx.staffProfile.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(calendarStaffProfile(created));
+    mocks.tx.staffProfile.create.mockResolvedValue(created);
 
     await createStaffProfile(ctx, {
       branchId,
@@ -177,7 +193,9 @@ describe("StaffBoard Lite staff profile services and queries", () => {
 
   it("createStaffProfile can create linked login access with hashed password, branch access, and tenant role", async () => {
     const created = staffProfile({ userId: "00000000-0000-0000-0000-000000000099" });
-    mocks.tx.staffProfile.findFirst.mockResolvedValue(null);
+    mocks.tx.staffProfile.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(calendarStaffProfile(created));
     mocks.tx.user.findUnique.mockResolvedValue(null);
     mocks.tx.role.findFirst.mockResolvedValue({ id: "00000000-0000-0000-0000-000000000088", code: "STAFF", name: "Staff" });
     mocks.tx.user.create.mockResolvedValue({
@@ -346,7 +364,9 @@ describe("StaffBoard Lite staff profile services and queries", () => {
   it("deactivateStaffProfile soft-deactivates and does not hard delete", async () => {
     const before = staffProfile({ employmentStatus: "ACTIVE" });
     const after = staffProfile({ employmentStatus: "INACTIVE" });
-    mocks.tx.staffProfile.findFirst.mockResolvedValue(before);
+    mocks.tx.staffProfile.findFirst
+      .mockResolvedValueOnce(before)
+      .mockResolvedValueOnce(calendarStaffProfile(after));
     mocks.tx.staffProfile.update.mockResolvedValue(after);
 
     await expect(deactivateStaffProfile(ctx, staffId)).resolves.toBe(after);
@@ -366,7 +386,9 @@ describe("StaffBoard Lite staff profile services and queries", () => {
   it("deactivation writes an audit log", async () => {
     const before = staffProfile({ employmentStatus: "ACTIVE" });
     const after = staffProfile({ employmentStatus: "INACTIVE" });
-    mocks.tx.staffProfile.findFirst.mockResolvedValue(before);
+    mocks.tx.staffProfile.findFirst
+      .mockResolvedValueOnce(before)
+      .mockResolvedValueOnce(calendarStaffProfile(after));
     mocks.tx.staffProfile.update.mockResolvedValue(after);
 
     await deactivateStaffProfile(ctx, staffId);
@@ -395,7 +417,9 @@ describe("StaffBoard Lite staff profile services and queries", () => {
       }
     });
     const after = staffProfile({ userId });
-    mocks.tx.staffProfile.findFirst.mockResolvedValue(before);
+    mocks.tx.staffProfile.findFirst
+      .mockResolvedValueOnce(before)
+      .mockResolvedValueOnce(calendarStaffProfile(after));
     mocks.tx.user.update.mockResolvedValue({
       id: userId,
       tenantId: ctx.tenantId,
@@ -480,7 +504,9 @@ describe("StaffBoard Lite staff profile services and queries", () => {
       user: linkedUser
     });
     const after = staffProfile({ userId, employmentStatus: "INACTIVE" });
-    mocks.tx.staffProfile.findFirst.mockResolvedValue(before);
+    mocks.tx.staffProfile.findFirst
+      .mockResolvedValueOnce(before)
+      .mockResolvedValueOnce(calendarStaffProfile(after));
     mocks.tx.staffProfile.update.mockResolvedValue(after);
     mocks.tx.user.update.mockResolvedValue({
       ...linkedUser,

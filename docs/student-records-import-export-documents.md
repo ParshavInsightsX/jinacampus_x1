@@ -19,20 +19,35 @@ Workflow:
 2. Download the Excel or CSV template.
 3. Complete up to 5,000 student rows.
 4. Upload and preview the file.
-5. Correct every row/field issue.
-6. Confirm the validated import.
+5. Review row/field issues.
+6. Confirm the import for the valid rows; correct and re-upload skipped rows later.
 
-The Excel template includes Instructions and Reference Data worksheets. Class assignments use the active class-section display name, not database IDs. Tenant, branch, user, and academic-year context are resolved server-side.
+The simple template contains only these mandatory columns:
+
+1. Scholar Number
+2. Student Name
+3. Date of Birth
+4. Current Class
+5. Contact Number
+6. Father's Name
+7. Mother's Name
+
+The Excel template also includes Instructions and Reference Data worksheets. Common headings such as `Scholar No`, `Admission Number`, `DOB`, `Class`, `Mobile Number`, `Father Name`, and `Mother Name` are recognized automatically. Class assignments use an active class-section name, never a database ID. A class-only value is accepted when it has exactly one active section; otherwise the row must use an exact class-section name or add an optional `Section` column.
+
+Tenant, branch, user, and active academic-year context are resolved server-side. They are not spreadsheet fields and are never trusted from the client.
 
 Import behavior:
 
 - A file is limited to 4 MB and 5,000 populated student rows.
-- Required headers and values are validated before writes.
-- Admission-number, roll-number, class capacity, guardian-contact, active branch, and active class-section conflicts are checked.
-- Imports are all-or-nothing and use batched inserts inside one database transaction.
+- The seven mandatory headers and values are validated before writes.
+- Optional legacy/profile columns remain accepted for schools that already have the information.
+- Blank optional cells and common placeholders such as `N/A`, `NaN`, and `null` are interpreted as unavailable values and persisted as null-compatible fields; users do not need to enter placeholders.
+- Scholar-number duplicates, date of birth, contact format, roll number, class capacity, guardian-contact consistency, active branch, and active class-section conflicts are checked.
+- File/header errors block the operation. Row errors are reported separately, and only validated rows are inserted in one database transaction.
 - Student, guardian link, optional enrollment, and import summary audit events are recorded.
 - Full Aadhaar and bank-account numbers are converted to masked values and last four digits before persistence.
 - Spreadsheet error responses contain row, field, and safe message only; they do not echo sensitive cell values.
+- Minimal imported records are shown as **Profile Incomplete** / **Additional information required** until the remaining admission profile is completed. Readiness is computed from the stored profile, so it changes to Complete without maintaining a second lifecycle status.
 
 Export behavior:
 
@@ -117,9 +132,12 @@ The private bucket and server-only Storage variables were configured for Vercel 
 ## QA Checklist
 
 - Download Excel and CSV templates for an allowed branch.
-- Preview a valid file and verify row counts.
+- Download the seven-column Excel and CSV templates and verify the sample row and active class references.
+- Preview a valid minimal file and verify row counts and flexible header aliases.
+- Verify blank optional cells and `N/A` markers are accepted as unavailable values.
 - Verify malformed dates, Aadhaar, category, missing headers, duplicate admission numbers, duplicate roll numbers, and unavailable class sections are rejected.
-- Import a multi-row file and verify Student, Guardian, link, Enrollment, and audit rows.
+- Import a mixed valid/invalid file and verify only valid rows create Student, Guardian, link, Enrollment, and audit rows.
+- Verify minimally imported students show Profile Incomplete and can be completed through the existing profile/admission workflow.
 - Verify a second tenant or unauthorized branch cannot preview, import, export, upload, open, or delete files.
 - Verify exported Aadhaar and bank fields remain masked.
 - Upload valid PDF/JPEG/PNG/WebP files and reject extension-spoofed files.
@@ -127,9 +145,11 @@ The private bucket and server-only Storage variables were configured for Vercel 
 - Verify the bucket is private and signed links expire.
 - Verify deleted files disappear from the profile and are removed from storage.
 
-## DB-Backed Browser QA - 2026-08-06
+## Historical DB-Backed Browser QA - 2026-08-06
 
 Status: Passed
+
+This pass verified the earlier strict all-or-nothing importer and the unchanged tenant, export, and document-storage boundaries. The seven-field and partial-row workflow added later is covered by focused source tests and requires a short DB-backed mixed-row browser smoke before the next production release.
 
 The release-equivalent production build was exercised with disposable two-tenant fixtures and a same-tenant unauthorized branch. The authenticated browser was used for the bulk-import workflow and rendered student profile. Exact authenticated HTTP requests from the same session covered route-level negative boundaries without exposing the session value.
 
@@ -137,7 +157,7 @@ The release-equivalent production build was exercised with disposable two-tenant
 |---|---|---|
 | Accessible branch selection | Pass | The Principal saw only the authorized branch in the bulk-record screen. |
 | Valid CSV import | Pass | Two rows previewed and committed; Student, Guardian, link, and Enrollment rows were created. |
-| Invalid mixed import | Pass | Invalid Aadhaar/category input disabled commit; a direct commit attempt returned 422 and persisted no rows. |
+| Invalid mixed import (historical behavior) | Pass | Under the previous contract, invalid Aadhaar/category input disabled commit and persisted no rows. Current behavior deliberately imports valid rows and reports invalid rows separately. |
 | Class-section resolution | Pass | `Grade 1-A` resolved once after duplicate aliases generated for the same class-section were deduplicated. |
 | Branch and tenant isolation | Pass | Same-tenant unauthorized-branch and cross-tenant preview, commit, export, upload, open, and delete requests returned safe 403/404 responses. |
 | CSV export | Pass | UTF-8 BOM present; authorized rows only; formula-like cells escaped; Aadhaar and bank account masked. |
@@ -160,6 +180,8 @@ No persistent QA account, tenant, student, document object, or browser session i
 ## Known Limits
 
 - Imports are intentionally insert-only. Existing students are reported as conflicts rather than overwritten.
+- A class-only value is intentionally rejected as ambiguous when more than one active section exists for that class.
+- The new seven-field/partial-row contract still needs a DB-backed mixed-row browser smoke after these source-level changes.
 - Files above the configured standard-upload limit require a future direct/resumable-upload flow.
 - Automated malware scanning and document OCR are not included. Files are limited to authenticated administrators, approved signatures, private storage, and short-lived access; add an approved scanning service before accepting documents from untrusted public users.
 - Background import jobs are not required at the current 5,000-row limit because inserts are batched in one bounded server request. Reassess if pilot files or Vercel execution limits exceed this envelope.

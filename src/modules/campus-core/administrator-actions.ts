@@ -46,6 +46,11 @@ function checked(formData: FormData, key: string) {
   return formData.get(key) === "on";
 }
 
+function optionalChecked(formData: FormData, key: string) {
+  if (!formData.has(key)) return undefined;
+  return formData.getAll(key).includes("on");
+}
+
 function passwordValue(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" ? value : "";
@@ -110,7 +115,8 @@ export async function updateSchoolAction(
       legalName: nullableS(formData, "legalName"),
       supportEmail: nullableS(formData, "supportEmail"),
       status: s(formData, "status"),
-      institutionDisplayName: nullableS(formData, "institutionDisplayName")
+      institutionDisplayName: nullableS(formData, "institutionDisplayName"),
+      gradebookEnabled: optionalChecked(formData, "gradebookEnabled")
     });
     await updateSchool(await getPlatformAdministratorContext(), input);
     revalidateAdministratorSchoolRoutes(input.tenantId);

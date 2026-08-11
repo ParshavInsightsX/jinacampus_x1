@@ -10,6 +10,7 @@ import {
 import { academiaListPageConfigs } from "@/modules/academia/ui-config";
 import {
   PageHeader,
+  ProfileReadinessPill,
   StatusPill,
   TableActionLink,
   TableShell,
@@ -196,6 +197,7 @@ export default async function StudentsPage({ searchParams }: { searchParams?: Ro
               <td className="whitespace-nowrap px-4 py-3">{student.currentClassSection}</td>
               <td className="whitespace-nowrap px-4 py-3">{student.guardianContact ?? "-"}</td>
               <td className="whitespace-nowrap px-4 py-3">{student.category ?? "-"}</td>
+              <td className="whitespace-nowrap px-4 py-3"><ProfileReadinessPill value={student.profileStatus} /></td>
               <td className="whitespace-nowrap px-4 py-3"><StatusPill value={student.status} /></td>
               <td className="whitespace-nowrap px-4 py-3">
                 <div className="flex flex-wrap gap-2">

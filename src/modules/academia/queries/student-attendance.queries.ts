@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { getEffectivePermissions, requirePermission } from "@/lib/rbac/require-permission";
 import type { TenantContext } from "@/lib/tenant/context";
 import { activeEnrolledStudentsForAttendanceSchema } from "@/modules/academia/schemas";
+import { findApplicableCalendarEntry } from "@/modules/campus-core/calendar/calendar-policy";
 
 export type ActiveEnrolledStudentForAttendance = {
   enrollmentId: string;
@@ -43,6 +44,7 @@ export type StudentAttendanceMarkingState = {
   existingRecordCount: number;
   lockedCount: number;
   isLocked: boolean;
+  calendarEntry: { id: string; name: string; entryType: "HOLIDAY" | "NON_WORKING_DAY" } | null;
 };
 
 function parseInput(input: unknown) {
@@ -221,8 +223,17 @@ export async function getStudentAttendanceMarkingState(
   });
   const branchId = ctx.activeBranchId ?? undefined;
   const academicYearId = ctx.activeAcademicYearId ?? undefined;
+  const calendarEntry = branchId && academicYearId
+    ? await findApplicableCalendarEntry(db, {
+      tenantId: ctx.tenantId,
+      branchId,
+      academicYearId,
+      attendanceDate,
+      audience: "STUDENTS"
+    })
+    : null;
 
-  if (!branchId || !academicYearId || students.length === 0) {
+  if (!branchId || !academicYearId || students.length === 0 || calendarEntry) {
     return {
       classSectionId: params.classSectionId,
       attendanceDate: toDateOnlyString(attendanceDate),
@@ -230,7 +241,8 @@ export async function getStudentAttendanceMarkingState(
       students: [],
       existingRecordCount: 0,
       lockedCount: 0,
-      isLocked: false
+      isLocked: false,
+      calendarEntry: calendarEntry ? { id: calendarEntry.id, name: calendarEntry.name, entryType: calendarEntry.entryType } : null
     };
   }
 
@@ -272,7 +284,8 @@ export async function getStudentAttendanceMarkingState(
     }),
     existingRecordCount: records.length,
     lockedCount,
-    isLocked: lockedCount > 0
+    isLocked: lockedCount > 0,
+    calendarEntry: null
   };
 }
 

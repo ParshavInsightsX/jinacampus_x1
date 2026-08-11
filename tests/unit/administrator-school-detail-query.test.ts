@@ -36,7 +36,10 @@ const dependencyCounts = {
   staffAttendanceRecords: 7,
   auditLogs: 8,
   notificationOutboxItems: 9,
-  roles: 10
+  roles: 10,
+  classSectionSubjects: 11,
+  gradebookAssessments: 12,
+  gradebookMarks: 13
 };
 
 const administratorContext: PlatformAdministratorContext = {
@@ -87,7 +90,10 @@ describe("administrator school detail query", () => {
             staffAttendanceRecords: true,
             auditLogs: true,
             notificationOutboxItems: true,
-            roles: true
+            roles: true,
+            classSectionSubjects: true,
+            gradebookAssessments: true,
+            gradebookMarks: true
           }
         }
       })

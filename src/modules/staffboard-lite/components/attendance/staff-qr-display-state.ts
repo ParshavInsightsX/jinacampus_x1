@@ -4,6 +4,7 @@ export const STAFF_QR_PURPOSE_OPTIONS = [
 ] as const;
 
 export type StaffQrPurposeOption = (typeof STAFF_QR_PURPOSE_OPTIONS)[number]["value"];
+export type StaffQrDisplayStatus = "ACTIVE" | "DEACTIVATED" | "EXPIRED";
 
 export function getSecondsRemaining(validUntil: string, now = new Date()) {
   const expiresAt = new Date(validUntil).getTime();
@@ -17,9 +18,31 @@ export function isQrExpired(validUntil: string, now = new Date()) {
 
 export function formatCountdown(totalSeconds: number) {
   const safeSeconds = Math.max(0, Math.floor(totalSeconds));
-  const minutes = Math.floor(safeSeconds / 60);
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
   const seconds = safeSeconds % 60;
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  return [hours, minutes, seconds].map((value) => String(value).padStart(2, "0")).join(":");
+}
+
+export function getQrDisplayStatus(
+  storedStatus: StaffQrDisplayStatus,
+  validUntil: string,
+  now = new Date()
+): StaffQrDisplayStatus {
+  if (storedStatus !== "ACTIVE") return storedStatus;
+  return isQrExpired(validUntil, now) ? "EXPIRED" : "ACTIVE";
+}
+
+export function formatQrStatus(status: StaffQrDisplayStatus) {
+  if (status === "ACTIVE") return "Active";
+  if (status === "DEACTIVATED") return "Deactivated";
+  return "Expired";
+}
+
+export function formatValidityDuration(seconds: number) {
+  if (seconds === 18_000) return "5 hours";
+  const hours = seconds / 3600;
+  return Number.isInteger(hours) ? `${hours} hours` : `${seconds} seconds`;
 }
 
 export function formatPurpose(value: StaffQrPurposeOption) {

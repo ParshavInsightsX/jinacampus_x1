@@ -30,6 +30,9 @@ type SchoolFormRecord = {
   status: SchoolStatus;
   legalName: string | null;
   supportEmail: string | null;
+  tenantSettings: {
+    gradebookEnabled: boolean;
+  } | null;
   institutions: Array<{
     id: string;
     name: string;
@@ -176,6 +179,24 @@ export function SchoolEditForm({ school }: { school: SchoolFormRecord }) {
           <input id="edit-institution-display-name" name="institutionDisplayName" defaultValue={institution?.displayName ?? ""} className={inputClassName} />
         </FormField>
       </div>
+      <section className="rounded-lg border border-campus-border bg-surface-muted p-4" aria-labelledby="school-module-access-title">
+        <h3 id="school-module-access-title" className="text-sm font-semibold text-ink">Pilot module access</h3>
+        <input type="hidden" name="gradebookEnabled" value="off" />
+        <label className="mt-3 flex min-h-11 items-start gap-3 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            name="gradebookEnabled"
+            defaultChecked={school.tenantSettings?.gradebookEnabled ?? false}
+            className="mt-1 size-5 rounded border-slate-300 text-brand-600 focus:ring-brand-200"
+          />
+          <span>
+            <span className="block font-semibold text-ink">Enable GradeBook</span>
+            <span className="mt-1 block leading-5 text-slate-500">
+              Exposes the GradeBook workspace only to school users who also hold its server-side permissions.
+            </span>
+          </span>
+        </label>
+      </section>
       <FieldErrorMessage id="school-edit-form-error" message={fieldError(state, "form")} />
       <FormActions pending={pending} label="Save School" pendingLabel="Saving..." backHref={`/administrator/schools/${school.id}`} />
     </form>

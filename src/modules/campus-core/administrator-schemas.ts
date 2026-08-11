@@ -93,7 +93,8 @@ export const updateSchoolSchema = z.object({
   ),
   status: z.enum(["ACTIVE", "SUSPENDED", "ARCHIVED"]).optional(),
   institutionDisplayName: optionalNullableText,
-  institutionLogoUrl: optionalLogoUrl
+  institutionLogoUrl: optionalLogoUrl,
+  gradebookEnabled: z.boolean().optional()
 }).refine(({ tenantId: _tenantId, ...value }) => Object.values(value).some((field) => field !== undefined), {
   message: "At least one school field is required."
 });

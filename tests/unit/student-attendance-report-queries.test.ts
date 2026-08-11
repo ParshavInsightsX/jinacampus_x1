@@ -11,6 +11,7 @@ import {
 
 const mocks = vi.hoisted(() => {
   const db = {
+    academicCalendarEntry: { findFirst: vi.fn() },
     classSection: { findFirst: vi.fn(), findMany: vi.fn() },
     enrollment: { findMany: vi.fn() },
     studentAttendanceRecord: { findMany: vi.fn() }
@@ -64,6 +65,8 @@ function attendanceRecord(overrides: Record<string, unknown> = {}) {
 }
 
 beforeEach(() => {
+  mocks.db.academicCalendarEntry.findFirst.mockReset();
+  mocks.db.academicCalendarEntry.findFirst.mockResolvedValue(null);
   mocks.db.classSection.findFirst.mockReset();
   mocks.db.classSection.findMany.mockReset();
   mocks.db.enrollment.findMany.mockReset();

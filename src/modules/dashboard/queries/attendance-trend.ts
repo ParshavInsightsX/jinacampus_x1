@@ -17,6 +17,8 @@ type AttendanceStatusGroup = {
   _count: { _all: number };
 };
 
+const NON_WORKING_ATTENDANCE_STATUSES = new Set(["NOT_MARKED", "HOLIDAY", "WEEK_OFF"]);
+
 function dateOnlyString(date: Date) {
   return date.toISOString().slice(0, 10);
 }
@@ -58,7 +60,7 @@ export function buildAttendanceTrendPoints(
     const late = statusCounts.get("LATE") ?? 0;
     const halfDay = statusCounts.get("HALF_DAY") ?? 0;
     const recorded = Array.from(statusCounts.entries()).reduce(
-      (total, [status, count]) => status === "NOT_MARKED" ? total : total + count,
+      (total, [status, count]) => NON_WORKING_ATTENDANCE_STATUSES.has(status) ? total : total + count,
       0
     );
     const onSite = present + late + halfDay;

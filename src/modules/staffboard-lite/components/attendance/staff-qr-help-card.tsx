@@ -12,7 +12,7 @@ export function StaffQrHelpCard() {
         </div>
         <ol className="mt-4 space-y-3 text-sm leading-6 text-slate-600">
           <li>1. Select check-in or check-out for the branch.</li>
-          <li>2. Generate a short-lived QR code for display at the gate or office.</li>
+          <li>2. Generate a five-hour QR code for display at the gate or office.</li>
           <li>3. Staff use the Scan QR page to validate the token and record attendance.</li>
         </ol>
       </section>
@@ -26,6 +26,7 @@ export function StaffQrHelpCard() {
         </div>
         <ul className="mt-4 space-y-2 text-sm leading-6 text-amber-900">
           <li>QR codes are time-bound and branch-scoped.</li>
+          <li>Regeneration deactivates the previous code for the same purpose.</li>
           <li>Do not share outside the school premises.</li>
           <li>Raw tokens are only rendered in the QR and are not stored.</li>
         </ul>

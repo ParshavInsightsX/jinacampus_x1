@@ -496,10 +496,12 @@ Implement QR token generation.
 Acceptance criteria:
 
 - Requires `staffboard.attendance.qr.generate`.
+- Requires a Principal or permissioned Office Staff QR Operator role on the server.
 - Token is random and secure.
 - Token hash is stored.
 - Raw token is returned only once for QR rendering.
 - Token has `validFrom` and `validUntil`.
+- Token uses the fixed five-hour validity window.
 - Token is tenant and branch scoped.
 
 ### 5.2 QR Display UI
@@ -516,6 +518,7 @@ Acceptance criteria:
 
 - Expired QR is not shown as active.
 - UI makes scan purpose clear.
+- UI shows generated time, expiry time, status, remaining validity, and an explicit deactivate action.
 
 ### 5.3 QR Scan Service
 Implement scan validation.
@@ -1178,7 +1181,9 @@ Implementation:
 
 - [x] Branch-scoped Excel and Google Sheets-compatible CSV templates.
 - [x] Server-side spreadsheet parsing with row/field preview errors.
-- [x] Atomic, batched imports for up to 5,000 student rows.
+- [x] Atomic, batched persistence for up to 5,000 validated student rows while reporting invalid rows separately.
+- [x] Seven-field minimum import template with flexible common school header aliases.
+- [x] Blank optional cells normalize to null-compatible values and incomplete profiles remain visible for later completion.
 - [x] Duplicate admission, roll-number, class-capacity, and guardian-contact checks.
 - [x] Mask Aadhaar and bank-account values before persistence and export.
 - [x] Branch-scoped audited Excel/CSV exports with formula-injection protection.
@@ -1194,7 +1199,7 @@ Implementation:
 Acceptance criteria:
 
 - Client input cannot select tenant, actor, or database branch IDs inside spreadsheet rows.
-- Invalid files and any invalid row prevent the complete import.
+- Invalid file/header errors block the import; row-level errors skip only affected rows and do not prevent validated rows from importing.
 - No full Aadhaar, bank account, storage path, checksum, or private key appears in exports or normal UI.
 - Student documents remain private and require branch-scoped `academia.student.update` access.
 - Existing single-student registration behavior remains available.
@@ -1258,6 +1263,145 @@ Acceptance criteria:
 - Staff can access only their own applications and private documents; reviewers remain branch-scoped.
 - WhatsApp delivery is never implied unless consent, settings, an approved template, and outbox processing are configured.
 - Payroll, salary calculation, email invitation, native mobile leave, and broad HR automation remain out of scope.
+
+## Phase 10.13 - Academic and Institutional Calendar
+
+Goal: configure audited school holidays and non-working days while keeping student and staff attendance calculations accurate.
+
+Implementation:
+
+- [x] Tenant-, institution-, branch-, and academic-year-scoped calendar entries with date ranges and explicit audiences.
+- [x] Principal calendar-governance permission with Teacher and Staff denial by default.
+- [x] Responsive calendar create, edit, soft-cancel, history, and all-branch access controls.
+- [x] Overlap, academic-year boundary, existing student attendance, staff leave, and real staff attendance conflict protection.
+- [x] Student attendance marking/correction blocking and classes-not-marked dashboard/report exclusion on holidays.
+- [x] Paid `HOLIDAY` staff attendance synchronization for teaching and non-teaching audiences.
+- [x] QR, manual correction, and leave approval safeguards for calendar-managed staff records.
+- [x] Holiday exclusion from staff leave working-day calculations.
+- [x] Staff-profile reconciliation when eligible staff are created or their operational scope changes.
+- [x] Calendar create, update, and cancellation audit events with safe metadata.
+- [x] Additive Prisma migration, hosted-database RLS enablement, focused tests, and operator documentation.
+- [x] Apply the additive calendar migration to the approved deployment database.
+- [x] Run DB-backed Principal create/update/cancel, Teacher/Staff denial, student attendance, staff QR, leave, dashboard, and report browser QA.
+
+Acceptance criteria:
+
+- Client input cannot select tenant, actor, staff identity, attendance status, or audit authority.
+- Institution-wide entries require access to every active institution branch; branch entries remain branch-scoped.
+- Student holidays create no attendance rows and do not reduce attendance percentages or create false not-marked results.
+- Applicable staff receive one paid holiday record per date without overwriting real attendance or approved leave.
+- Calendar changes retain history through soft cancellation and write tenant-safe audit logs.
+- Payroll remains out of scope; future salary calculations must treat `HOLIDAY` as paid non-working time.
+
+## Phase 10.14 - QR Attendance Operator Console and PWA Installation
+
+Goal: harden attendance QR operations and provide a supported mobile-web installation path without adding offline attendance behavior.
+
+Implementation:
+
+- [x] Dedicated QR Attendance Console at `/staffboard/attendance/qr` using existing StaffBoard attendance services.
+- [x] Combined server-side role and permission boundary for Principal and Office Staff QR Operator access.
+- [x] Fixed five-hour validity with client validity overrides rejected.
+- [x] Explicit active, deactivated, and expired lifecycle state with one active token per branch and purpose.
+- [x] Atomic regeneration revocation, manual deactivation, lazy expiry reconciliation, and authoritative expiry rejection.
+- [x] Audit events for generation, regeneration, deactivation, expiry reconciliation, and successful QR use.
+- [x] Current status, generated time, expiry time, validity duration, and remaining countdown in the console.
+- [x] Authenticated mobile navigation install control using the browser prompt when available.
+- [x] Safari-specific Add to Home Screen guidance and safe fallback guidance for other browsers.
+- [x] Existing manifest, icons, HTTPS camera policy, responsive navigation, and secure login preserved.
+- [x] Focused QR lifecycle, RBAC, action, UI, schema, and PWA source tests.
+
+Acceptance criteria:
+
+- Teacher, Staff, and other non-operator school roles cannot generate or deactivate QR codes even if UI visibility is bypassed.
+- A regenerated or manually deactivated token is rejected by the scan service.
+- Expiry never depends on the browser countdown; `validUntil` is enforced server-side.
+- No raw QR token or token hash is stored in lifecycle fields or written to audit metadata.
+- PWA installation is progressive: unsupported prompts show truthful browser-specific guidance rather than a false success state.
+- Installed PWA attendance remains online-only and requires the same authenticated server checks as browser use.
+- Additive migration and physical-device HTTPS install/camera QA must pass before release deployment.
+
+## Phase 10.15 - Class-wise Student Promotion
+
+Goal: record reviewed student outcomes and create next-year enrollments without overwriting academic history.
+
+Implementation:
+
+- [x] Dedicated `academia.promotion.manage` permission granted to Principal and legacy school-governance aliases by default.
+- [x] Class-wise source roster with individual and bulk student selection.
+- [x] Promoted, Not Promoted, Repeat Same Class, Transferred, School Left, Result Pending, and Promotion Withheld outcomes.
+- [x] Explicit current/target academic years, source/target class-sections, effective date, remarks, and result-publication attestation.
+- [x] Review and confirmation summary before any mutation.
+- [x] One transaction for batch ledger, selected and excluded decisions, target enrollments, source lifecycle updates, and audit logging.
+- [x] Existing target-year enrollment, duplicate decision, class capacity, year order, and repeat-class validation.
+- [x] Soft full-batch reversal that cancels target enrollments and restores prior lifecycle state when no later attendance or manual changes exist.
+- [x] Responsive promotion workspace, recent batch history, and permission-aware navigation.
+- [x] Focused schema, tenant boundary, transaction, audit, reversal, and UI/navigation tests.
+- [ ] Apply the additive student-promotion migration to the approved deployment database.
+- [ ] Run DB-backed Principal promotion/reversal and Teacher/Staff denial browser QA.
+
+Acceptance criteria:
+
+- Client input cannot select tenant, branch, actor, role, source enrollment status, or target enrollment status.
+- Only active source-class enrollments are eligible and every omitted roster student is recorded as excluded.
+- Promoted and repeating students receive one active target-year enrollment; transferred and school-left students do not.
+- Source enrollments, attendance, future result/fee history, and class history are never deleted or moved between academic years.
+- Reversal never deletes history and is blocked after target attendance or later lifecycle changes.
+- Result publication is an explicit audited attestation until the approved GradeBook module provides a machine-verifiable result state.
+- New admissions and imports remain separate from promotion.
+
+## Phase 11 - GradeBook MVP
+
+Goal: introduce a tenant-safe assessment and marks ledger without duplicating Academia data or disrupting existing school workflows.
+
+### 11.1 Controlled Foundation
+
+- [x] Define GradeBook ownership and CampusCore/Academia integration boundaries.
+- [x] Add additive class-subject, assessment, and marks models with tenant, branch, and academic-year scoping.
+- [x] Add a disabled-by-default `TenantSettings.gradebookEnabled` rollout flag.
+- [x] Restrict feature enablement to the separate Administrator Portal and include the flag in platform audit history.
+- [x] Add GradeBook permissions and Principal/Teacher defaults without granting Office Staff or Staff access.
+- [x] Add strict Zod schemas that reject client-owned scope and duplicate enrollment results.
+- [x] Add transactional services for assignment, assessment creation, marks entry, publication, reopen, and cancellation.
+- [x] Add assigned-class/subject Teacher restrictions and safe not-found behavior.
+- [x] Add responsive GradeBook workspace, roster marks editor, lifecycle controls, and published summaries.
+- [x] Add permission- and feature-aware desktop/mobile navigation.
+- [x] Extend permanent school deletion ordering for GradeBook records.
+- [x] Add focused schema, RBAC, tenant-boundary, publication, audit, navigation, and migration tests.
+
+### 11.2 Release Gates
+
+- [x] Apply `20260810213000_add_gradebook_foundation` to an approved non-production database with `prisma migrate deploy`.
+- [ ] Run DB-backed Principal class-subject, assessment, marks, publish, reopen, cancel, and report browser QA.
+- [x] Run Teacher assigned-class/subject access and unassigned-class denial QA.
+- [ ] Run Office Staff, Staff, cross-branch, and cross-tenant denial QA.
+- [ ] Verify existing CampusCore, Academia, student promotion, student attendance, StaffBoard, leave, calendar, and QR smoke flows.
+- [x] Enable GradeBook only for the approved pilot tenant through the Administrator Portal.
+- [x] Deploy through the approved release process and complete post-deployment smoke/observability review.
+- [ ] Stabilize the pilot and approve GradeBook for broad tenant enablement.
+
+### 11.3 Deferred GradeBook Scope
+
+- Grading-scale and weighted-term configuration.
+- Exam timetable and hall-ticket workflows.
+- Report-card PDF generation, transcripts, and board-specific templates.
+- Parent/student result portals and notification delivery.
+- Subject teacher workload/timetable automation.
+- GradeBook-driven promotion eligibility policy until final-result configuration is approved.
+
+### 11.4 SchoolCast Gate
+
+- [ ] Do not begin complete SchoolCast MVP implementation until every GradeBook release gate above is complete and the deployed pilot is stable.
+- [ ] After GradeBook stabilization, begin SchoolCast discovery with its own PRD, ownership boundaries, consent/delivery policy, feature flag, migrations, and rollout gates.
+
+Acceptance criteria:
+
+- Existing tenants see no GradeBook UI or behavior until explicitly enabled.
+- Existing production data and workflows remain unchanged by the additive migration.
+- School users cannot self-enable the module or bypass GradeBook permissions.
+- Teachers never gain broad class access through navigation alone.
+- Published result history remains traceable and cannot be silently overwritten.
+- Rollback disables the flag and reverts application code while retaining additive GradeBook tables until a separately approved data-retention decision.
 
 ## Final Delivery Checklist
 

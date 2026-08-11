@@ -8,6 +8,7 @@ import type { TenantContext } from "@/lib/tenant/context";
 
 const mocks = vi.hoisted(() => {
   const tx = {
+    academicCalendarEntry: { findFirst: vi.fn() },
     auditLog: { create: vi.fn() },
     attendanceSetting: { findFirst: vi.fn() },
     staffAttendanceQrToken: { create: vi.fn(), findFirst: vi.fn(), update: vi.fn() },
@@ -36,6 +37,7 @@ const secondStaffId = "00000000-0000-0000-0000-000000000024";
 const qrTokenId = "00000000-0000-0000-0000-000000000005";
 const attendanceRecordId = "00000000-0000-0000-0000-000000000006";
 const academicYearId = "00000000-0000-0000-0000-000000000007";
+const institutionId = "00000000-0000-0000-0000-000000000008";
 const rawToken = "raw-staff-qr-token-12345";
 const attendanceDate = new Date(Date.UTC(2026, 4, 5));
 
@@ -54,7 +56,8 @@ function staffProfile(overrides: Record<string, unknown> = {}) {
     id: staffId,
     tenantId,
     branchId,
-    branch: { id: branchId, timezone: "Asia/Kolkata", status: "ACTIVE" },
+    staffType: "ADMIN",
+    branch: { id: branchId, institutionId, timezone: "Asia/Kolkata", status: "ACTIVE" },
     ...overrides
   };
 }
@@ -65,6 +68,7 @@ function qrToken(overrides: Record<string, unknown> = {}) {
     tenantId,
     branchId,
     purpose: "CHECK_IN",
+    status: "ACTIVE",
     validFrom: new Date("2026-05-05T00:00:00.000Z"),
     validUntil: new Date("2026-05-05T18:00:00.000Z"),
     ...overrides
@@ -89,6 +93,8 @@ function existingRecord(overrides: Record<string, unknown> = {}) {
     checkOutQrTokenId: null,
     markedById: userId,
     updatedById: null,
+    leaveApplicationId: null,
+    calendarEntryId: null,
     correctionReason: null,
     createdAt: new Date("2026-05-05T02:30:00.000Z"),
     updatedAt: new Date("2026-05-05T02:30:00.000Z"),
@@ -109,6 +115,7 @@ function resetMocks() {
   mocks.writeAuditLog.mockReset();
   mocks.writeAuditLog.mockResolvedValue({ id: "audit-id" });
   mocks.tx.staffProfile.findFirst.mockResolvedValue(staffProfile());
+  mocks.tx.academicCalendarEntry.findFirst.mockResolvedValue(null);
   mocks.tx.staffAttendanceQrToken.findFirst.mockResolvedValue(qrToken());
   mocks.tx.staffAttendanceQrToken.update.mockResolvedValue({ id: qrTokenId });
   mocks.tx.attendanceSetting.findFirst.mockResolvedValue({
@@ -207,6 +214,47 @@ describe("StaffBoard Lite QR scan service", () => {
     expect(JSON.stringify(result)).not.toContain(hashStaffAttendanceQrToken(rawToken));
   });
 
+  it("rejects QR attendance on an applicable institution holiday", async () => {
+    mocks.tx.academicCalendarEntry.findFirst.mockResolvedValue({
+      id: "00000000-0000-0000-0000-000000000088",
+      name: "Paid holiday",
+      entryType: "HOLIDAY",
+      startDate: attendanceDate,
+      endDate: attendanceDate
+    });
+
+    await expect(scanStaffAttendanceQr(ctx, { token: rawToken })).rejects.toMatchObject({
+      code: "STAFF_ATTENDANCE_HOLIDAY"
+    });
+
+    expect(mocks.tx.academicCalendarEntry.findFirst).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        tenantId,
+        institutionId,
+        academicYearId,
+        audiences: { has: "NON_TEACHING_STAFF" },
+        OR: [{ branchId: null }, { branchId }]
+      }),
+      select: expect.any(Object),
+      orderBy: expect.any(Array)
+    });
+    expect(mocks.tx.staffAttendanceRecord.create).not.toHaveBeenCalled();
+  });
+
+  it("does not overwrite an existing calendar-managed paid holiday row", async () => {
+    mocks.tx.staffAttendanceRecord.findFirst.mockResolvedValue(existingRecord({
+      status: "HOLIDAY",
+      checkInAt: null,
+      calendarEntryId: "00000000-0000-0000-0000-000000000088"
+    }));
+
+    await expect(scanStaffAttendanceQr(ctx, { token: rawToken })).rejects.toMatchObject({
+      code: "STAFF_ATTENDANCE_HOLIDAY"
+    });
+
+    expect(mocks.tx.staffAttendanceRecord.update).not.toHaveBeenCalled();
+  });
+
   it("records valid CHECK_OUT and calculates working minutes", async () => {
     vi.setSystemTime(new Date("2026-05-05T10:30:00.000Z"));
     mocks.tx.staffAttendanceQrToken.findFirst.mockResolvedValue(qrToken({ purpose: "CHECK_OUT" }));
@@ -283,6 +331,25 @@ describe("StaffBoard Lite QR scan service", () => {
     await expect(scanStaffAttendanceQr(ctx, { token: rawToken })).rejects.toMatchObject({
       code: "STAFF_QR_EXPIRED"
     });
+    expect(mocks.tx.staffAttendanceQrToken.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: qrTokenId },
+      data: {
+        status: "EXPIRED",
+        expiredAt: new Date("2026-05-05T02:19:59.000Z")
+      }
+    }));
+    expect(mocks.writeAuditLog).toHaveBeenCalledWith(expect.objectContaining({
+      action: STAFFBOARD_LITE_AUDIT_EVENTS.STAFF_ATTENDANCE_QR_EXPIRED
+    }), mocks.tx);
+  });
+
+  it("rejects an operator-deactivated QR token", async () => {
+    mocks.tx.staffAttendanceQrToken.findFirst.mockResolvedValue(qrToken({ status: "DEACTIVATED" }));
+
+    await expect(scanStaffAttendanceQr(ctx, { token: rawToken })).rejects.toMatchObject({
+      code: "INVALID_STAFF_QR"
+    });
+    expect(mocks.tx.staffAttendanceRecord.create).not.toHaveBeenCalled();
   });
 
   it("rejects a QR token that is not yet valid", async () => {
@@ -369,7 +436,10 @@ describe("StaffBoard Lite QR scan service", () => {
 
     expect(mocks.tx.staffAttendanceQrToken.update).toHaveBeenCalledWith({
       where: { id: qrTokenId },
-      data: { consumedCount: { increment: 1 } }
+      data: {
+        consumedCount: { increment: 1 },
+        lastUsedAt: new Date("2026-05-05T02:20:00.000Z")
+      }
     });
   });
 
@@ -395,7 +465,15 @@ describe("StaffBoard Lite QR scan service", () => {
   it("writes audit log without raw token or tokenHash", async () => {
     await scanStaffAttendanceQr(ctx, { token: rawToken });
 
-    const auditArg = mocks.writeAuditLog.mock.calls[0][0];
+    const auditArg = mocks.writeAuditLog.mock.calls
+      .map(([input]) => input)
+      .find((input) => input.action === STAFFBOARD_LITE_AUDIT_EVENTS.STAFF_ATTENDANCE_CHECK_IN);
+    if (!auditArg) throw new Error("Expected staff attendance check-in audit event.");
+    expect(mocks.writeAuditLog).toHaveBeenCalledWith(expect.objectContaining({
+      action: STAFFBOARD_LITE_AUDIT_EVENTS.STAFF_ATTENDANCE_QR_USED,
+      entityType: "StaffAttendanceQrToken",
+      entityId: qrTokenId
+    }), mocks.tx);
     const serializedAudit = JSON.stringify(auditArg);
     expect(auditArg).toEqual(expect.objectContaining({
       ctx,

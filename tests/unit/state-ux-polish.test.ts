@@ -64,7 +64,8 @@ describe("empty loading and error state polish", () => {
     expect(displaySource).toContain("ErrorState");
     expect(displaySource).toContain("No active QR generated");
     expect(displaySource).toContain("QR expired");
-    expect(scanSource).toContain("Scan could not be completed");
+    expect(scanSource).toContain("staffQrScanErrorTitle(error.code)");
+    expect(scanStateSource).toContain("Scan could not be completed");
     expect(scanStateSource).toContain("Enter a valid QR token before submitting.");
     expect(scannerSource).toContain("Camera requires a secure HTTPS connection. Please open the approved HTTPS pilot link.");
     expect(scannerSource).toContain("Camera is not available in this browser context. Use the approved HTTPS link in Safari/Chrome.");

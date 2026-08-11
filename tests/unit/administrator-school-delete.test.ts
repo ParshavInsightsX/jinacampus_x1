@@ -13,12 +13,18 @@ const deleteDelegates = [
   "inAppNotification",
   "studentAttendanceRecord",
   "staffAttendanceRecord",
+  "academicCalendarEntry",
   "staffLeaveApplication",
   "staffLeaveBalance",
   "staffLeaveApprover",
   "staffLeaveType",
   "staffLeaveSetting",
   "staffAttendanceQrToken",
+  "gradebookMark",
+  "gradebookAssessment",
+  "classSectionSubject",
+  "studentPromotionItem",
+  "studentPromotionBatch",
   "enrollment",
   "studentGuardianLink",
   "classSection",
@@ -51,8 +57,10 @@ const mocks = vi.hoisted(() => {
     "notificationDeliveryLog", "notificationOutbox", "whatsAppIntegrationSetting",
     "notificationTemplate", "communicationPreference", "staffLeaveDocument",
     "staffLeaveApplicationAction", "inAppNotification", "studentAttendanceRecord",
-    "staffAttendanceRecord", "staffLeaveApplication", "staffLeaveBalance",
+    "staffAttendanceRecord", "academicCalendarEntry", "staffLeaveApplication", "staffLeaveBalance",
     "staffLeaveApprover", "staffLeaveType", "staffLeaveSetting", "staffAttendanceQrToken",
+    "gradebookMark", "gradebookAssessment", "classSectionSubject",
+    "studentPromotionItem", "studentPromotionBatch",
     "enrollment", "studentGuardianLink",
     "classSection", "student", "guardian", "staffProfile", "subject", "class", "section",
     "attendanceSetting", "auditLog", "passkeyChallenge", "passkeyCredential", "loginOtp",
@@ -103,7 +111,10 @@ const dependencySummary = {
   staffAttendanceRecords: 1,
   auditLogs: 1,
   notificationOutboxItems: 1,
-  roles: 1
+  roles: 1,
+  classSectionSubjects: 1,
+  gradebookAssessments: 1,
+  gradebookMarks: 1
 };
 
 describe("permanent administrator school deletion", () => {

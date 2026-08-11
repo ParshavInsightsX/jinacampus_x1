@@ -131,7 +131,9 @@ describe("mobile web/PWA UI redesign", () => {
     expect(scanPage).toContain('staffboard.attendance.self_scan');
     expect(scanPage).toContain('StaffQrScanForm variant="mobile"');
     expect(scanForm).toContain('variant?: "default" | "mobile"');
-    expect(scanner).toContain("min-h-[42vh]");
+    expect(scanner).toContain('data-qr-scan-frame="true"');
+    expect(scanner).toContain("aspect-square");
+    expect(scanner).toContain("Place the live school QR inside the square");
     expect(scanner).toContain("Start Camera");
     expect(scanner).toContain("Upload QR image/photo");
     expect(scanner).toContain("Camera requires a secure HTTPS connection");

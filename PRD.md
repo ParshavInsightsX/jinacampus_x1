@@ -23,9 +23,7 @@ Do not build the following in this phase:
 
 - Fee collection
 - Receipts
-- Exams
-- Marks entry
-- Report cards
+- Advanced exam scheduling, report-card generation, transcripts, and grading-scale automation beyond the approved GradeBook MVP
 - Full SchoolCast communication module, except the approved disabled-by-default attendance notification foundation
 - Advanced dashboards
 - Payroll
@@ -62,6 +60,8 @@ Reason: the current MVP foundation is technically strong, but a school SaaS must
 - Payroll
 - Biometric attendance
 - Exports/charts unless explicitly requested
+
+Phase 9 and the approved Base MVP stabilization gates are complete enough for the explicitly approved GradeBook MVP described in section 6.4. FeeDesk and full SchoolCast remain separate future modules.
 
 ### Phase 9 User Experience Goals
 
@@ -127,6 +127,7 @@ CampusCore is the platform foundation.
 - Institution model
 - Branch model
 - Academic year model
+- Academic and institutional holiday/non-working-day calendar
 - User model
 - Role model
 - Permission model
@@ -148,6 +149,7 @@ CampusCore is the platform foundation.
 - Default roles and permissions can be seeded.
 - Audit logs can be created for critical actions.
 - Active academic year can be identified per tenant/branch.
+- Authorised calendar changes are tenant-, institution-, branch-, and academic-year-scoped and audited.
 - App shell can show tenant, branch, and academic year context.
 
 ## 6.2 Academia
@@ -161,9 +163,11 @@ Academia manages academic setup, student records, enrollment, and student attend
 - Subjects
 - Students
 - Student admission-sheet registration with scholar/admission number, admission date, full name, DOB, parent names, masked Aadhaar reference, demographic fields, address, and optional masked bank details
+- Minimal student roster import using Scholar Number, Student Name, Date of Birth, Current Class, Contact Number, Father's Name, and Mother's Name; additional admission fields remain optional and can be completed later
 - Guardians
 - Student Guardian Links
 - Enrollments
+- Class-wise student promotion with selected-student outcomes and historical enrollment preservation
 - Daily Full-Day Class-Section Attendance
 - Basic attendance reports
 - WhatsApp attendance notification outbox foundation for guardian alerts, disabled by default
@@ -198,6 +202,7 @@ Required attendance capabilities:
 ### Student Attendance Rules
 
 - One active student enrollment receives one attendance record per school day for `FULL_DAY`.
+- Student holidays and non-working days are excluded from attendance marking, working-day totals, percentages, and classes-not-marked reporting.
 - Unique key: `tenantId + academicYearId + studentId + attendanceDate + sessionType`.
 - Teachers can mark only assigned class-sections.
 - Admins can mark any class-section within assigned branch scope.
@@ -209,8 +214,11 @@ Required attendance capabilities:
 - Student records are tenant-scoped.
 - Admission number is unique within tenant.
 - Student registration validates required admission-sheet fields server-side.
+- Bulk roster import validates its separate seven-field minimum contract server-side, imports valid rows, reports invalid rows separately, and identifies records that still need full admission details.
 - Full Aadhaar and bank account numbers are not exposed or stored as plaintext; only masked references and last-four digits are retained until approved encrypted storage exists.
 - Enrollments are academic-year-scoped.
+- Promotion creates new target-year enrollments only for promoted or repeating students and preserves every source-year enrollment.
+- Promotion decisions, excluded students, reversals, actor, scope, and timestamps remain auditable and tenant/branch scoped.
 - Active enrolled student list excludes inactive/withdrawn students.
 - Attendance submission is transactional.
 - Duplicate attendance records are prevented.
@@ -273,13 +281,26 @@ Staff arrives at school
 - QR code is tenant-scoped.
 - QR code is branch-scoped.
 - QR code is time-bound.
-- Default QR validity is 180 seconds.
+- QR generation is restricted server-side to Principals and permissioned Office Staff QR Operators.
+- Every newly generated QR is valid for a fixed 5-hour window (18,000 seconds).
+- Regeneration atomically deactivates the prior active code for the same branch and purpose.
+- Operators can explicitly deactivate an active code.
+- Lifecycle status is `ACTIVE`, `DEACTIVATED`, or `EXPIRED`; acceptance always checks the time window server-side.
 - Raw token must not be stored; store token hash.
 - Staff must be authenticated before scanning.
 - Duplicate check-in must be prevented.
 - Expired QR must be rejected.
 - Wrong-branch QR must be rejected unless explicitly allowed.
+- Generation, regeneration, deactivation, expiry reconciliation, and successful use must be audited without raw QR data.
 - Manual correction requires reason and permission.
+
+### Attendance PWA Installation
+
+- Authenticated mobile-web users can access a clear JinaCampus installation control.
+- Supported Chromium browsers use the browser-provided install prompt after a direct user action.
+- iPhone and iPad users receive Safari Add to Home Screen guidance when no programmable prompt exists.
+- Installed use remains online-first and must preserve secure login, responsive permission-aware navigation, camera permission behavior, server-side tenant/RBAC enforcement, and audit logging.
+- Offline attendance submission, background synchronization, and cached QR acceptance are not supported.
 
 ### Staff Attendance Statuses
 
@@ -317,9 +338,49 @@ Only `QR_SCAN` and `MANUAL_ADMIN` are implemented in first development. `IMPORT`
 - Leave totals, working dates, balance usage, and attendance status are calculated server-side.
 - Approval is transactional and rejects overlapping leave, insufficient balance, required-document gaps, and conflicting attendance.
 - Approved full-day leave is synchronized as `ON_LEAVE`; approved half-day leave is synchronized as `HALF_DAY`.
+- Applicable staff holidays are paid `HOLIDAY` attendance records and cannot be overwritten by QR scans, leave approval, or manual correction.
 - Staff can withdraw pending applications; authorized approvers can cancel only future approved leave without attendance activity.
 - Every leave state, policy, approver, balance, and document change is audited.
 - WhatsApp leave updates are disabled by default and require branch enablement, staff consent, an active template, and notification processing.
+
+## 6.4 GradeBook MVP
+
+GradeBook owns assessment configuration, class-subject teaching assignments, marks entry, publication state, and published result summaries. It references, but does not duplicate, CampusCore users/settings or Academia classes, sections, subjects, students, academic years, and enrollments.
+
+### Required Features
+
+1. Platform-controlled, tenant-specific feature enablement.
+2. Class-section subject assignment using existing Academia subjects.
+3. Optional subject-teacher assignment with branch and Teacher-role validation.
+4. Assessment creation with code, title, type, date, maximum marks, and pass marks.
+5. Active-enrollment roster marks entry with Graded, Absent, and Exempt outcomes.
+6. Explicit Open, Published, and Cancelled lifecycle states.
+7. Complete-roster validation before publication.
+8. Audited reopen and cancellation flows with required reasons.
+9. Published assessment summaries and read-only published ledgers.
+10. Principal governance and assigned-class/subject Teacher access.
+
+### Integration Boundaries
+
+- CampusCore owns tenants, branch access, active academic-year context, users, roles, permissions, feature enablement, and audit infrastructure.
+- Academia owns classes, sections, class-sections, subjects, students, and enrollments.
+- GradeBook never creates or mutates Student or Enrollment records.
+- Marks reference the active enrollment and server-derived student identity; client-supplied tenant, branch, academic year, student, actor, role, and permission claims are rejected or ignored.
+- Student attendance and GradeBook remain separate records. Attendance does not implicitly create marks, and marks do not alter attendance.
+- Student promotion continues to preserve historical enrollments. A future GradeBook policy phase may replace the existing result-publication attestation only after schools can configure which published assessments constitute a final result.
+
+### GradeBook Acceptance Criteria
+
+- The module remains inaccessible and absent from navigation while `TenantSettings.gradebookEnabled` is false.
+- Enabling the module requires the separate JinaCampus Administrator Portal; school users cannot self-enable it.
+- Every query and mutation is tenant-, branch-, and academic-year-scoped and permission checked server-side.
+- Teachers can access only class-sections where they are class teacher or assigned subject teacher.
+- Only active roster enrollments can receive results, and student identity is derived server-side.
+- Publishing is blocked until every active student has a valid result.
+- Published results cannot be edited without an audited reopen reason.
+- Marks updates, publication, reopening, cancellation, and class-subject changes are audited.
+- Migration, authenticated role-matrix QA, regression checks, and pilot stabilization pass before broad enablement.
+- Full report cards, grading scales, exam timetable management, transcripts, parent/student portals, and SchoolCast delivery are deferred.
 
 ## 7. Data Model Requirements
 
@@ -353,6 +414,12 @@ Required Prisma models:
 - `Enrollment`
 - `StudentAttendanceRecord`
 
+### GradeBook
+
+- `ClassSectionSubject`
+- `GradebookAssessment`
+- `GradebookMark`
+
 ### StaffBoard Lite
 
 - `StaffProfile`
@@ -385,6 +452,7 @@ The notification foundation is limited to attendance WhatsApp use cases and does
 - `campuscore.institution.manage`
 - `campuscore.branch.manage`
 - `campuscore.academic_year.manage`
+- `campuscore.calendar.manage`
 - `campuscore.user.view`
 - `campuscore.user.create`
 - `campuscore.user.update`
@@ -409,6 +477,15 @@ The notification foundation is limited to attendance WhatsApp use cases and does
 - `academia.attendance.correct`
 - `academia.attendance.lock`
 - `academia.attendance.report`
+
+### GradeBook Permissions
+
+- `gradebook.view`
+- `gradebook.setup.manage`
+- `gradebook.assessment.manage`
+- `gradebook.marks.enter`
+- `gradebook.publish`
+- `gradebook.report`
 
 ### StaffBoard Lite Permissions
 
@@ -445,6 +522,7 @@ The notification foundation is limited to attendance WhatsApp use cases and does
 - `/campus-core/institutions`
 - `/campus-core/branches`
 - `/campus-core/academic-years`
+- `/campus-core/calendar`
 - `/campus-core/users`
 - `/campus-core/roles`
 - `/campus-core/settings`

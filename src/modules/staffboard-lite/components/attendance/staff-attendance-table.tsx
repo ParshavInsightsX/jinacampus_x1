@@ -66,6 +66,14 @@ function CorrectionAction({
     );
   }
 
+  if (row.calendarManaged) {
+    return (
+      <span className="inline-flex min-h-11 items-center rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-1.5 text-xs font-medium text-cyan-800">
+        Calendar managed
+      </span>
+    );
+  }
+
   return (
     <StaffAttendanceCorrectionForm
       attendanceRecordId={row.attendanceRecordId}

@@ -6,6 +6,7 @@ import { requirePermission } from "@/lib/rbac/require-permission";
 import { canAssignRole } from "@/lib/rbac/roles";
 import type { TenantContext } from "@/lib/tenant/context";
 import { CAMPUS_CORE_AUDIT_EVENTS } from "@/modules/campus-core/audit-events";
+import { reconcileAcademicCalendarForStaffProfile } from "@/modules/campus-core/calendar/calendar-service";
 import { STAFFBOARD_LITE_AUDIT_EVENTS } from "@/modules/staffboard-lite/audit-events";
 import {
   createStaffLoginAccessSchema,
@@ -180,6 +181,7 @@ export async function createStaffProfile(ctx: TenantContext, input: unknown) {
       },
       select: staffProfileSelect
     });
+    await reconcileAcademicCalendarForStaffProfile(tx, ctx, staffProfile.id);
     await writeAuditLog({
       ctx,
       action: STAFFBOARD_LITE_AUDIT_EVENTS.STAFF_CREATED,
@@ -700,6 +702,15 @@ export async function updateStaffProfile(ctx: TenantContext, input: unknown) {
           sessionsRevoked: shouldDeactivateLinkedUser
         }
       }, tx);
+    }
+
+    if (
+      data.branchId !== undefined ||
+      data.staffType !== undefined ||
+      data.joiningDate !== undefined ||
+      data.employmentStatus !== undefined
+    ) {
+      await reconcileAcademicCalendarForStaffProfile(tx, ctx, after.id, new Date());
     }
 
     await writeAuditLog({

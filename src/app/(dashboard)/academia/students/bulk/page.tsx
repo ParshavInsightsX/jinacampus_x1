@@ -14,13 +14,15 @@ export default async function StudentBulkPage() {
   if (!branches.length) {
     return <PrerequisiteState title="No branch access" description="Branch access is required before importing or exporting student records." />;
   }
-  const canImport = permissions.has("academia.student.create") && permissions.has("academia.guardian.manage");
+  const canImport = permissions.has("academia.student.create") &&
+    permissions.has("academia.guardian.manage") &&
+    permissions.has("academia.enrollment.manage");
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Student Import & Export"
-        description="Bulk registration and Google Sheets-compatible student record downloads."
+        description="Import essential student records with a simple Excel or Google Sheets-compatible template."
       />
       <div className="flex justify-end">
         <Link href="/academia/students" className="premium-secondary-button">Back to students</Link>

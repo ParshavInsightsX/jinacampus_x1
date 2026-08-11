@@ -6,7 +6,8 @@ import {
   formatStaffAttendanceStatus,
   formatStaffQrPurpose,
   parseStaffAttendanceQrPayload,
-  staffQrScanErrorMessage
+  staffQrScanErrorMessage,
+  staffQrScanErrorTitle
 } from "@/modules/staffboard-lite/components/attendance/staff-qr-scan-state";
 
 describe("StaffBoard Lite QR scan UI", () => {
@@ -46,9 +47,9 @@ describe("StaffBoard Lite QR scan UI", () => {
     expect(scannerSource).toContain("Checking camera support...");
     expect(scannerSource).toContain("CAMERA_REQUEST_TIMEOUT_MS = 12_000");
     expect(scannerSource).toContain("getUserMediaWithTimeout");
-    expect(scannerSource).toContain("requestCameraStream(mediaDevices)");
+    expect(scannerSource).toContain("requestCameraStream(mediaDevices, deviceId)");
     expect(scannerSource).toContain("mediaDevices.getUserMedia(constraints)");
-    expect(scannerSource).toContain("PREFERRED_CAMERA_CONSTRAINTS");
+    expect(scannerSource).toContain("preferredCameraConstraints");
     expect(scannerSource).toContain("FALLBACK_CAMERA_CONSTRAINTS");
     expect(scannerSource).toContain("videoElement.play()");
     expect(scannerSource).toContain("decodeQrFromCanvas");
@@ -62,6 +63,12 @@ describe("StaffBoard Lite QR scan UI", () => {
     expect(scannerSource).toContain('data-camera-diagnostics="true"');
     expect(scannerSource).toContain('data-camera-https-warning="true"');
     expect(scannerSource).toContain('data-camera-inapp-warning="true"');
+    expect(scannerSource).toContain('data-qr-scan-frame="true"');
+    expect(scannerSource).toContain("aspect-square");
+    expect(scannerSource).toContain("cropToSquare");
+    expect(scannerSource).toContain("SwitchCamera");
+    expect(scannerSource).toContain("Flashlight");
+    expect(scannerSource).toContain("videoTrack.applyConstraints");
     expect(formSource).toContain("StaffQrManualTokenInput");
     expect(inputSource).toContain("QR token or scanned QR payload");
     expect(`${formSource}\n${scannerSource}\n${inputSource}`).not.toMatch(/html5-qrcode|qr-scanner|@zxing|BarcodeDetector/);
@@ -138,6 +145,18 @@ describe("StaffBoard Lite QR scan UI", () => {
     expect(scannerSource).not.toContain("parseStaffAttendanceQrPayload");
   });
 
+  it("locks duplicate submissions and redirects successful scans without putting the QR payload in the URL", () => {
+    const formSource = readFileSync(
+      resolve(process.cwd(), "src/modules/staffboard-lite/components/attendance/staff-qr-scan-form.tsx"),
+      "utf8"
+    );
+
+    expect(formSource).toContain("submissionLockRef.current");
+    expect(formSource).toContain('data-qr-processing-lock={isPending ? "locked" : "ready"}');
+    expect(formSource).toContain("router.replace(`/staffboard/attendance/me?scan=success&purpose=${purpose}`)");
+    expect(formSource).not.toMatch(/router\.(?:push|replace)\([^\n]*qrPayload/);
+  });
+
   it("renders safe camera unsupported and permission denied messages", () => {
     const scannerSource = readFileSync(
       resolve(process.cwd(), "src/modules/staffboard-lite/components/attendance/staff-qr-camera-scanner.tsx"),
@@ -176,6 +195,8 @@ describe("StaffBoard Lite QR scan UI", () => {
       "permission"
     );
     expect(staffQrScanErrorMessage("STAFF_ALREADY_CHECKED_IN", "raw tokenHash tenantId")).not.toMatch(/tokenHash|tenantId/);
+    expect(staffQrScanErrorTitle("STAFF_QR_EXPIRED")).toBe("QR code expired");
+    expect(staffQrScanErrorTitle("STAFF_ALREADY_CHECKED_OUT")).toBe("Attendance already recorded");
   });
 
   it("shows success result fields including check-in and check-out data", () => {
@@ -185,8 +206,31 @@ describe("StaffBoard Lite QR scan UI", () => {
     );
 
     expect(resultSource).toContain("Attendance date");
+    expect(resultSource).toContain("Staff member");
+    expect(resultSource).toContain("Institution");
+    expect(resultSource).toContain("Branch");
+    expect(resultSource).toContain("Recorded at");
     expect(resultSource).toContain("Check-in");
     expect(resultSource).toContain("Check-out");
     expect(resultSource).toContain("Working minutes");
+  });
+
+  it("loads only the authenticated staff member's bounded attendance history", () => {
+    const querySource = readFileSync(
+      resolve(process.cwd(), "src/modules/staffboard-lite/queries/staff-attendance.queries.ts"),
+      "utf8"
+    );
+    const pageSource = readFileSync(
+      resolve(process.cwd(), "src/app/(dashboard)/staffboard/attendance/me/page.tsx"),
+      "utf8"
+    );
+
+    expect(querySource).toContain("listMyStaffAttendanceHistory");
+    expect(querySource).toContain("tenantId: ctx.tenantId");
+    expect(querySource).toContain("userId: ctx.userId");
+    expect(querySource).toContain('permission: "staffboard.attendance.self_view"');
+    expect(querySource).toContain("take: Math.min(Math.max(limit, 1), 31)");
+    expect(pageSource).toContain('id="attendance-history"');
+    expect(pageSource).toContain("StaffQrScanResult");
   });
 });

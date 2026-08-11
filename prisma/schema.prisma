@@ -145,6 +145,22 @@ enum EnrollmentStatus {
   COMPLETED
 }
 
+enum StudentPromotionBatchStatus {
+  COMPLETED
+  REVERSED
+}
+
+enum StudentPromotionOutcome {
+  PROMOTED
+  NOT_PROMOTED
+  REPEAT_SAME_CLASS
+  TRANSFERRED
+  SCHOOL_LEFT
+  RESULT_PENDING
+  PROMOTION_WITHHELD
+  EXCLUDED
+}
+
 enum GuardianRelation {
   FATHER
   MOTHER
@@ -165,6 +181,22 @@ enum StudentAttendanceStatus {
   ON_LEAVE
   EXCUSED
   NOT_MARKED
+}
+
+enum AcademicCalendarEntryType {
+  HOLIDAY
+  NON_WORKING_DAY
+}
+
+enum AcademicCalendarAudience {
+  STUDENTS
+  TEACHING_STAFF
+  NON_TEACHING_STAFF
+}
+
+enum AcademicCalendarEntryStatus {
+  ACTIVE
+  CANCELLED
 }
 
 enum Gender {
@@ -191,6 +223,28 @@ enum SubjectType {
   ELECTIVE
   OPTIONAL
   CO_CURRICULAR
+}
+
+enum GradebookAssessmentType {
+  UNIT_TEST
+  PERIODIC_TEST
+  HALF_YEARLY
+  ANNUAL
+  PROJECT
+  PRACTICAL
+  OTHER
+}
+
+enum GradebookAssessmentStatus {
+  OPEN
+  PUBLISHED
+  CANCELLED
+}
+
+enum GradebookMarkStatus {
+  GRADED
+  ABSENT
+  EXEMPT
 }
 
 enum StaffType {
@@ -269,6 +323,12 @@ enum StaffQrPurpose {
   CHECK_OUT
 }
 
+enum StaffQrTokenStatus {
+  ACTIVE
+  DEACTIVATED
+  EXPIRED
+}
+
 enum CommunicationPreferenceOwnerType {
   GUARDIAN
   STAFF
@@ -330,6 +390,7 @@ model Tenant {
   institutions             Institution[]
   branches                 Branch[]
   academicYears            AcademicYear[]
+  academicCalendarEntries  AcademicCalendarEntry[]
   users                    User[]
   roles                    Role[]
   rolePermissions          RolePermission[]
@@ -351,7 +412,12 @@ model Tenant {
   guardians                Guardian[]
   studentGuardianLinks     StudentGuardianLink[]
   enrollments              Enrollment[]
+  studentPromotionBatches  StudentPromotionBatch[]
+  studentPromotionItems    StudentPromotionItem[]
   studentAttendanceRecords StudentAttendanceRecord[]
+  classSectionSubjects     ClassSectionSubject[]
+  gradebookAssessments     GradebookAssessment[]
+  gradebookMarks           GradebookMark[]
   staffProfiles            StaffProfile[]
   staffAttendanceRecords   StaffAttendanceRecord[]
   staffAttendanceQrTokens  StaffAttendanceQrToken[]
@@ -465,9 +531,10 @@ model Institution {
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 
-  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  branches      Branch[]
-  academicYears AcademicYear[]
+  tenant                  Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  branches                Branch[]
+  academicYears           AcademicYear[]
+  academicCalendarEntries AcademicCalendarEntry[]
 
   @@unique([tenantId, code])
   @@index([tenantId, status])
@@ -497,6 +564,7 @@ model Branch {
 
   tenant                   Tenant                        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   institution              Institution                   @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  academicCalendarEntries  AcademicCalendarEntry[]
   userBranchAccesses       UserBranchAccess[]
   attendanceSetting        AttendanceSetting?
   auditLogs                AuditLog[]
@@ -504,7 +572,12 @@ model Branch {
   students                 Student[]
   studentDocuments         StudentDocument[]
   enrollments              Enrollment[]
+  studentPromotionBatches  StudentPromotionBatch[]
+  studentPromotionItems    StudentPromotionItem[]
   studentAttendanceRecords StudentAttendanceRecord[]
+  classSectionSubjects     ClassSectionSubject[]
+  gradebookAssessments     GradebookAssessment[]
+  gradebookMarks           GradebookMark[]
   staffProfiles            StaffProfile[]
   staffAttendanceRecords   StaffAttendanceRecord[]
   staffAttendanceQrTokens  StaffAttendanceQrToken[]
@@ -546,14 +619,51 @@ model AcademicYear {
   auditLogs                AuditLog[]
   classSections            ClassSection[]
   enrollments              Enrollment[]
+  sourcePromotionBatches   StudentPromotionBatch[]   @relation("StudentPromotionSourceAcademicYear")
+  targetPromotionBatches   StudentPromotionBatch[]   @relation("StudentPromotionTargetAcademicYear")
   studentAttendanceRecords StudentAttendanceRecord[]
+  classSectionSubjects     ClassSectionSubject[]
+  gradebookAssessments     GradebookAssessment[]
+  gradebookMarks           GradebookMark[]
   staffAttendanceRecords   StaffAttendanceRecord[]
+  academicCalendarEntries  AcademicCalendarEntry[]
   notificationOutboxItems  NotificationOutbox[]
 
   @@unique([tenantId, institutionId, name])
   @@index([tenantId, institutionId, status])
   @@index([tenantId, institutionId, isActive])
   @@map("academic_years")
+}
+
+model AcademicCalendarEntry {
+  id                 String                      @id @default(uuid()) @db.Uuid
+  tenantId           String                      @db.Uuid
+  institutionId      String                      @db.Uuid
+  branchId           String?                     @db.Uuid
+  academicYearId     String                      @db.Uuid
+  entryType          AcademicCalendarEntryType   @default(HOLIDAY)
+  name               String
+  description        String?
+  startDate          DateTime                    @db.Date
+  endDate            DateTime                    @db.Date
+  audiences          AcademicCalendarAudience[]
+  status             AcademicCalendarEntryStatus @default(ACTIVE)
+  cancellationReason String?
+  cancelledAt        DateTime?
+  createdById        String?                     @db.Uuid
+  updatedById        String?                     @db.Uuid
+  createdAt          DateTime                    @default(now())
+  updatedAt          DateTime                    @updatedAt
+
+  tenant                 Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  institution            Institution             @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  branch                 Branch?                 @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  academicYear           AcademicYear            @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  staffAttendanceRecords StaffAttendanceRecord[]
+
+  @@index([tenantId, institutionId, academicYearId, status, startDate, endDate], map: "academic_calendar_institution_dates_idx")
+  @@index([tenantId, branchId, academicYearId, status, startDate, endDate], map: "academic_calendar_branch_dates_idx")
+  @@map("academic_calendar_entries")
 }
 
 model User {
@@ -576,26 +686,35 @@ model User {
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
-  tenant                     Tenant                        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  passwordCredential         PasswordCredential?
-  sessions                   Session[]
-  loginOtps                  LoginOtp[]
-  passkeyCredentials         PasskeyCredential[]
-  passkeyChallenges          PasskeyChallenge[]
-  roleAssignments            UserRoleAssignment[]
-  branchAccesses             UserBranchAccess[]
-  auditLogs                  AuditLog[]                    @relation("AuditActor")
-  classSectionsAsTeacher     ClassSection[]                @relation("ClassSectionTeacher")
-  markedStudentAttendance    StudentAttendanceRecord[]     @relation("StudentAttendanceMarkedBy")
-  correctedStudentAttendance StudentAttendanceRecord[]     @relation("StudentAttendanceCorrectedBy")
-  staffProfile               StaffProfile?                 @relation("StaffProfileUser")
-  markedStaffAttendance      StaffAttendanceRecord[]       @relation("StaffAttendanceMarkedBy")
-  updatedStaffAttendance     StaffAttendanceRecord[]       @relation("StaffAttendanceUpdatedBy")
-  createdStaffQrTokens       StaffAttendanceQrToken[]      @relation("StaffAttendanceQrTokenCreatedBy")
-  staffLeaveApproverScopes   StaffLeaveApprover[]          @relation("StaffLeaveApproverUser")
-  actionedStaffLeave         StaffLeaveApplication[]       @relation("StaffLeaveApplicationActionedBy")
-  staffLeaveActions          StaffLeaveApplicationAction[] @relation("StaffLeaveActionActor")
-  inAppNotifications         InAppNotification[]
+  tenant                        Tenant                        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  passwordCredential            PasswordCredential?
+  sessions                      Session[]
+  loginOtps                     LoginOtp[]
+  passkeyCredentials            PasskeyCredential[]
+  passkeyChallenges             PasskeyChallenge[]
+  roleAssignments               UserRoleAssignment[]
+  branchAccesses                UserBranchAccess[]
+  auditLogs                     AuditLog[]                    @relation("AuditActor")
+  classSectionsAsTeacher        ClassSection[]                @relation("ClassSectionTeacher")
+  markedStudentAttendance       StudentAttendanceRecord[]     @relation("StudentAttendanceMarkedBy")
+  correctedStudentAttendance    StudentAttendanceRecord[]     @relation("StudentAttendanceCorrectedBy")
+  staffProfile                  StaffProfile?                 @relation("StaffProfileUser")
+  markedStaffAttendance         StaffAttendanceRecord[]       @relation("StaffAttendanceMarkedBy")
+  updatedStaffAttendance        StaffAttendanceRecord[]       @relation("StaffAttendanceUpdatedBy")
+  createdStaffQrTokens          StaffAttendanceQrToken[]      @relation("StaffAttendanceQrTokenCreatedBy")
+  deactivatedStaffQrTokens      StaffAttendanceQrToken[]      @relation("StaffAttendanceQrTokenDeactivatedBy")
+  staffLeaveApproverScopes      StaffLeaveApprover[]          @relation("StaffLeaveApproverUser")
+  actionedStaffLeave            StaffLeaveApplication[]       @relation("StaffLeaveApplicationActionedBy")
+  staffLeaveActions             StaffLeaveApplicationAction[] @relation("StaffLeaveActionActor")
+  inAppNotifications            InAppNotification[]
+  createdPromotionBatches       StudentPromotionBatch[]       @relation("StudentPromotionCreatedBy")
+  reversedPromotionBatches      StudentPromotionBatch[]       @relation("StudentPromotionReversedBy")
+  reversedPromotionItems        StudentPromotionItem[]        @relation("StudentPromotionItemReversedBy")
+  classSectionSubjectsTaught    ClassSectionSubject[]         @relation("ClassSectionSubjectTeacher")
+  createdGradebookAssessments   GradebookAssessment[]         @relation("GradebookAssessmentCreatedBy")
+  publishedGradebookAssessments GradebookAssessment[]         @relation("GradebookAssessmentPublishedBy")
+  cancelledGradebookAssessments GradebookAssessment[]         @relation("GradebookAssessmentCancelledBy")
+  enteredGradebookMarks         GradebookMark[]               @relation("GradebookMarkEnteredBy")
 
   @@unique([tenantId, email])
   @@unique([tenantId, phone])
@@ -821,6 +940,7 @@ model TenantSettings {
   dateFormat                       String   @default("dd/MM/yyyy")
   currency                         String   @default("INR")
   allowMultipleActiveAcademicYears Boolean  @default(false)
+  gradebookEnabled                 Boolean  @default(false)
   createdById                      String?  @db.Uuid
   updatedById                      String?  @db.Uuid
   createdAt                        DateTime @default(now())
@@ -849,7 +969,7 @@ model AttendanceSetting {
   staffLateAfterTime                 String                            @default("08:00")
   staffHalfDayBeforeMinutes          Int                               @default(240)
   staffMinimumWorkingMinutes         Int                               @default(360)
-  staffQrTokenValiditySeconds        Int                               @default(180)
+  staffQrTokenValiditySeconds        Int                               @default(18000)
   staffWeeklySummaryWhatsAppEnabled  Boolean                           @default(false)
   staffWeeklySummarySendDay          Int                               @default(1)
   staffWeeklySummarySendTime         String                            @default("09:00")
@@ -966,7 +1086,12 @@ model ClassSection {
   section                  Section                   @relation(fields: [sectionId], references: [id], onDelete: Restrict)
   classTeacherUser         User?                     @relation("ClassSectionTeacher", fields: [classTeacherUserId], references: [id], onDelete: SetNull)
   enrollments              Enrollment[]
+  sourcePromotionBatches   StudentPromotionBatch[]   @relation("StudentPromotionSourceClassSection")
+  targetPromotionBatches   StudentPromotionBatch[]   @relation("StudentPromotionDefaultTargetClassSection")
+  targetPromotionItems     StudentPromotionItem[]    @relation("StudentPromotionItemTargetClassSection")
   studentAttendanceRecords StudentAttendanceRecord[]
+  classSectionSubjects     ClassSectionSubject[]
+  gradebookAssessments     GradebookAssessment[]
 
   @@unique([tenantId, branchId, academicYearId, classId, sectionId])
   @@index([tenantId, branchId, academicYearId, status])
@@ -988,7 +1113,8 @@ model Subject {
   createdAt   DateTime             @default(now())
   updatedAt   DateTime             @updatedAt
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant               Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  classSectionSubjects ClassSectionSubject[]
 
   @@unique([tenantId, code])
   @@unique([tenantId, name])
@@ -1044,7 +1170,9 @@ model Student {
   branch                   Branch                    @relation(fields: [branchId], references: [id], onDelete: Restrict)
   guardianLinks            StudentGuardianLink[]
   enrollments              Enrollment[]
+  promotionItems           StudentPromotionItem[]
   studentAttendanceRecords StudentAttendanceRecord[]
+  gradebookMarks           GradebookMark[]
   documents                StudentDocument[]
 
   @@unique([tenantId, admissionNumber])
@@ -1159,12 +1287,190 @@ model Enrollment {
   student                  Student                   @relation(fields: [studentId], references: [id], onDelete: Restrict)
   classSection             ClassSection              @relation(fields: [classSectionId], references: [id], onDelete: Restrict)
   studentAttendanceRecords StudentAttendanceRecord[]
+  sourcePromotionItems     StudentPromotionItem[]    @relation("StudentPromotionSourceEnrollment")
+  targetPromotionItems     StudentPromotionItem[]    @relation("StudentPromotionTargetEnrollment")
+  gradebookMarks           GradebookMark[]
 
   @@unique([tenantId, academicYearId, studentId])
   @@unique([tenantId, academicYearId, classSectionId, rollNumber])
   @@index([tenantId, branchId, academicYearId, status])
   @@index([tenantId, classSectionId, status])
   @@map("enrollments")
+}
+
+model ClassSectionSubject {
+  id             String               @id @default(uuid()) @db.Uuid
+  tenantId       String               @db.Uuid
+  branchId       String               @db.Uuid
+  academicYearId String               @db.Uuid
+  classSectionId String               @db.Uuid
+  subjectId      String               @db.Uuid
+  teacherUserId  String?              @db.Uuid
+  status         AcademicRecordStatus @default(ACTIVE)
+  createdById    String?              @db.Uuid
+  updatedById    String?              @db.Uuid
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  tenant       Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch       Branch                @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  academicYear AcademicYear          @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  classSection ClassSection          @relation(fields: [classSectionId], references: [id], onDelete: Restrict)
+  subject      Subject               @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  teacherUser  User?                 @relation("ClassSectionSubjectTeacher", fields: [teacherUserId], references: [id], onDelete: SetNull)
+  assessments  GradebookAssessment[]
+
+  @@unique([tenantId, classSectionId, subjectId])
+  @@index([tenantId, branchId, academicYearId, status])
+  @@index([tenantId, teacherUserId, status])
+  @@map("class_section_subjects")
+}
+
+model GradebookAssessment {
+  id                    String                    @id @default(uuid()) @db.Uuid
+  tenantId              String                    @db.Uuid
+  branchId              String                    @db.Uuid
+  academicYearId        String                    @db.Uuid
+  classSectionId        String                    @db.Uuid
+  classSectionSubjectId String                    @db.Uuid
+  code                  String
+  title                 String
+  type                  GradebookAssessmentType
+  assessmentDate        DateTime                  @db.Date
+  maxMarks              Decimal                   @db.Decimal(8, 2)
+  passMarks             Decimal                   @db.Decimal(8, 2)
+  status                GradebookAssessmentStatus @default(OPEN)
+  createdById           String                    @db.Uuid
+  publishedById         String?                   @db.Uuid
+  publishedAt           DateTime?
+  cancelledById         String?                   @db.Uuid
+  cancelledAt           DateTime?
+  cancellationReason    String?                   @db.Text
+  reopenReason          String?                   @db.Text
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
+
+  tenant              Tenant              @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  branch              Branch              @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  academicYear        AcademicYear        @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  classSection        ClassSection        @relation(fields: [classSectionId], references: [id], onDelete: Restrict)
+  classSectionSubject ClassSectionSubject @relation(fields: [classSectionSubjectId], references: [id], onDelete: Restrict)
+  createdBy           User                @relation("GradebookAssessmentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  publishedBy         User?               @relation("GradebookAssessmentPublishedBy", fields: [publishedById], references: [id], onDelete: SetNull)
+  cancelledBy         User?               @relation("GradebookAssessmentCancelledBy", fields: [cancelledById], references: [id], onDelete: SetNull)
+  marks               GradebookMark[]
+
+  @@unique([tenantId, classSectionSubjectId, code])
+  @@index([tenantId, branchId, academicYearId, status])
+  @@index([tenantId, classSectionId, assessmentDate])
+  @@index([tenantId, classSectionSubjectId, status])
+  @@map("gradebook_assessments")
+}
+
+model GradebookMark {
+  id             String              @id @default(uuid()) @db.Uuid
+  tenantId       String              @db.Uuid
+  branchId       String              @db.Uuid
+  academicYearId String              @db.Uuid
+  assessmentId   String              @db.Uuid
+  enrollmentId   String              @db.Uuid
+  studentId      String              @db.Uuid
+  status         GradebookMarkStatus @default(GRADED)
+  marksObtained  Decimal?            @db.Decimal(8, 2)
+  remarks        String?             @db.Text
+  enteredById    String              @db.Uuid
+  enteredAt      DateTime            @default(now())
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  tenant       Tenant              @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  branch       Branch              @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  academicYear AcademicYear        @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  assessment   GradebookAssessment @relation(fields: [assessmentId], references: [id], onDelete: Restrict)
+  enrollment   Enrollment          @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+  student      Student             @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  enteredBy    User                @relation("GradebookMarkEnteredBy", fields: [enteredById], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, assessmentId, enrollmentId])
+  @@index([tenantId, branchId, academicYearId, assessmentId])
+  @@index([tenantId, studentId, academicYearId])
+  @@index([tenantId, enrollmentId])
+  @@map("gradebook_marks")
+}
+
+model StudentPromotionBatch {
+  id                          String                      @id @default(uuid()) @db.Uuid
+  tenantId                    String                      @db.Uuid
+  branchId                    String                      @db.Uuid
+  sourceAcademicYearId        String                      @db.Uuid
+  targetAcademicYearId        String                      @db.Uuid
+  sourceClassSectionId        String                      @db.Uuid
+  defaultTargetClassSectionId String                      @db.Uuid
+  status                      StudentPromotionBatchStatus @default(COMPLETED)
+  effectiveDate               DateTime                    @db.Date
+  remarks                     String?                     @db.Text
+  resultsPublicationConfirmed Boolean                     @default(false)
+  selectedCount               Int
+  excludedCount               Int
+  outcomeSummary              Json
+  createdById                 String                      @db.Uuid
+  reversedAt                  DateTime?
+  reversedById                String?                     @db.Uuid
+  reversalReason              String?                     @db.Text
+  createdAt                   DateTime                    @default(now())
+  updatedAt                   DateTime                    @updatedAt
+
+  tenant                    Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  branch                    Branch                 @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  sourceAcademicYear        AcademicYear           @relation("StudentPromotionSourceAcademicYear", fields: [sourceAcademicYearId], references: [id], onDelete: Restrict)
+  targetAcademicYear        AcademicYear           @relation("StudentPromotionTargetAcademicYear", fields: [targetAcademicYearId], references: [id], onDelete: Restrict)
+  sourceClassSection        ClassSection           @relation("StudentPromotionSourceClassSection", fields: [sourceClassSectionId], references: [id], onDelete: Restrict)
+  defaultTargetClassSection ClassSection           @relation("StudentPromotionDefaultTargetClassSection", fields: [defaultTargetClassSectionId], references: [id], onDelete: Restrict)
+  createdBy                 User                   @relation("StudentPromotionCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  reversedBy                User?                  @relation("StudentPromotionReversedBy", fields: [reversedById], references: [id], onDelete: SetNull)
+  items                     StudentPromotionItem[]
+
+  @@index([tenantId, branchId, sourceAcademicYearId, sourceClassSectionId], map: "promotion_batch_source_scope_idx")
+  @@index([tenantId, branchId, targetAcademicYearId, defaultTargetClassSectionId], map: "promotion_batch_target_scope_idx")
+  @@index([tenantId, status, createdAt], map: "promotion_batch_status_created_idx")
+  @@map("student_promotion_batches")
+}
+
+model StudentPromotionItem {
+  id                           String                  @id @default(uuid()) @db.Uuid
+  tenantId                     String                  @db.Uuid
+  branchId                     String                  @db.Uuid
+  batchId                      String                  @db.Uuid
+  studentId                    String                  @db.Uuid
+  sourceEnrollmentId           String                  @db.Uuid
+  targetEnrollmentId           String?                 @unique @db.Uuid
+  targetClassSectionId         String?                 @db.Uuid
+  selected                     Boolean                 @default(true)
+  outcome                      StudentPromotionOutcome
+  decisionRemarks              String?                 @db.Text
+  sourceEnrollmentStatusBefore EnrollmentStatus
+  sourceEnrollmentLeftOnBefore DateTime?               @db.Date
+  studentStatusBefore          StudentStatus
+  studentLeftAtBefore          DateTime?               @db.Date
+  reversedAt                   DateTime?
+  reversedById                 String?                 @db.Uuid
+  createdAt                    DateTime                @default(now())
+  updatedAt                    DateTime                @updatedAt
+
+  tenant             Tenant                @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  branch             Branch                @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  batch              StudentPromotionBatch @relation(fields: [batchId], references: [id], onDelete: Restrict)
+  student            Student               @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  sourceEnrollment   Enrollment            @relation("StudentPromotionSourceEnrollment", fields: [sourceEnrollmentId], references: [id], onDelete: Restrict)
+  targetEnrollment   Enrollment?           @relation("StudentPromotionTargetEnrollment", fields: [targetEnrollmentId], references: [id], onDelete: Restrict)
+  targetClassSection ClassSection?         @relation("StudentPromotionItemTargetClassSection", fields: [targetClassSectionId], references: [id], onDelete: Restrict)
+  reversedBy         User?                 @relation("StudentPromotionItemReversedBy", fields: [reversedById], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, batchId, sourceEnrollmentId], map: "promotion_item_batch_source_key")
+  @@index([tenantId, branchId, studentId], map: "promotion_item_student_idx")
+  @@index([tenantId, sourceEnrollmentId, outcome], map: "promotion_item_source_outcome_idx")
+  @@index([tenantId, batchId, selected], map: "promotion_item_batch_selected_idx")
+  @@map("student_promotion_items")
 }
 
 model StudentAttendanceRecord {
@@ -1256,6 +1562,7 @@ model StaffAttendanceRecord {
   markedById         String?                @db.Uuid
   updatedById        String?                @db.Uuid
   leaveApplicationId String?                @db.Uuid
+  calendarEntryId    String?                @db.Uuid
   correctionReason   String?
   createdAt          DateTime               @default(now())
   updatedAt          DateTime               @updatedAt
@@ -1269,6 +1576,7 @@ model StaffAttendanceRecord {
   markedBy         User?                   @relation("StaffAttendanceMarkedBy", fields: [markedById], references: [id], onDelete: SetNull)
   updatedBy        User?                   @relation("StaffAttendanceUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
   leaveApplication StaffLeaveApplication?  @relation(fields: [leaveApplicationId], references: [id], onDelete: SetNull)
+  calendarEntry    AcademicCalendarEntry?  @relation(fields: [calendarEntryId], references: [id], onDelete: SetNull)
 
   @@unique([tenantId, branchId, staffId, attendanceDate])
   @@index([tenantId, branchId, attendanceDate])
@@ -1276,6 +1584,7 @@ model StaffAttendanceRecord {
   @@index([tenantId, staffId])
   @@index([tenantId, status, attendanceDate])
   @@index([tenantId, leaveApplicationId])
+  @@index([tenantId, calendarEntryId], map: "staff_attendance_calendar_entry_idx")
   @@index([leaveApplicationId])
   @@map("staff_attendance_records")
 }
@@ -1500,26 +1809,35 @@ model InAppNotification {
 }
 
 model StaffAttendanceQrToken {
-  id            String         @id @default(uuid()) @db.Uuid
-  tenantId      String         @db.Uuid
-  branchId      String         @db.Uuid
-  tokenHash     String         @unique
-  purpose       StaffQrPurpose
-  validFrom     DateTime
-  validUntil    DateTime
-  consumedCount Int            @default(0)
-  createdById   String?        @db.Uuid
-  createdAt     DateTime       @default(now())
+  id                 String             @id @default(uuid()) @db.Uuid
+  tenantId           String             @db.Uuid
+  branchId           String             @db.Uuid
+  tokenHash          String             @unique
+  purpose            StaffQrPurpose
+  status             StaffQrTokenStatus @default(ACTIVE)
+  validFrom          DateTime
+  validUntil         DateTime
+  consumedCount      Int                @default(0)
+  lastUsedAt         DateTime?
+  expiredAt          DateTime?
+  deactivatedAt      DateTime?
+  deactivatedById    String?            @db.Uuid
+  deactivationReason String?
+  createdById        String?            @db.Uuid
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
 
   tenant              Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   branch              Branch                  @relation(fields: [branchId], references: [id], onDelete: Cascade)
   createdBy           User?                   @relation("StaffAttendanceQrTokenCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  deactivatedBy       User?                   @relation("StaffAttendanceQrTokenDeactivatedBy", fields: [deactivatedById], references: [id], onDelete: SetNull)
   checkInAttendances  StaffAttendanceRecord[] @relation("StaffAttendanceCheckInQrToken")
   checkOutAttendances StaffAttendanceRecord[] @relation("StaffAttendanceCheckOutQrToken")
 
   @@index([tenantId, branchId, validFrom, validUntil])
-  @@index([tenantId, branchId, purpose])
+  @@index([tenantId, branchId, status, purpose, validUntil], map: "staff_qr_tokens_lifecycle_idx")
   @@index([validUntil])
+  @@index([deactivatedById], map: "staff_qr_tokens_deactivated_by_idx")
   @@map("staff_attendance_qr_tokens")
 }
 

@@ -145,10 +145,13 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                 Late after
                 <input name="staffLateAfterTime" defaultValue={s.staffLateAfterTime} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
               </label>
-              <label className="text-xs font-medium text-slate-600">
-                QR validity seconds
-                <input name="staffQrTokenValiditySeconds" defaultValue={s.staffQrTokenValiditySeconds} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
-              </label>
+              <div className="text-xs font-medium text-slate-600">
+                QR validity
+                <input type="hidden" name="staffQrTokenValiditySeconds" value="18000" />
+                <span className="mt-1 block min-h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
+                  5 hours (fixed)
+                </span>
+              </div>
               <label className="text-xs font-medium text-slate-600">
                 Student WhatsApp mode
                 {canManageNotificationSettings ? (

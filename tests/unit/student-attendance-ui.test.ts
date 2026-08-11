@@ -107,9 +107,10 @@ describe("attendance form state helpers", () => {
       attendanceDate: "2026-05-04",
       sessionType: "FULL_DAY",
       existingRecordCount: 1,
-      lockedCount: 0,
-      isLocked: false,
-      students: [
+          lockedCount: 0,
+          isLocked: false,
+          calendarEntry: null,
+          students: [
         {
           enrollmentId: rows[0].enrollmentId,
           studentId: rows[0].studentId,

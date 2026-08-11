@@ -292,7 +292,7 @@ export const updateAttendanceSettingsSchema = z.object({
   staffLateAfterTime: z.string().regex(hhmm).default("08:00"),
   staffHalfDayBeforeMinutes: z.number().int().min(0).max(720).default(240),
   staffMinimumWorkingMinutes: z.number().int().min(0).max(900).default(360),
-  staffQrTokenValiditySeconds: z.number().int().min(30).max(900).default(180),
+  staffQrTokenValiditySeconds: z.literal(18000).default(18000),
   staffWeeklySummaryWhatsAppEnabled: z.boolean().default(false),
   staffWeeklySummarySendDay: z.number().int().min(1).max(7).default(1),
   staffWeeklySummarySendTime: z.string().regex(hhmm).default("09:00"),

@@ -11,13 +11,14 @@ import {
 import {
   MAX_STUDENT_IMPORT_FILE_BYTES,
   MAX_STUDENT_IMPORT_ROWS,
+  MINIMUM_STUDENT_IMPORT_COLUMNS,
   REQUIRED_STUDENT_IMPORT_COLUMNS,
   STUDENT_IMPORT_COLUMNS,
   type StudentImportColumnKey
 } from "@/modules/academia/student-bulk-columns";
 import {
-  createStudentRegistrationSchema,
-  type CreateStudentRegistrationInput
+  studentBulkImportRegistrationSchema,
+  type StudentBulkImportRegistrationInput
 } from "@/modules/academia/schemas";
 
 type ImportRowValues = Partial<Record<StudentImportColumnKey, string>>;
@@ -30,8 +31,8 @@ export type StudentImportError = {
 
 export type ParsedStudentImportRow = {
   rowNumber: number;
-  registration: CreateStudentRegistrationInput;
-  classSectionLabel?: string;
+  registration: StudentBulkImportRegistrationInput;
+  classSectionLabel: string;
   rollNumber?: string;
   enrollmentDate?: Date;
 };
@@ -42,7 +43,12 @@ const HEADER_BY_NORMALIZED_VALUE = new Map<string, StudentImportColumnKey>();
 for (const column of STUDENT_IMPORT_COLUMNS) {
   HEADER_BY_NORMALIZED_VALUE.set(normalizeHeader(column.key), column.key);
   HEADER_BY_NORMALIZED_VALUE.set(normalizeHeader(column.label), column.key);
+  for (const alias of column.aliases) {
+    HEADER_BY_NORMALIZED_VALUE.set(normalizeHeader(alias), column.key);
+  }
 }
+
+const EMPTY_CELL_MARKERS = new Set(["n/a", "na", "nan", "null", "not available"]);
 
 const GENDER_VALUES = new Map([
   ["male", "MALE"],
@@ -69,7 +75,7 @@ function normalizeHeader(value: string) {
 }
 
 function optionValue(value: string | undefined, options: readonly string[]) {
-  if (!value) return value;
+  if (!value?.trim()) return undefined;
   const normalized = value.trim().toLowerCase();
   return options.find((option) => option.toLowerCase() === normalized) ?? value.trim();
 }
@@ -85,14 +91,19 @@ function dateValue(value: ExcelJS.CellValue): string {
   if (typeof value === "number" && Number.isFinite(value)) {
     return new Date(Math.round((value - 25569) * 86400 * 1000)).toISOString().slice(0, 10);
   }
-  return cellText(value);
+  const text = cellText(value);
+  const dayFirst = /^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/.exec(text);
+  if (!dayFirst) return text;
+  const [, day, month, year] = dayFirst;
+  return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
 }
 
 function cellText(value: ExcelJS.CellValue): string {
   if (value === null || value === undefined) return "";
   if (value instanceof Date) return value.toISOString().slice(0, 10);
   if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
-    return String(value).trim();
+    const text = String(value).trim();
+    return EMPTY_CELL_MARKERS.has(text.toLowerCase()) ? "" : text;
   }
   if ("result" in value && value.result !== undefined) return cellText(value.result);
   if ("text" in value && typeof value.text === "string") return value.text.trim();
@@ -111,7 +122,17 @@ function issuePath(issue: z.ZodIssue) {
 }
 
 function parseRegistrationRow(rowNumber: number, branchId: string, values: ImportRowValues) {
-  const result = createStudentRegistrationSchema.safeParse({
+  if (values.admissionNumber?.trim().toUpperCase() === "EXAMPLE-001") {
+    return {
+      errors: [{
+        row: rowNumber,
+        field: "admissionNumber",
+        message: "Replace or remove the example row before importing."
+      }] satisfies StudentImportError[]
+    };
+  }
+
+  const result = studentBulkImportRegistrationSchema.safeParse({
     student: {
       branchId,
       admissionNumber: values.admissionNumber,
@@ -141,11 +162,10 @@ function parseRegistrationRow(rowNumber: number, branchId: string, values: Impor
       bankAccountNumber: values.bankAccountNumber,
       bankBranchName: values.bankBranchName,
       ifscCode: values.ifscCode,
-      status: "ACTIVE",
-      joinedAt: spreadsheetDate(values, "admissionDate")
+      status: "ACTIVE"
     },
     primaryGuardian: {
-      relation: values.guardianRelation?.trim().toUpperCase(),
+      relation: values.guardianRelation?.trim().toUpperCase() || undefined,
       phone: values.guardianPhone,
       email: values.guardianEmail,
       isEmergencyContact: true,
@@ -165,15 +185,25 @@ function parseRegistrationRow(rowNumber: number, branchId: string, values: Impor
 
   const enrollmentDate = spreadsheetDate(values, "enrollmentDate");
   const parsedEnrollmentDate = enrollmentDate ? new Date(`${enrollmentDate}T00:00:00.000Z`) : undefined;
-  if (parsedEnrollmentDate && Number.isNaN(parsedEnrollmentDate.valueOf())) {
+  if (
+    parsedEnrollmentDate &&
+    (Number.isNaN(parsedEnrollmentDate.valueOf()) || parsedEnrollmentDate.toISOString().slice(0, 10) !== enrollmentDate)
+  ) {
     return { errors: [{ row: rowNumber, field: "enrollmentDate", message: "Enter a valid enrollment date." }] };
   }
+
+  const className = values.classSection?.trim();
+  const sectionName = values.section?.trim();
+  if (!className) {
+    return { errors: [{ row: rowNumber, field: "classSection", message: "Current Class is required." }] };
+  }
+  const classSectionLabel = sectionName ? `${className}-${sectionName}` : className;
 
   return {
     row: {
       rowNumber,
       registration: result.data,
-      classSectionLabel: values.classSection?.trim() || undefined,
+      classSectionLabel,
       rollNumber: values.rollNumber?.trim() || undefined,
       enrollmentDate: parsedEnrollmentDate
     } satisfies ParsedStudentImportRow
@@ -278,43 +308,65 @@ export async function buildStudentImportTemplate(format: "xlsx" | "csv", referen
   academicYearName?: string | null;
   classSections: string[];
 }) {
+  const sampleValues: Partial<Record<StudentImportColumnKey, string>> = {
+    admissionNumber: "EXAMPLE-001",
+    fullName: "Example Student",
+    dateOfBirth: "2012-04-15",
+    classSection: reference.classSections[0] ?? "Class 1-A",
+    guardianPhone: "9876543210",
+    fatherName: "Example Father",
+    motherName: "Example Mother"
+  };
+
   if (format === "csv") {
-    const header = STUDENT_IMPORT_COLUMNS.map((column) => column.key).join(",");
-    return Buffer.from(`\uFEFF${header}\r\n`, "utf8");
+    const header = MINIMUM_STUDENT_IMPORT_COLUMNS.map((column) => safeCsvValue(column.label)).join(",");
+    const sample = MINIMUM_STUDENT_IMPORT_COLUMNS
+      .map((column) => safeCsvValue(sampleValues[column.key] ?? ""))
+      .join(",");
+    return Buffer.from(`\uFEFF${header}\r\n${sample}\r\n`, "utf8");
   }
 
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "JinaCampus";
   workbook.created = new Date();
   const students = workbook.addWorksheet("Students", { views: [{ state: "frozen", ySplit: 1 }] });
-  students.addRow(STUDENT_IMPORT_COLUMNS.map((column) => `${column.key}${column.required ? " *" : ""}`));
+  students.addRow(MINIMUM_STUDENT_IMPORT_COLUMNS.map((column) => `${column.label} *`));
+  students.addRow(MINIMUM_STUDENT_IMPORT_COLUMNS.map((column) => sampleValues[column.key] ?? ""));
   styleHeader(students.getRow(1));
-  students.autoFilter = { from: "A1", to: `${students.getColumn(STUDENT_IMPORT_COLUMNS.length).letter}1` };
-  STUDENT_IMPORT_COLUMNS.forEach((column, index) => {
+  students.getRow(2).eachCell((cell) => {
+    cell.font = { italic: true, color: { argb: "FF7C5C10" } };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF7D6" } };
+  });
+  students.autoFilter = { from: "A1", to: `${students.getColumn(MINIMUM_STUDENT_IMPORT_COLUMNS.length).letter}2` };
+  MINIMUM_STUDENT_IMPORT_COLUMNS.forEach((column, index) => {
     students.getColumn(index + 1).width = Math.min(32, Math.max(16, column.label.length + 3));
   });
-  for (let row = 2; row <= 101; row += 1) {
-    students.getCell(row, 6).dataValidation = { type: "list", allowBlank: true, formulae: ['"MALE,FEMALE,OTHER,NOT_SPECIFIED"'] };
-    students.getCell(row, 12).dataValidation = { type: "list", allowBlank: false, formulae: ['"FATHER,MOTHER,GUARDIAN"'] };
-    students.getCell(row, 19).dataValidation = { type: "list", allowBlank: false, formulae: [`'Reference Data'!$A$2:$A$${STUDENT_RELIGION_OPTIONS.length + 1}`] };
-    students.getCell(row, 21).dataValidation = { type: "list", allowBlank: false, formulae: [`'Reference Data'!$B$2:$B$${STUDENT_CATEGORY_OPTIONS.length + 1}`] };
-    students.getCell(row, 26).dataValidation = { type: "list", allowBlank: false, formulae: [`'Reference Data'!$C$2:$C$${INDIAN_STATE_OPTIONS.length + 1}`] };
-    if (reference.classSections.length) {
-      students.getCell(row, 31).dataValidation = { type: "list", allowBlank: true, formulae: [`'Reference Data'!$D$2:$D$${reference.classSections.length + 1}`] };
+  const classColumn = MINIMUM_STUDENT_IMPORT_COLUMNS.findIndex((column) => column.key === "classSection") + 1;
+  const dobColumn = MINIMUM_STUDENT_IMPORT_COLUMNS.findIndex((column) => column.key === "dateOfBirth") + 1;
+  students.getColumn(dobColumn).numFmt = "yyyy-mm-dd";
+  if (reference.classSections.length) {
+    for (let row = 2; row <= 101; row += 1) {
+      students.getCell(row, classColumn).dataValidation = {
+        type: "list",
+        allowBlank: false,
+        formulae: [`'Reference Data'!$D$2:$D$${reference.classSections.length + 1}`]
+      };
     }
   }
 
   const instructions = workbook.addWorksheet("Instructions");
   instructions.columns = [{ width: 28 }, { width: 90 }];
   instructions.addRows([
-    ["JinaCampus Student Import", "Use the Students sheet without renaming or deleting required columns."],
+    ["JinaCampus Student Import", "Use the Students sheet. Replace or delete the highlighted example row before importing."],
     ["Branch", reference.branchName],
     ["Academic Year", reference.academicYearName ?? "No active academic year"],
-    ["Required fields", "Columns marked with * must contain a value."],
-    ["Dates", "Use YYYY-MM-DD. Google Sheets and Excel date cells are also accepted."],
-    ["Aadhaar", "Format as text and enter 12 digits. JinaCampus stores only a masked value and last four digits."],
-    ["Class assignment", "Use an exact Class Section value from Reference Data, or leave blank to enroll later."],
-    ["Validation", "Preview the file before import. Imports are rejected unless every row is valid."],
+    ["Required fields", "Scholar Number, Student Name, Date of Birth, Current Class, Contact Number, Father's Name, and Mother's Name."],
+    ["Optional profile fields", "Leave unavailable optional cells blank. JinaCampus stores them as empty profile values and marks the student profile incomplete until they are completed later."],
+    ["Header matching", "Common headings such as Scholar No, DOB, Class, Mobile Number, Father Name, and Mother Name are accepted."],
+    ["Dates", "Use YYYY-MM-DD or DD/MM/YYYY. Native Google Sheets and Excel date cells are also accepted."],
+    ["Class assignment", "Use an active Class Section from Reference Data. A class-only value is accepted only when that class has one active section."],
+    ["Validation", "Preview first. Valid rows can be imported while invalid rows remain listed for correction."],
+    ["Blank cells", "Leave optional cells blank; do not enter NaN, N/A, or placeholder text."],
     ["Limit", `${MAX_STUDENT_IMPORT_ROWS} student rows per file.`]
   ]);
   styleHeader(instructions.getRow(1));

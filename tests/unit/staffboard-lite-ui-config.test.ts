@@ -57,7 +57,7 @@ describe("StaffBoard Lite UI route config", () => {
       "/staffboard/leave/review"
     ]);
     expect(staffboardModuleCards.map((card) => card.key)).toContain("attendance");
-    expect(staffboardModuleCards.map((card) => card.title)).toContain("Staff QR Display");
+    expect(staffboardModuleCards.map((card) => card.title)).toContain("QR Attendance Console");
     expect(staffboardModuleCards.filter((card) => card.status === "coming-soon")).toEqual([]);
   });
 
@@ -107,7 +107,7 @@ describe("StaffBoard Lite UI route config", () => {
     expect(navigationSource).toContain("StaffBoard Lite");
     expect(navigationSource).toContain("Categories");
     expect(navigationSource).toContain("Staff Attendance");
-    expect(navigationSource).toContain("QR Display");
+    expect(navigationSource).toContain("QR Console");
     expect(navigationSource).toContain("Scan QR");
     expect(navigationSource).toContain("Staff Reports");
     expect(navigationSource).toContain("My Leave");

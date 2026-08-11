@@ -17,13 +17,19 @@ export async function POST(request: Request) {
     const branchId = idSchema.parse(formData.get("branchId"));
     const parsed = await parseStudentImportFile(file, branchId);
     const validated = await validateStudentBulkImport(ctx, branchId, parsed.rows, parsed.errors);
+    const invalidRows = new Set(
+      validated.errors.filter((error) => error.row > 1).map((error) => error.row)
+    ).size;
+    const hasBlockingError = validated.errors.some(
+      (error) => error.row === 1 || error.field === "file"
+    );
     return NextResponse.json({
       success: true,
       summary: {
         totalRows: parsed.totalRows,
         validRows: validated.validRows,
-        invalidRows: new Set(validated.errors.filter((error) => error.row > 1).map((error) => error.row)).size,
-        canImport: validated.errors.length === 0 && validated.rows.length > 0
+        invalidRows,
+        canImport: validated.rows.length > 0 && !hasBlockingError
       },
       errors: validated.errors.slice(0, 250),
       truncatedErrors: validated.errors.length > 250

@@ -9,6 +9,7 @@ import {
   maskAadhaarNumber,
   maskBankAccountNumber
 } from "@/modules/academia/schemas/student.schema";
+import { getStudentProfileStatus } from "@/modules/academia/student-profile-completeness";
 import type {
   ParsedStudentImportRow,
   StudentExportRow,
@@ -71,7 +72,8 @@ const EXPORT_COLUMNS = [
   { key: "academicYear", label: "Academic Year" },
   { key: "classSection", label: "Class Section" },
   { key: "rollNumber", label: "Roll Number" },
-  { key: "status", label: "Student Status" }
+  { key: "status", label: "Student Status" },
+  { key: "profileStatus", label: "Profile Status" }
 ] as const;
 
 function normalizedLabel(value: string) {
@@ -112,6 +114,48 @@ export function classSectionAliases(classSection: ClassSectionReference) {
     `${classSection.academicClass.name} ${classSection.section.name}`,
     `${classSection.academicClass.code}-${classSection.section.code}`
   ].map(normalizedLabel)));
+}
+
+function classAliases(classSection: ClassSectionReference) {
+  return Array.from(new Set([
+    classSection.academicClass.name,
+    classSection.academicClass.code
+  ].map(normalizedLabel)));
+}
+
+function addClassSectionAlias(
+  aliases: Map<string, ClassSectionReference | null>,
+  alias: string,
+  classSection: ClassSectionReference
+) {
+  if (!aliases.has(alias)) {
+    aliases.set(alias, classSection);
+    return;
+  }
+  if (aliases.get(alias)?.id !== classSection.id) aliases.set(alias, null);
+}
+
+export function buildClassSectionReferenceMap(classSections: ClassSectionReference[]) {
+  const aliases = new Map<string, ClassSectionReference | null>();
+  for (const classSection of classSections) {
+    for (const alias of classSectionAliases(classSection)) {
+      addClassSectionAlias(aliases, alias, classSection);
+    }
+    for (const alias of classAliases(classSection)) {
+      addClassSectionAlias(aliases, alias, classSection);
+    }
+  }
+  return aliases;
+}
+
+export function rowsExceedingClassCapacity(
+  capacity: number | null,
+  currentEnrollmentCount: number,
+  eligibleRowNumbers: number[]
+) {
+  if (capacity === null) return [];
+  const availablePlaces = Math.max(0, capacity - currentEnrollmentCount);
+  return [...eligibleRowNumbers].sort((left, right) => left - right).slice(availablePlaces);
 }
 
 async function loadClassSectionReferences(ctx: TenantContext, branchId: string) {
@@ -168,14 +212,22 @@ export async function validateStudentBulkImport(
   await ensureActiveBranch(db, ctx, branchId);
 
   const errors = [...parseErrors];
-  const admissionRows = new Map<string, number>();
+  const admissionRows = new Map<string, number[]>();
   for (const row of rows) {
     const key = row.registration.student.admissionNumber.toLowerCase();
-    const firstRow = admissionRows.get(key);
-    if (firstRow) {
-      errors.push({ row: row.rowNumber, field: "admissionNumber", message: `Duplicate admission number also used on row ${firstRow}.` });
-    } else {
-      admissionRows.set(key, row.rowNumber);
+    const matchingRows = admissionRows.get(key) ?? [];
+    matchingRows.push(row.rowNumber);
+    admissionRows.set(key, matchingRows);
+  }
+  for (const matchingRows of admissionRows.values()) {
+    if (matchingRows.length > 1) {
+      for (const rowNumber of matchingRows) {
+        errors.push({
+          row: rowNumber,
+          field: "admissionNumber",
+          message: "This Scholar Number appears more than once in the file."
+        });
+      }
     }
   }
 
@@ -183,7 +235,10 @@ export async function validateStudentBulkImport(
     admissionRows.size ? db.student.findMany({
       where: {
         tenantId: ctx.tenantId,
-        admissionNumber: { in: rows.map((row) => row.registration.student.admissionNumber) }
+        admissionNumber: {
+          in: rows.map((row) => row.registration.student.admissionNumber),
+          mode: "insensitive"
+        }
       },
       select: { admissionNumber: true }
     }) : [],
@@ -192,21 +247,15 @@ export async function validateStudentBulkImport(
   const existingAdmissions = new Set(existingStudents.map((student) => student.admissionNumber.toLowerCase()));
   for (const row of rows) {
     if (existingAdmissions.has(row.registration.student.admissionNumber.toLowerCase())) {
-      errors.push({ row: row.rowNumber, field: "admissionNumber", message: "This admission number already exists." });
+      errors.push({ row: row.rowNumber, field: "admissionNumber", message: "This Scholar Number already exists." });
     }
   }
 
-  const classSectionMap = new Map<string, ClassSectionReference | null>();
-  for (const classSection of classSections) {
-    for (const alias of classSectionAliases(classSection)) {
-      classSectionMap.set(alias, classSectionMap.has(alias) ? null : classSection);
-    }
-  }
+  const classSectionMap = buildClassSectionReferenceMap(classSections);
 
   const preparedRows: PreparedRow[] = [];
-  const incomingCapacity = new Map<string, number>();
-  const rollKeys = new Map<string, number>();
-  if (rows.some((row) => Boolean(row.classSectionLabel))) {
+  const rollKeys = new Map<string, number[]>();
+  if (rows.length) {
     await requireBranchPermission(ctx, "academia.enrollment.manage", branchId);
   }
   for (const row of rows) {
@@ -214,20 +263,20 @@ export async function validateStudentBulkImport(
     if (row.classSectionLabel) {
       const matched = classSectionMap.get(normalizedLabel(row.classSectionLabel));
       if (matched === undefined) {
-        errors.push({ row: row.rowNumber, field: "classSection", message: "Class section was not found in the active academic year." });
+        errors.push({ row: row.rowNumber, field: "classSection", message: "Current Class was not found in the active academic year." });
       } else if (matched === null) {
-        errors.push({ row: row.rowNumber, field: "classSection", message: "Class section name is ambiguous. Use its exact display name." });
+        errors.push({
+          row: row.rowNumber,
+          field: "classSection",
+          message: "This class has multiple sections. Enter an exact class-section or add a Section column."
+        });
       } else {
         classSection = matched;
-        incomingCapacity.set(matched.id, (incomingCapacity.get(matched.id) ?? 0) + 1);
         if (row.rollNumber) {
           const rollKey = `${matched.id}:${row.rollNumber.toLowerCase()}`;
-          const firstRow = rollKeys.get(rollKey);
-          if (firstRow) {
-            errors.push({ row: row.rowNumber, field: "rollNumber", message: `Duplicate roll number also used on row ${firstRow}.` });
-          } else {
-            rollKeys.set(rollKey, row.rowNumber);
-          }
+          const matchingRows = rollKeys.get(rollKey) ?? [];
+          matchingRows.push(row.rowNumber);
+          rollKeys.set(rollKey, matchingRows);
         }
       }
     } else if (row.rollNumber || row.enrollmentDate) {
@@ -236,11 +285,14 @@ export async function validateStudentBulkImport(
     preparedRows.push({ ...row, classSection });
   }
 
-  for (const classSection of classSections) {
-    const incoming = incomingCapacity.get(classSection.id) ?? 0;
-    if (classSection.capacity && classSection.currentEnrollmentCount + incoming > classSection.capacity) {
-      for (const row of preparedRows.filter((item) => item.classSection?.id === classSection.id)) {
-        errors.push({ row: row.rowNumber, field: "classSection", message: `${classSection.displayName} exceeds its configured capacity.` });
+  for (const matchingRows of rollKeys.values()) {
+    if (matchingRows.length > 1) {
+      for (const rowNumber of matchingRows) {
+        errors.push({
+          row: rowNumber,
+          field: "rollNumber",
+          message: "This roll number appears more than once for the class section."
+        });
       }
     }
   }
@@ -298,12 +350,33 @@ export async function validateStudentBulkImport(
     }
   }
 
+  const invalidBeforeCapacity = new Set(
+    errors.filter((error) => error.row > 1).map((error) => error.row)
+  );
+  for (const classSection of classSections) {
+    const eligibleRows = preparedRows
+      .filter((row) => row.classSection?.id === classSection.id && !invalidBeforeCapacity.has(row.rowNumber))
+      .map((row) => row.rowNumber);
+    for (const rowNumber of rowsExceedingClassCapacity(
+      classSection.capacity,
+      classSection.currentEnrollmentCount,
+      eligibleRows
+    )) {
+      errors.push({
+        row: rowNumber,
+        field: "classSection",
+        message: `${classSection.displayName} has no remaining capacity for this row.`
+      });
+    }
+  }
+
   const invalidParsedRows = new Set(errors.filter((error) => error.row > 1).map((error) => error.row));
+  const validPreparedRows = preparedRows.filter((row) => !invalidParsedRows.has(row.rowNumber));
 
   return {
-    rows: preparedRows,
+    rows: validPreparedRows,
     errors,
-    validRows: rows.filter((row) => !invalidParsedRows.has(row.rowNumber)).length
+    validRows: validPreparedRows.length
   };
 }
 
@@ -379,18 +452,26 @@ async function createManyInChunks<T>(items: T[], create: (chunk: T[]) => Promise
 
 export async function importStudentRows(ctx: TenantContext, branchId: string, rows: PreparedRow[]) {
   if (!rows.length) throw new AppError("STUDENT_IMPORT_EMPTY", "STUDENT_IMPORT_EMPTY", 400);
+  await requireBranchPermission(ctx, "academia.student.create", branchId);
+  await requireBranchPermission(ctx, "academia.guardian.manage", branchId);
+  await requireBranchPermission(ctx, "academia.enrollment.manage", branchId);
+  await ensureActiveBranch(db, ctx, branchId);
   const { byRow: guardiansByRow, newGuardians } = await resolveGuardians(ctx, rows);
   const now = new Date();
   const students: Prisma.StudentCreateManyInput[] = [];
   const links: Prisma.StudentGuardianLinkCreateManyInput[] = [];
   const enrollments: Prisma.EnrollmentCreateManyInput[] = [];
   const audits: Prisma.AuditLogCreateManyInput[] = [];
+  let incompleteProfiles = 0;
 
   for (const row of rows) {
     const studentId = randomUUID();
     const student = row.registration.student;
     const guardian = guardiansByRow.get(row.rowNumber);
     if (!guardian) throw new AppError("STUDENT_IMPORT_GUARDIAN_RESOLUTION_FAILED", "STUDENT_IMPORT_GUARDIAN_RESOLUTION_FAILED", 500);
+    const names = splitName(student.fullName);
+    const profileStatus = getStudentProfileStatus(student);
+    if (profileStatus === "INCOMPLETE") incompleteProfiles += 1;
     students.push({
       id: studentId,
       tenantId: ctx.tenantId,
@@ -398,9 +479,8 @@ export async function importStudentRows(ctx: TenantContext, branchId: string, ro
       admissionNumber: student.admissionNumber,
       admissionDate: student.admissionDate,
       fullName: student.fullName,
-      firstName: student.firstName ?? student.fullName,
-      middleName: student.middleName,
-      lastName: student.lastName,
+      firstName: names.firstName,
+      lastName: names.lastName,
       displayName: student.displayName ?? student.fullName,
       dateOfBirth: student.dateOfBirth,
       gender: student.gender,
@@ -409,8 +489,8 @@ export async function importStudentRows(ctx: TenantContext, branchId: string, ro
       fatherOccupation: student.fatherOccupation,
       motherName: student.motherName,
       guardianName: student.guardianName,
-      aadhaarMasked: maskAadhaarNumber(student.aadhaarNumber),
-      aadhaarLast4: lastFourDigits(student.aadhaarNumber),
+      aadhaarMasked: student.aadhaarNumber ? maskAadhaarNumber(student.aadhaarNumber) : undefined,
+      aadhaarLast4: student.aadhaarNumber ? lastFourDigits(student.aadhaarNumber) : undefined,
       familyIdNumber: student.familyIdNumber,
       sssmIdNumber: student.sssmIdNumber,
       apaarIdNumber: student.apaarIdNumber,
@@ -428,8 +508,7 @@ export async function importStudentRows(ctx: TenantContext, branchId: string, ro
       bankBranchName: student.bankBranchName,
       ifscCode: student.ifscCode,
       status: student.status,
-      joinedAt: student.joinedAt ?? student.admissionDate,
-      leftAt: student.leftAt,
+      joinedAt: student.admissionDate,
       createdById: ctx.userId,
       createdAt: now,
       updatedAt: now
@@ -456,7 +535,11 @@ export async function importStudentRows(ctx: TenantContext, branchId: string, ro
       action: ACADEMIA_AUDIT_EVENTS.STUDENT_CREATED,
       entityType: "Student",
       entityId: studentId,
-      afterJson: { admissionNumber: student.admissionNumber, importRow: row.rowNumber },
+      afterJson: {
+        admissionNumber: student.admissionNumber,
+        importRow: row.rowNumber,
+        profileStatus
+      },
       ipAddress: ctx.ipAddress,
       userAgent: ctx.userAgent,
       createdAt: now
@@ -484,7 +567,7 @@ export async function importStudentRows(ctx: TenantContext, branchId: string, ro
         classSectionId: row.classSection.id,
         rollNumber: row.rollNumber,
         status: "ACTIVE",
-        enrolledOn: row.enrollmentDate ?? student.admissionDate,
+        enrolledOn: row.enrollmentDate ?? student.admissionDate ?? now,
         createdById: ctx.userId,
         createdAt: now,
         updatedAt: now
@@ -536,12 +619,18 @@ export async function importStudentRows(ctx: TenantContext, branchId: string, ro
       metadata: {
         totalStudents: students.length,
         newGuardians: newGuardians.length,
-        enrollments: enrollments.length
+        enrollments: enrollments.length,
+        incompleteProfiles
       }
     }, tx);
   }, { maxWait: 10_000, timeout: 240_000 });
 
-  return { total: students.length, guardiansCreated: newGuardians.length, enrollmentsCreated: enrollments.length };
+  return {
+    total: students.length,
+    guardiansCreated: newGuardians.length,
+    enrollmentsCreated: enrollments.length,
+    incompleteProfiles
+  };
 }
 
 export async function exportStudentRecords(ctx: TenantContext, branchId: string) {
@@ -614,6 +703,7 @@ export async function exportStudentRecords(ctx: TenantContext, branchId: string)
       academicYear: enrollment?.academicYear.name,
       classSection: enrollment?.classSection.displayName,
       rollNumber: enrollment?.rollNumber,
+      profileStatus: getStudentProfileStatus(student),
       guardianLinks: undefined,
       enrollments: undefined
     };

@@ -1,5 +1,6 @@
 import { ACADEMIA_PERMISSIONS } from "@/modules/academia/permissions";
 import { STAFFBOARD_LITE_PERMISSIONS } from "@/modules/staffboard-lite/permissions";
+import { GRADEBOOK_PERMISSIONS } from "@/modules/gradebook/permissions";
 import type { PermissionCode } from "@/lib/rbac/permissions";
 import { hasPrincipalRole, hasTeacherRole } from "@/lib/rbac/roles";
 
@@ -22,7 +23,7 @@ export type NavGroup = {
 export type DesktopDockNavItem = NavItem & {
   activeHrefs: readonly string[];
   iconHref: string;
-  moduleKey: "dashboard" | "campus-core" | "academia" | "staffboard";
+  moduleKey: "dashboard" | "campus-core" | "academia" | "gradebook" | "staffboard";
 };
 
 type PermissionNavGroup = {
@@ -41,6 +42,7 @@ export const NAVIGATION_GROUPS = [
       { title: "School Profile", href: "/campus-core/institutions", permissions: ["campuscore.institution.manage"] },
       { title: "Branches", href: "/campus-core/branches", permissions: ["campuscore.branch.manage"] },
       { title: "Academic Years", href: "/campus-core/academic-years", permissions: ["campuscore.academic_year.manage"] },
+      { title: "Calendar", href: "/campus-core/calendar", permissions: ["campuscore.calendar.manage"] },
       { title: "Users", href: "/campus-core/users", permissions: ["campuscore.user.view"] },
       { title: "Roles", href: "/campus-core/roles", permissions: ["campuscore.role.view"] },
       { title: "Settings", href: "/campus-core/settings", permissions: ["campuscore.settings.manage"] },
@@ -58,8 +60,16 @@ export const NAVIGATION_GROUPS = [
         permissions: ["academia.class.manage", "academia.section.manage", "academia.subject.manage"]
       },
       { title: "Students", href: "/academia/students", permissions: ["academia.student.view"] },
+      { title: "Student Promotion", href: "/academia/promotions", permissions: ["academia.promotion.manage"] },
       { title: "Student Attendance", href: "/academia/attendance", permissions: ["academia.attendance.view"] },
       { title: "Student Attendance Reports", href: "/academia/attendance/reports", permissions: ["academia.attendance.report"] }
+    ]
+  },
+  {
+    title: "GradeBook",
+    items: [
+      { title: "GradeBook", href: "/gradebook", permissions: GRADEBOOK_PERMISSIONS },
+      { title: "Published Results", href: "/gradebook/reports", permissions: ["gradebook.report"] }
     ]
   },
   {
@@ -69,7 +79,7 @@ export const NAVIGATION_GROUPS = [
       { title: "Staff Profiles", href: "/staffboard/staff", permissions: ["staffboard.staff.view"] },
       { title: "Categories", href: "/staffboard/categories", permissions: ["staffboard.staff.view"] },
       { title: "Staff Attendance", href: "/staffboard/attendance", permissions: ["staffboard.attendance.view"] },
-      { title: "QR Display", href: "/staffboard/attendance/qr", permissions: ["staffboard.attendance.qr.generate"] },
+      { title: "QR Console", href: "/staffboard/attendance/qr", permissions: ["staffboard.attendance.qr.generate"] },
       { title: "Scan QR", href: "/staffboard/attendance/scan", permissions: ["staffboard.attendance.self_scan"] },
       { title: "My Attendance", href: "/staffboard/attendance/me", permissions: ["staffboard.attendance.self_view"] },
       { title: "My Leave", href: "/staffboard/leave", permissions: ["staffboard.leave.self_view"] },
@@ -160,6 +170,12 @@ export const MOBILE_NAVIGATION_SHORTCUTS = [
     audiences: ["admin", "teacher"]
   },
   {
+    title: "GradeBook",
+    href: "/gradebook",
+    permissions: ["gradebook.view"],
+    audiences: ["admin", "teacher"]
+  },
+  {
     title: "Staff Reports",
     href: "/staffboard/attendance/reports",
     permissions: ["staffboard.attendance.report"],
@@ -211,6 +227,12 @@ const MOBILE_BOTTOM_NAVIGATION_ITEMS = {
       title: "Attendance",
       href: "/academia/attendance/reports",
       permissions: ["academia.attendance.report"],
+      audiences: ["teacher"]
+    },
+    {
+      title: "GradeBook",
+      href: "/gradebook",
+      permissions: ["gradebook.view"],
       audiences: ["teacher"]
     },
     {
@@ -303,6 +325,12 @@ const DESKTOP_DOCK_GROUP_CONFIG = {
     iconHref: "/academia",
     moduleKey: "academia"
   },
+  GradeBook: {
+    title: "GradeBook",
+    preferredHref: "/gradebook",
+    iconHref: "/gradebook",
+    moduleKey: "gradebook"
+  },
   "StaffBoard Lite": {
     title: "StaffBoard",
     preferredHref: "/staffboard",
@@ -319,8 +347,16 @@ function hasEveryPermission(permissions: ReadonlySet<PermissionCode>, requiredPe
   return requiredPermissions.every((permission) => permissions.has(permission));
 }
 
-export function getVisibleNavigationGroups(permissions: ReadonlySet<PermissionCode>) {
+type NavigationFeatureOptions = {
+  gradebookEnabled?: boolean;
+};
+
+export function getVisibleNavigationGroups(
+  permissions: ReadonlySet<PermissionCode>,
+  features: NavigationFeatureOptions = {}
+) {
   return NAVIGATION_GROUPS
+    .filter((group) => group.title !== "GradeBook" || features.gradebookEnabled === true)
     .map((group) => ({
       title: group.title,
       items: group.items
@@ -361,11 +397,13 @@ export function getNavigationAudience(
 
 export function getPrimaryMobileNavigationItems(
   permissions: ReadonlySet<PermissionCode>,
-  roleCodes: readonly string[] = []
+  roleCodes: readonly string[] = [],
+  features: NavigationFeatureOptions = {}
 ) {
   const audience = getNavigationAudience(permissions, roleCodes);
   const visibleShortcuts = MOBILE_NAVIGATION_SHORTCUTS.filter(
     (shortcut) =>
+      (shortcut.href !== "/gradebook" || features.gradebookEnabled === true) &&
       shortcut.audiences.some((shortcutAudience) => shortcutAudience === audience) &&
       hasEveryPermission(permissions, shortcut.permissions)
   );
@@ -382,12 +420,14 @@ export function getPrimaryMobileNavigationItems(
 
 export function getMobileBottomNavigationItems(
   permissions: ReadonlySet<PermissionCode>,
-  roleCodes: readonly string[] = []
+  roleCodes: readonly string[] = [],
+  features: NavigationFeatureOptions = {}
 ) {
   const audience = getNavigationAudience(permissions, roleCodes);
-  const visibleGroups = getVisibleNavigationGroups(permissions);
+  const visibleGroups = getVisibleNavigationGroups(permissions, features);
   const visibleItems = MOBILE_BOTTOM_NAVIGATION_ITEMS[audience].filter(
     (item) =>
+      (item.href !== "/gradebook" || features.gradebookEnabled === true) &&
       item.audiences.some((itemAudience) => itemAudience === audience) &&
       hasEveryPermission(permissions, item.permissions)
   );

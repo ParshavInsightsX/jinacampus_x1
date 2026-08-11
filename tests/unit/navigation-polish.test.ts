@@ -27,6 +27,7 @@ describe("navigation polish", () => {
       "Dashboard",
       "CampusCore",
       "Academia",
+      "GradeBook",
       "StaffBoard Lite"
     ]);
   });
@@ -50,7 +51,7 @@ describe("navigation polish", () => {
     expect(staffboardItems).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ title: "Staff Attendance", href: "/staffboard/attendance" }),
-        expect.objectContaining({ title: "QR Display", href: "/staffboard/attendance/qr" }),
+        expect.objectContaining({ title: "QR Console", href: "/staffboard/attendance/qr" }),
         expect.objectContaining({ title: "Scan QR", href: "/staffboard/attendance/scan" }),
         expect.objectContaining({ title: "Staff Reports", href: "/staffboard/attendance/reports" })
       ])
@@ -209,7 +210,7 @@ describe("navigation polish", () => {
       "Scan QR"
     ]);
     expect(MOBILE_NAVIGATION_SHORTCUTS.map((item) => item.href)).not.toEqual(
-      expect.arrayContaining(["/feedesk", "/gradebook", "/schoolcast"])
+      expect.arrayContaining(["/feedesk", "/schoolcast"])
     );
   });
 
@@ -222,7 +223,7 @@ describe("navigation polish", () => {
       "/staffboard/attendance/scan"
     ]);
     expect(staffboardItems.map((item) => item.title)).not.toEqual(
-      expect.arrayContaining(["Staff Attendance", "QR Display", "Staff Reports"])
+      expect.arrayContaining(["Staff Attendance", "QR Console", "Staff Reports"])
     );
   });
 
@@ -327,7 +328,7 @@ describe("navigation polish", () => {
       "src/modules/dashboard/components/dashboard-state.ts"
     ].map(readProjectFile).join("\n");
 
-    expect(combinedSource).not.toMatch(/FeeDesk|GradeBook|SchoolCast|InsightBoard|payroll|biometric/i);
+    expect(combinedSource).not.toMatch(/FeeDesk|SchoolCast|InsightBoard|payroll|biometric/i);
     expect(combinedSource).not.toMatch(/tokenHash|rawToken/i);
   });
 });

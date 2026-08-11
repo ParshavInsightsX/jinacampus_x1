@@ -4,6 +4,8 @@ This document records the Phase 8.2 responsive browser QA plan for the current J
 
 Phase 8.2 no-new-browser-framework QA is complete. Authenticated mobile QA continues as `TASKS.md` Phase 9.7 after the local database is reachable and seeded with users/data for admin/principal, teacher, and staff flows.
 
+Current QR/PWA update (2026-08-11): the authenticated mobile drawer includes progressive JinaCampus installation controls, including Safari Add to Home Screen guidance. The QR Attendance Console uses a fixed five-hour lifecycle and explicit deactivate/regenerate controls. The staff scanner now uses an automatic 1:1 square `jsQR` scan region, processing lock, optional camera/flashlight controls, and a confirmation/current-status/history flow. Offline attendance remains out of scope; approved-HTTPS physical-device installation and camera QA is still required.
+
 ## Browser QA Approach
 
 - Playwright is not installed in this repo.
@@ -107,25 +109,42 @@ Student Attendance Marking, `/academia/attendance/mark`:
 Staff QR Scan, `/staffboard/attendance/scan`:
 
 - [ ] Camera scanner Start Camera button is visible and tappable.
+- [ ] Camera preview is centered, square, and does not overflow at 360 px.
 - [ ] Camera permission request appears on supported devices.
+- [ ] Rear camera is preferred and scanning begins automatically without a capture button.
+- [ ] A QR inside the square is decoded once and the UI remains locked during server validation.
+- [ ] Camera switch appears only with multiple cameras; flashlight appears only when supported.
 - [ ] Camera denial shows a safe fallback message.
 - [ ] Live QR scan submits decoded token without showing token hash or raw internals.
 - [ ] Manual token input is easy to paste or type into.
 - [ ] Submit button is large enough.
-- [ ] Success and error states are readable.
-- [ ] Result card fits phone width.
+- [ ] Success redirects to My Attendance and shows staff, institution, branch, date/time, purpose, and status.
+- [ ] Duplicate, expired, invalid, wrong-branch, and check-in-required errors remain on the scanner and are readable.
+- [ ] Today and recent personal attendance history fit phone width.
 - [ ] QR secrets are not shown.
 - [ ] Manual fallback remains available when camera scanning fails.
 - [ ] HTTPS requirement is communicated for deployed environments.
 
-Staff QR Display, `/staffboard/attendance/qr`:
+Staff QR Display / QR Attendance Console, `/staffboard/attendance/qr`:
 
 - [ ] QR code remains large and centered.
-- [ ] Countdown remains readable.
+- [ ] `HH:MM:SS` remaining-validity countdown remains readable for the five-hour window.
 - [ ] Purpose selector is usable.
 - [ ] Generate button is visible.
-- [ ] Expired state is clear.
+- [ ] Generated time, expiry time, and active/deactivated/expired status are clear.
+- [ ] Regenerate immediately invalidates the previous code for the same branch and purpose.
+- [ ] Deactivate immediately prevents further use.
+- [ ] Teacher and Staff direct-route access is denied; Principal and Office Staff Operator access follows branch permission.
 - [ ] Tablet layout works for front-office display.
+
+PWA installation from authenticated mobile navigation:
+
+- [ ] Android Chrome shows the browser install prompt or truthful browser-menu guidance over approved HTTPS.
+- [ ] Installed Android app restores secure login/session behavior and opens responsive navigation.
+- [ ] iOS Safari guidance explains Share, Add to Home Screen, Open as Web App, and Add.
+- [ ] Installed iOS web app supports login, navigation, and camera permission where the device/browser allows it.
+- [ ] In-app browsers direct users to Safari or Chrome instead of claiming installation succeeded.
+- [ ] Installed mode does not imply offline attendance or bypass server-side RBAC.
 
 Staff Attendance Admin, `/staffboard/attendance`:
 

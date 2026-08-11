@@ -56,8 +56,8 @@ export const staffboardModuleCards: readonly StaffboardModuleCard[] = [
   },
   {
     key: "qr-attendance",
-    title: "Staff QR Display",
-    description: "Generate secure branch QR codes for staff check-in and check-out display.",
+    title: "QR Attendance Console",
+    description: "Generate, regenerate, and deactivate audited five-hour branch QR codes for staff attendance.",
     href: staffboardRoutes.qr,
     permissions: ["staffboard.attendance.qr.generate"]
   },

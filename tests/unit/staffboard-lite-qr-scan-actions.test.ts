@@ -68,6 +68,7 @@ describe("staff QR scan server action", () => {
     expect(mocks.scanStaffAttendanceQr).toHaveBeenCalledWith(ctx, { token: "raw-staff-qr-token-12345" });
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/staffboard/attendance/scan");
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/staffboard/attendance");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/staffboard/attendance/me");
   });
 
   it("rejects blank token before resolving tenant context", async () => {

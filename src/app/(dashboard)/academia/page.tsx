@@ -1,5 +1,6 @@
 import {
   BookOpen,
+  CircleArrowUp,
   CalendarClock,
   Contact,
   GraduationCap,
@@ -25,6 +26,7 @@ const icons: Record<AcademiaModuleKey, typeof School> = {
   students: UsersRound,
   guardians: Contact,
   enrollments: LibraryBig,
+  promotions: CircleArrowUp,
   attendance: CalendarClock
 };
 

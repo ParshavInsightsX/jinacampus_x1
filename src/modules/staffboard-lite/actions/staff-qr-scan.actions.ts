@@ -52,6 +52,7 @@ export async function scanStaffAttendanceQrAction(input: unknown): Promise<Staff
 
     revalidatePath("/staffboard/attendance/scan");
     revalidatePath("/staffboard/attendance");
+    revalidatePath("/staffboard/attendance/me");
     return { ok: true, data };
   } catch (error) {
     return scanActionError(error);

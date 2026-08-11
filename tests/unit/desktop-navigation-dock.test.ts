@@ -81,8 +81,9 @@ describe("desktop navigation dock", () => {
     const dock = source("src/components/app-shell/desktop-navigation-dock.tsx");
     const layout = source("src/app/(dashboard)/layout.tsx");
 
-    expect(layout).toContain("getVisibleNavigationGroups(permissions)");
-    expect(layout).toContain("getMobileBottomNavigationItems(permissions, ctx.roleCodes ?? [])");
+    expect(layout).toContain("getVisibleNavigationGroups(permissions, { gradebookEnabled })");
+    expect(layout).toContain("getMobileBottomNavigationItems(");
+    expect(layout).toContain("{ gradebookEnabled }");
     expect(dock).not.toMatch(/tenantId|branchId|academicYearId|userId|permissionCodes|roleCodes/);
     expect(dock).not.toMatch(/passwordHash|tokenHash|rawToken/);
   });

@@ -5,6 +5,10 @@ import { hasPlatformAdminRole, hasPrincipalRole, hasTeacherRole } from "@/lib/rb
 import type { TenantContext } from "@/lib/tenant/context";
 import { listStudentsSchema } from "@/modules/academia/schemas";
 import { idSchema } from "@/modules/academia/schemas/shared";
+import {
+  getStudentProfileStatus,
+  type StudentProfileStatus
+} from "@/modules/academia/student-profile-completeness";
 import { pagination, resolveAcademicYearId } from "./shared";
 
 export type StudentClassSectionOption = {
@@ -28,6 +32,7 @@ export type StudentListRow = {
   displayName: string;
   gender: string;
   status: string;
+  profileStatus: StudentProfileStatus;
   fatherName: string | null;
   guardianName: string | null;
   category: string | null;
@@ -299,14 +304,24 @@ export async function listStudentsWithCurrentEnrollment(
       select: {
         id: true,
         admissionNumber: true,
+        admissionDate: true,
+        fullName: true,
         firstName: true,
         lastName: true,
         displayName: true,
+        dateOfBirth: true,
         gender: true,
         status: true,
         fatherName: true,
+        motherName: true,
         guardianName: true,
+        aadhaarMasked: true,
+        religion: true,
+        caste: true,
         category: true,
+        nationality: true,
+        city: true,
+        state: true,
         guardianLinks: {
           where: { tenantId: ctx.tenantId, isPrimary: true },
           select: {
@@ -359,6 +374,7 @@ export async function listStudentsWithCurrentEnrollment(
         displayName: studentName(student),
         gender: student.gender,
         status: student.status,
+        profileStatus: getStudentProfileStatus(student),
         fatherName: student.fatherName,
         guardianName: student.guardianName,
         category: student.category,
@@ -388,14 +404,24 @@ export async function listStudentsWithCurrentEnrollment(
         select: {
           id: true,
           admissionNumber: true,
+          admissionDate: true,
+          fullName: true,
           firstName: true,
           lastName: true,
           displayName: true,
+          dateOfBirth: true,
           gender: true,
           status: true,
           fatherName: true,
+          motherName: true,
           guardianName: true,
+          aadhaarMasked: true,
+          religion: true,
+          caste: true,
           category: true,
+          nationality: true,
+          city: true,
+          state: true,
           guardianLinks: {
             where: { tenantId: ctx.tenantId, isPrimary: true },
             select: {
@@ -440,6 +466,7 @@ export async function listStudentsWithCurrentEnrollment(
     displayName: studentName(enrollment.student),
     gender: enrollment.student.gender,
     status: enrollment.student.status,
+    profileStatus: getStudentProfileStatus(enrollment.student),
     fatherName: enrollment.student.fatherName,
     guardianName: enrollment.student.guardianName,
     category: enrollment.student.category,

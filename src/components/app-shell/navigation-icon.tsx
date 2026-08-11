@@ -44,6 +44,8 @@ const navigationIconsByHref: Record<string, LucideIcon> = {
   "/academia/attendance": CalendarCheck2,
   "/academia/attendance/mark": ClipboardCheck,
   "/academia/attendance/reports": ScrollText,
+  "/gradebook": BookOpenCheck,
+  "/gradebook/reports": ScrollText,
   "/staffboard": ClipboardList,
   "/staffboard/staff": UsersRound,
   "/staffboard/categories": ListChecks,

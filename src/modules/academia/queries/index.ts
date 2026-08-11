@@ -6,4 +6,5 @@ export * from "./section.queries";
 export * from "./student-attendance-reports.queries";
 export * from "./student-attendance.queries";
 export * from "./student.queries";
+export * from "./student-promotion.queries";
 export * from "./subject.queries";

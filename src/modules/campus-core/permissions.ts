@@ -15,6 +15,7 @@ export const CAMPUS_CORE_PERMISSIONS = [
   "campuscore.institution.manage",
   "campuscore.branch.manage",
   "campuscore.academic_year.manage",
+  "campuscore.calendar.manage",
   "campuscore.user.view",
   "campuscore.user.manage",
   "campuscore.user.create",

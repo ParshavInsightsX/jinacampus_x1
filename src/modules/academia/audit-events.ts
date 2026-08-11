@@ -28,6 +28,8 @@ export const ACADEMIA_AUDIT_EVENTS = {
   ENROLLMENT_UPDATED: "academia.enrollment.updated",
   ENROLLMENT_CANCELLED: "academia.enrollment.cancelled",
   ENROLLMENT_STATUS_CHANGED: "academia.enrollment.status_changed",
+  STUDENT_PROMOTION_BATCH_COMPLETED: "academia.student_promotion.batch_completed",
+  STUDENT_PROMOTION_BATCH_REVERSED: "academia.student_promotion.batch_reversed",
   STUDENT_ATTENDANCE_SUBMITTED: "academia.student_attendance.submitted",
   STUDENT_ATTENDANCE_UPDATED: "academia.student_attendance.updated",
   STUDENT_ATTENDANCE_LOCKED: "academia.student_attendance.locked",

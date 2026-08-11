@@ -8,11 +8,21 @@ import {
   getStudentProfileWithGuardians,
   listStudentRegistrationClassSectionOptions
 } from "@/modules/academia/queries";
-import { PageHeader, StatusPill, formatDateTime, formatEnumLabel } from "@/modules/academia/components/academia-page-shell";
+import {
+  PageHeader,
+  ProfileReadinessPill,
+  StatusPill,
+  formatDateTime,
+  formatEnumLabel
+} from "@/modules/academia/components/academia-page-shell";
 import { AssignStudentClassForm } from "@/modules/academia/components/assign-student-class-form";
 import { env } from "@/lib/env";
 import { listStudentDocuments } from "@/modules/academia/services/student-document.service";
 import { StudentDocumentsPanel } from "@/modules/academia/components/student-documents-panel";
+import {
+  getStudentProfileStatus,
+  missingStudentProfileFields
+} from "@/modules/academia/student-profile-completeness";
 
 function displayName(student: {
   fullName: string | null;
@@ -68,6 +78,8 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
   const canUpdate = permissions.has("academia.student.update");
   const canManageEnrollment = permissions.has("academia.enrollment.manage");
   const name = displayName(student);
+  const profileStatus = getStudentProfileStatus(student);
+  const missingProfileFields = missingStudentProfileFields(student);
   const primaryGuardian = student.guardianLinks[0]?.guardian;
   const currentYearEnrollment = student.enrollments.find(
     (enrollment) => enrollment.academicYear.isActive
@@ -95,12 +107,25 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
         ) : null}
       </div>
 
+      {profileStatus === "INCOMPLETE" ? (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+          <p className="font-semibold">Additional information required</p>
+          <p className="mt-1">
+            Complete the admission profile when details become available. Missing: {missingProfileFields.join(", ")}.
+          </p>
+        </div>
+      ) : null}
+
       <ProfileSection title="Admission Details" description="School identifiers and current lifecycle state.">
         <InfoRow label="Scholar / Admission No." value={student.admissionNumber} />
         <InfoRow label="Admission Date" value={formatDateTime(student.admissionDate)} />
         <div className="rounded-xl border border-slate-200 bg-white/80 p-3">
           <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Status</dt>
           <dd className="mt-2"><StatusPill value={student.status} /></dd>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white/80 p-3">
+          <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Profile readiness</dt>
+          <dd className="mt-2"><ProfileReadinessPill value={profileStatus} /></dd>
         </div>
       </ProfileSection>
 

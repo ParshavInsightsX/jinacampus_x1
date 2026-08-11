@@ -161,10 +161,70 @@ export function getUserSafeErrorMessage(errorOrCode: unknown, fallback = DEFAULT
     case "STUDENT_ATTENDANCE_ALREADY_EXISTS":
     case "STUDENT_ATTENDANCE_ALREADY_MARKED_FOR_DIFFERENT_SCOPE":
       return "Attendance has already been recorded for this student and date.";
+    case "STUDENT_ATTENDANCE_HOLIDAY":
+      return "Student attendance is not required on this calendar holiday or non-working day.";
     case "NO_ACTIVE_ENROLLMENTS":
       return "No active enrolled students were found for the selected class-section and date.";
     case "STUDENT_NOT_ACTIVE_ENROLLED":
       return "One or more selected students are not actively enrolled for this class-section.";
+    case "PROMOTION_NO_ACTIVE_ENROLLMENTS":
+      return "No active student enrollments are available in the selected source class-section.";
+    case "PROMOTION_TARGET_ACADEMIC_YEAR_MUST_FOLLOW_SOURCE":
+      return "Choose an academic year that follows the source academic year.";
+    case "PROMOTION_EFFECTIVE_DATE_OUTSIDE_TARGET_YEAR":
+      return "The effective date must fall within the target academic year.";
+    case "PROMOTION_NEXT_CLASS_MUST_DIFFER_FROM_SOURCE":
+      return "Choose a different next class for students marked Promoted.";
+    case "PROMOTION_REPEAT_TARGET_MUST_USE_SOURCE_CLASS":
+      return "A repeating student must remain in the same class level for the target academic year.";
+    case "PROMOTION_TARGET_NOT_ALLOWED_FOR_OUTCOME":
+      return "A target class-section is used only for promoted or repeating students.";
+    case "PROMOTION_DECISION_ALREADY_RECORDED":
+      return "A selected student already has a completed promotion decision. Reverse that batch before recording another decision.";
+    case "PROMOTION_TARGET_ENROLLMENT_ALREADY_EXISTS":
+      return "A selected student already has an enrollment in the target academic year.";
+    case "PROMOTION_TARGET_CLASS_SECTION_CAPACITY_EXCEEDED":
+      return "The selected decisions would exceed a target class-section capacity.";
+    case "PROMOTION_SOURCE_ENROLLMENT_CHANGED":
+    case "PROMOTION_STUDENT_LIFECYCLE_CHANGED":
+      return "A selected student changed while this batch was being prepared. Reload the roster and review again.";
+    case "PROMOTION_TARGET_ENROLLMENT_WRITE_INCOMPLETE":
+    case "PROMOTION_DECISION_WRITE_INCOMPLETE":
+      return "The promotion batch was not completed. No partial changes were saved; reload and try again.";
+    case "PROMOTION_BATCH_ALREADY_REVERSED":
+      return "This promotion batch has already been reversed.";
+    case "PROMOTION_REVERSAL_BLOCKED_BY_TARGET_ACTIVITY":
+      return "This batch cannot be reversed because attendance exists for a target-year enrollment.";
+    case "PROMOTION_REVERSAL_BLOCKED_BY_LATER_CHANGES":
+      return "This batch cannot be reversed because related student or enrollment records changed later.";
+    case "GRADEBOOK_NOT_ENABLED":
+      return "GradeBook is not enabled for this school.";
+    case "GRADEBOOK_CLASS_SUBJECT_ALREADY_ASSIGNED":
+      return "This subject is already assigned to the selected class-section.";
+    case "GRADEBOOK_CLASS_SUBJECT_HAS_ASSESSMENTS":
+      return "This subject assignment has assessments and cannot be deactivated.";
+    case "GRADEBOOK_TEACHER_NOT_AVAILABLE":
+      return "Choose an active teacher who has access to this branch.";
+    case "GRADEBOOK_ASSESSMENT_ALREADY_EXISTS":
+      return "An assessment with this code already exists for the selected class and subject.";
+    case "GRADEBOOK_ASSESSMENT_DATE_OUTSIDE_YEAR":
+      return "The assessment date must fall within the active academic year.";
+    case "GRADEBOOK_ASSESSMENT_NOT_OPEN":
+      return "Marks can be changed only while the assessment is open.";
+    case "GRADEBOOK_MARKS_OUT_OF_RANGE":
+      return "One or more marks exceed the assessment maximum.";
+    case "GRADEBOOK_ENROLLMENT_NOT_ELIGIBLE":
+      return "One or more students are not actively enrolled in this class-section.";
+    case "GRADEBOOK_RESULTS_INCOMPLETE":
+      return "Enter a result for every active student before publishing.";
+    case "GRADEBOOK_ASSESSMENT_ALREADY_PUBLISHED":
+      return "This assessment is already published.";
+    case "GRADEBOOK_ASSESSMENT_NOT_PUBLISHED":
+      return "Only a published assessment can be reopened.";
+    case "GRADEBOOK_PUBLISHED_REOPEN_REQUIRED":
+      return "Reopen this published assessment before cancelling it.";
+    case "GRADEBOOK_ASSESSMENT_CANCELLED":
+      return "This assessment has been cancelled and cannot be changed.";
     case "STAFF_QR_EXPIRED":
       return "This QR code has expired. Please scan a fresh QR code.";
     case "INVALID_STAFF_QR":
@@ -197,14 +257,22 @@ export function getUserSafeErrorMessage(errorOrCode: unknown, fallback = DEFAULT
       return "Staff QR attendance is disabled for this branch.";
     case "STAFF_QR_BRANCH_REQUIRED":
       return "Select a branch before generating a QR code.";
+    case "STAFF_QR_OPERATOR_ACCESS_REQUIRED":
+      return "Only an authorised Principal or Office Staff QR Operator can manage attendance QR codes.";
+    case "STAFF_QR_NOT_FOUND":
+      return "This attendance QR code is no longer available.";
     case "INVALID_STAFF_QR_TOKEN_VALIDITY_SECONDS":
-      return "Choose a QR validity window between 30 and 900 seconds.";
+      return "Staff attendance QR codes use the fixed five-hour validity window.";
     case "STAFF_ATTENDANCE_RECORD_NOT_FOUND":
       return "The requested attendance record was not found or is no longer accessible.";
     case "STAFF_ATTENDANCE_CHECK_OUT_BEFORE_CHECK_IN":
       return "Check-out time must be after check-in time.";
     case "STAFF_ATTENDANCE_MANAGED_BY_LEAVE":
       return "This attendance record is managed by an approved leave application. Cancel or revise the leave first.";
+    case "STAFF_ATTENDANCE_MANAGED_BY_CALENDAR":
+      return "This attendance record is managed by the academic calendar. Update the calendar entry first.";
+    case "STAFF_ATTENDANCE_HOLIDAY":
+      return "Today is a paid holiday for this staff group. Attendance check-in is not required.";
     case "STAFF_ON_APPROVED_LEAVE":
       return "You have approved leave for today. Contact an authorised approver if the leave needs to be cancelled.";
     case "STAFF_LEAVE_TYPE_NOT_FOUND":
@@ -265,6 +333,28 @@ export function getUserSafeErrorMessage(errorOrCode: unknown, fallback = DEFAULT
       return "The supporting document could not be opened. Please try again.";
     case "STAFF_LEAVE_DOCUMENT_DELETE_FAILED":
       return "The supporting document could not be deleted. Please try again.";
+    case "CALENDAR_INSTITUTION_NOT_FOUND":
+      return "The selected institution was not found or is no longer accessible.";
+    case "CALENDAR_BRANCH_NOT_FOUND":
+      return "The selected branch was not found or is no longer accessible.";
+    case "CALENDAR_ACADEMIC_YEAR_NOT_FOUND":
+      return "Select an academic year for the chosen institution.";
+    case "CALENDAR_DATE_OUTSIDE_ACADEMIC_YEAR":
+      return "The calendar dates must fall within the selected academic year.";
+    case "CALENDAR_ACTIVE_BRANCH_REQUIRED":
+      return "Add an active branch before creating institution-wide calendar entries.";
+    case "CALENDAR_ALL_BRANCH_ACCESS_REQUIRED":
+      return "Institution-wide calendar entries require access to every active branch. Select one authorised branch instead.";
+    case "CALENDAR_ENTRY_OVERLAP":
+      return "Another active calendar entry overlaps these dates, branches, and applicable groups.";
+    case "CALENDAR_STUDENT_ATTENDANCE_CONFLICT":
+      return "Student attendance already exists in this date range. Resolve those records before adding the holiday.";
+    case "CALENDAR_STAFF_LEAVE_CONFLICT":
+      return "An active staff leave application overlaps this date range. Resolve the leave before changing the calendar.";
+    case "CALENDAR_STAFF_ATTENDANCE_CONFLICT":
+      return "Staff attendance already exists in this date range. Resolve it before changing the calendar.";
+    case "CALENDAR_ENTRY_NOT_FOUND":
+      return "The calendar entry was not found or is no longer active.";
     case "CURRENT_PASSWORD_INCORRECT":
       return "Current password is incorrect.";
     case "USER_PASSWORD_NOT_SET":

@@ -15,6 +15,7 @@ import {
 const mocks = vi.hoisted(() => {
   const db = {
     branch: { count: vi.fn() },
+    academicCalendarEntry: { findMany: vi.fn() },
     academicYear: { findFirst: vi.fn() },
     user: { count: vi.fn() },
     role: { count: vi.fn() },
@@ -52,6 +53,7 @@ const ctx: TenantContext = {
 };
 
 function resetDbMocks() {
+  mocks.db.academicCalendarEntry.findMany.mockReset();
   mocks.db.branch.count.mockReset();
   mocks.db.academicYear.findFirst.mockReset();
   mocks.db.user.count.mockReset();
@@ -70,6 +72,7 @@ function resetDbMocks() {
 }
 
 function seedDefaultMockResults() {
+  mocks.db.academicCalendarEntry.findMany.mockResolvedValue([]);
   mocks.db.branch.count.mockResolvedValue(1);
   mocks.db.academicYear.findFirst.mockResolvedValue({ id: academicYearId, name: "2026-27" });
   mocks.db.user.count.mockResolvedValue(11);
@@ -235,13 +238,15 @@ describe("dashboard query services", () => {
     });
   });
 
-  it("builds a bounded trend without treating not-marked records as absence", () => {
+  it("builds a bounded trend without treating not-marked or non-working records as absence", () => {
     const dates = Array.from({ length: 7 }, (_, index) => new Date(Date.UTC(2026, 4, index + 1)));
     const result = buildAttendanceTrendPoints(dates, [
       { attendanceDate: new Date(Date.UTC(2026, 4, 7)), status: "PRESENT", _count: { _all: 7 } },
       { attendanceDate: new Date(Date.UTC(2026, 4, 7)), status: "LATE", _count: { _all: 1 } },
       { attendanceDate: new Date(Date.UTC(2026, 4, 7)), status: "ABSENT", _count: { _all: 2 } },
-      { attendanceDate: new Date(Date.UTC(2026, 4, 7)), status: "NOT_MARKED", _count: { _all: 4 } }
+      { attendanceDate: new Date(Date.UTC(2026, 4, 7)), status: "NOT_MARKED", _count: { _all: 4 } },
+      { attendanceDate: new Date(Date.UTC(2026, 4, 7)), status: "HOLIDAY", _count: { _all: 3 } },
+      { attendanceDate: new Date(Date.UTC(2026, 4, 7)), status: "WEEK_OFF", _count: { _all: 2 } }
     ]);
 
     expect(result).toHaveLength(7);

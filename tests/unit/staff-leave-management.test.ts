@@ -37,6 +37,13 @@ describe("Staff Leave management", () => {
       duration: "FIRST_HALF",
       nonWorkingWeekdays: [0]
     })).toBe(0.5);
+    expect(calculateStaffLeaveDays({
+      startDate: new Date("2026-08-07"),
+      endDate: new Date("2026-08-10"),
+      duration: "FULL_DAY",
+      nonWorkingWeekdays: [0],
+      excludedDateKeys: new Set(["2026-08-08"])
+    })).toBe(2);
   });
 
   it("rejects client-owned context and invalid date combinations", () => {

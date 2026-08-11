@@ -2,10 +2,14 @@ import { AppChrome } from "@/components/app-shell/app-chrome";
 import { getMobileBottomNavigationItems, getVisibleNavigationGroups } from "@/components/app-shell/navigation";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { getEffectivePermissions } from "@/lib/rbac/require-permission";
+import { isGradebookEnabled } from "@/modules/gradebook/feature";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const ctx = await requireAuth();
-  const permissions = await getEffectivePermissions({ ctx, branchId: ctx.activeBranchId });
+  const [permissions, gradebookEnabled] = await Promise.all([
+    getEffectivePermissions({ ctx, branchId: ctx.activeBranchId }),
+    isGradebookEnabled(ctx)
+  ]);
   const navbarContext = {
     userEmail: ctx.userEmail,
     userName: ctx.userName,
@@ -20,8 +24,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
     academicYearName: ctx.activeAcademicYearName ?? null,
     roleLabels: ctx.roleLabels ?? []
   };
-  const navigationGroups = getVisibleNavigationGroups(permissions);
-  const mobileBottomItems = getMobileBottomNavigationItems(permissions, ctx.roleCodes ?? []);
+  const navigationGroups = getVisibleNavigationGroups(permissions, { gradebookEnabled });
+  const mobileBottomItems = getMobileBottomNavigationItems(
+    permissions,
+    ctx.roleCodes ?? [],
+    { gradebookEnabled }
+  );
 
   return (
     <div className="min-h-dvh overflow-x-hidden bg-app-background">

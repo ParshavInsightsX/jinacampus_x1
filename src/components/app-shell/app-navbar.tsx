@@ -8,6 +8,7 @@ import { getNavbarRouteContext, isNavbarAutoHideEnabled } from "@/config/navbar"
 import { useAutoHideNavbar } from "@/hooks/use-auto-hide-navbar";
 import { BrandLogo } from "@/components/brand/brand-logo";
 import { InstitutionLogo } from "@/components/brand/institution-logo";
+import { PwaInstallProvider } from "@/components/pwa/pwa-install-control";
 
 import type { AppShellBranding } from "./branding";
 import { InstitutionBrand } from "./institution-brand";
@@ -57,7 +58,7 @@ export function AppNavbar({
   });
 
   return (
-    <>
+    <PwaInstallProvider>
       <TopEdgeRevealZone onReveal={reveal} />
       <header
         className={`sticky top-0 z-50 min-w-0 border-b border-campus-border bg-white pt-[env(safe-area-inset-top)] shadow-[0_6px_18px_rgba(11,22,56,0.07)] transition-transform duration-200 ease-out motion-reduce:transition-none lg:border-white/70 lg:bg-white/70 lg:pt-0 lg:shadow-[0_10px_36px_rgba(11,22,56,0.08)] lg:backdrop-blur-2xl ${isVisible ? "translate-y-0" : "-translate-y-full"}`}
@@ -128,6 +129,6 @@ export function AppNavbar({
         branding={branding}
         returnFocusRef={mobileTriggerRef}
       />
-    </>
+    </PwaInstallProvider>
   );
 }
