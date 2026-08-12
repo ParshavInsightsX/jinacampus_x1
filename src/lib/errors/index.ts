@@ -199,6 +199,50 @@ export function getUserSafeErrorMessage(errorOrCode: unknown, fallback = DEFAULT
       return "This batch cannot be reversed because related student or enrollment records changed later.";
     case "GRADEBOOK_NOT_ENABLED":
       return "GradeBook is not enabled for this school.";
+    case "GRADEBOOK_FEATURE_NOT_ENABLED":
+      return "This GradeBook capability is not enabled for this school.";
+    case "GRADEBOOK_SCOPE_FORBIDDEN":
+      return "You do not have access to this GradeBook scope.";
+    case "GRADEBOOK_BRANCH_CONTEXT_REQUIRED":
+      return "Select an authorised branch before using GradeBook.";
+    case "GRADEBOOK_ACADEMIC_YEAR_CONTEXT_REQUIRED":
+      return "Select an active academic year before using GradeBook.";
+    case "GRADEBOOK_INSTITUTION_CONTEXT_REQUIRED":
+      return "Your school context is incomplete. Ask an administrator to review your access.";
+    case "GRADEBOOK_STORAGE_UNAVAILABLE":
+    case "GRADEBOOK_STORAGE_BUCKET_MUST_BE_PRIVATE":
+      return "GradeBook document storage is not available. Ask an administrator to check the private storage configuration.";
+    case "GRADEBOOK_BATCH_VERSION_CONFLICT":
+      return "This marks batch changed after you opened it. Reload the page and review the latest version.";
+    case "GRADEBOOK_BATCH_LOCKED":
+      return "This marks batch is locked and cannot be edited.";
+    case "GRADEBOOK_MARK_OUT_OF_RANGE":
+      return "One or more marks exceed the configured maximum.";
+    case "GRADEBOOK_MARK_BATCH_NOT_FOUND":
+    case "GRADEBOOK_MARK_SCOPE_NOT_FOUND":
+      return "The requested marks scope was not found or is no longer accessible.";
+    case "GRADEBOOK_MARKS_WINDOW_NOT_OPEN":
+      return "The marks-entry window is not open.";
+    case "GRADEBOOK_MARKS_WINDOW_CLOSED":
+      return "The marks-entry window has closed.";
+    case "GRADEBOOK_GRADE_SCALE_COVERAGE_INVALID":
+      return "The grade scale must cover the complete score range from 0 to 100.";
+    case "GRADEBOOK_GRADE_SCALE_RANGE_INVALID":
+      return "Grade ranges must be continuous and must not overlap.";
+    case "GRADEBOOK_INVALID_STATE_TRANSITION":
+      return "This GradeBook record cannot move to the requested status.";
+    case "GRADEBOOK_SEGREGATION_OF_DUTIES_REQUIRED":
+      return "A different authorised user must complete this approval step.";
+    case "GRADEBOOK_RESULT_INPUT_INCOMPLETE":
+      return "Complete and approve every required marks batch before calculating results.";
+    case "GRADEBOOK_REPORT_CARD_NOT_APPROVED":
+      return "Approve every required report card before publishing results.";
+    case "GRADEBOOK_IMPORT_FILE_REQUIRED":
+      return "Choose a GradeBook CSV or Excel file to import.";
+    case "GRADEBOOK_IMPORT_FILE_TYPE_NOT_ALLOWED":
+      return "Use a valid GradeBook .csv or .xlsx file.";
+    case "GRADEBOOK_IMPORT_FILE_TOO_LARGE":
+      return "The GradeBook import file exceeds the configured size limit.";
     case "GRADEBOOK_CLASS_SUBJECT_ALREADY_ASSIGNED":
       return "This subject is already assigned to the selected class-section.";
     case "GRADEBOOK_CLASS_SUBJECT_HAS_ASSESSMENTS":

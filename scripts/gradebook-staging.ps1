@@ -1,0 +1,206 @@
+[CmdletBinding()]
+param(
+  [Parameter(Mandatory = $true)]
+  [ValidateSet("AssertTarget", "Connectivity", "ResetApplicationSchema", "Status", "ExpectedGradebookPending", "Deploy", "Generate", "Seed", "Drift", "Audit")]
+  [string]$Command,
+
+  [string]$EnvironmentFile = (Join-Path $env:LOCALAPPDATA "JinaCampus\secrets\.env.gradebook-staging.local"),
+  [string]$SchemaPath = "prisma/schema.prisma"
+)
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+
+$expectedStagingRef = "clmbwnulotrviqvnwvvj"
+$productionRef = "jcqpmdslmydxjsfdwenc"
+$root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$prisma = Join-Path $root "node_modules/.bin/prisma.cmd"
+$resetSql = Join-Path $PSScriptRoot "sql/reset-gradebook-staging-application-schema.sql"
+$connectivitySql = Join-Path $PSScriptRoot "sql/check-staging-connectivity.sql"
+$secretsRoot = [IO.Path]::GetFullPath((Join-Path $env:LOCALAPPDATA "JinaCampus\secrets"))
+$secretsRootPrefix = $secretsRoot.TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
+
+function Import-ProtectedEnvironment([string]$Path) {
+  $candidate = [IO.Path]::GetFullPath($Path)
+  if (-not $candidate.StartsWith($secretsRootPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+    throw "The staging environment file must stay inside the protected local JinaCampus secrets directory."
+  }
+  if (-not $candidate.EndsWith(".local", [StringComparison]::OrdinalIgnoreCase)) {
+    throw "The staging environment filename must end in .local."
+  }
+  if (-not (Test-Path -LiteralPath $candidate -PathType Leaf)) {
+    throw "Missing protected staging environment file: $Path"
+  }
+
+  foreach ($rawLine in [IO.File]::ReadAllLines($candidate)) {
+    $line = $rawLine.Trim()
+    if (-not $line -or $line.StartsWith("#")) { continue }
+    $pair = $line.Split("=", 2)
+    if ($pair.Count -ne 2 -or $pair[0] -notmatch "^[A-Z_][A-Z0-9_]*$") {
+      throw "Invalid staging environment entry."
+    }
+    $value = $pair[1].Trim()
+    if ($value.Length -ge 2 -and (($value.StartsWith('"') -and $value.EndsWith('"')) -or ($value.StartsWith("'") -and $value.EndsWith("'")))) {
+      $value = $value.Substring(1, $value.Length - 2)
+    }
+    [Environment]::SetEnvironmentVariable($pair[0], $value, "Process")
+  }
+}
+
+function Get-ProjectRefFromDatabaseUrl([string]$Value, [string]$Name) {
+  if ([string]::IsNullOrWhiteSpace($Value)) {
+    throw "$Name is required."
+  }
+  try {
+    $uri = [Uri]$Value
+  }
+  catch {
+    throw "$Name must be a valid PostgreSQL URL."
+  }
+  if ($uri.Scheme -notin @("postgresql", "postgres")) {
+    throw "$Name must use PostgreSQL."
+  }
+
+  $hostName = $uri.DnsSafeHost.ToLowerInvariant()
+  $userName = [Uri]::UnescapeDataString(($uri.UserInfo.Split(":", 2))[0]).ToLowerInvariant()
+
+  if ($hostName -match "^db\.([a-z0-9]+)\.supabase\.co$") {
+    return $Matches[1]
+  }
+  if ($hostName.EndsWith(".pooler.supabase.com") -and $userName -match "^postgres\.([a-z0-9]+)$") {
+    return $Matches[1]
+  }
+  throw "$Name does not identify a Supabase project reference."
+}
+
+function Assert-StagingTarget {
+  $configuredRef = [Environment]::GetEnvironmentVariable("GRADEBOOK_STAGING_PROJECT_REF", "Process")
+  if ($configuredRef -ne $expectedStagingRef) {
+    throw "GRADEBOOK_STAGING_PROJECT_REF does not match the approved staging project."
+  }
+  if ($expectedStagingRef -eq $productionRef) {
+    throw "Staging and production project references must differ."
+  }
+
+  $databaseRef = Get-ProjectRefFromDatabaseUrl $env:DATABASE_URL "DATABASE_URL"
+  $directRef = Get-ProjectRefFromDatabaseUrl $env:DIRECT_URL "DIRECT_URL"
+  if ($databaseRef -eq $productionRef -or $directRef -eq $productionRef) {
+    throw "Production database target detected. Operation refused."
+  }
+  if ($databaseRef -ne $expectedStagingRef -or $directRef -ne $expectedStagingRef) {
+    throw "Both database URLs must target the approved GradeBook staging project."
+  }
+
+  Write-Host "Verified staging target: gradebook-mvp-staging ($expectedStagingRef)."
+}
+
+function Use-StagingDirectConnection {
+  $source = [Uri]$env:DIRECT_URL
+  $userInfo = $source.UserInfo.Split(":", 2)
+  if ($userInfo.Count -ne 2 -or [string]::IsNullOrWhiteSpace($userInfo[1])) {
+    throw "DIRECT_URL does not contain staging database credentials."
+  }
+  $directHost = "db.$expectedStagingRef.supabase.co"
+  $directUrl = "postgresql://postgres:$($userInfo[1])@$directHost`:5432/postgres?connection_limit=1&sslmode=require"
+  [Environment]::SetEnvironmentVariable("DATABASE_URL", $directUrl, "Process")
+  [Environment]::SetEnvironmentVariable("DIRECT_URL", $directUrl, "Process")
+  Assert-StagingTarget
+  Write-Host "Using the project-specific staging direct connection."
+}
+
+function Invoke-Prisma([string[]]$Arguments) {
+  Assert-StagingTarget
+  & $prisma @Arguments
+  if ($LASTEXITCODE -ne 0) {
+    throw "Prisma command failed with exit code $LASTEXITCODE."
+  }
+}
+
+Import-ProtectedEnvironment $EnvironmentFile
+Assert-StagingTarget
+Use-StagingDirectConnection
+
+$resolvedSchema = (Resolve-Path (Join-Path $root $SchemaPath)).Path
+
+switch ($Command) {
+  "AssertTarget" { break }
+  "Connectivity" {
+    Assert-StagingTarget
+    & $prisma db execute --schema $resolvedSchema --file $connectivitySql
+    if ($LASTEXITCODE -ne 0) {
+      throw "Staging database connectivity check failed with exit code $LASTEXITCODE."
+    }
+  }
+  "ResetApplicationSchema" {
+    Invoke-Prisma @("db", "execute", "--schema", $resolvedSchema, "--file", $resetSql)
+  }
+  "Status" {
+    Assert-StagingTarget
+    $statusOutput = & $prisma migrate status --schema $resolvedSchema 2>&1
+    $statusCode = $LASTEXITCODE
+    $statusOutput | ForEach-Object { Write-Host $_ }
+    if ($statusCode -notin @(0, 1)) {
+      throw "Prisma migrate status failed with exit code $statusCode."
+    }
+    Write-Host "Prisma migration status exit code: $statusCode."
+  }
+  "ExpectedGradebookPending" {
+    Assert-StagingTarget
+    $statusOutput = & $prisma migrate status --schema $resolvedSchema 2>&1
+    $statusCode = $LASTEXITCODE
+    $statusOutput | ForEach-Object { Write-Host $_ }
+    $joinedOutput = $statusOutput -join "`n"
+    if ($statusCode -ne 1 -or $joinedOutput -notmatch "20260811201500_expand_gradebook_phase_0_1") {
+      throw "Expected exactly the expanded GradeBook migration to be pending."
+    }
+  }
+  "Deploy" {
+    Invoke-Prisma @("migrate", "deploy", "--schema", $resolvedSchema)
+  }
+  "Generate" {
+    Invoke-Prisma @("generate", "--schema", $resolvedSchema)
+  }
+  "Seed" {
+    if ($env:NODE_ENV -eq "production") {
+      throw "Synthetic staging seed is forbidden with NODE_ENV=production."
+    }
+    foreach ($name in @("PASSWORD_PEPPER", "SEED_ADMIN_EMAIL", "SEED_ADMIN_TEMP_PASSWORD", "DEV_DEMO_USER_PASSWORD")) {
+      if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($name, "Process"))) {
+        throw "$name is required for the synthetic staging seed."
+      }
+    }
+    if ($env:DEV_DEMO_SEED_ENABLED -ne "true") {
+      throw "DEV_DEMO_SEED_ENABLED must be true for the synthetic staging seed."
+    }
+    Invoke-Prisma @("generate", "--schema", $resolvedSchema)
+    $seedPath = Join-Path (Split-Path $resolvedSchema -Parent) "seed.ts"
+    if (-not (Test-Path -LiteralPath $seedPath -PathType Leaf)) {
+      throw "The selected baseline does not contain prisma/seed.ts."
+    }
+    Push-Location (Split-Path (Split-Path $resolvedSchema -Parent) -Parent)
+    try {
+      & node --import tsx $seedPath
+      if ($LASTEXITCODE -ne 0) {
+        throw "Synthetic staging seed failed with exit code $LASTEXITCODE."
+      }
+    }
+    finally {
+      Pop-Location
+    }
+  }
+  "Drift" {
+    Invoke-Prisma @(
+      "migrate", "diff",
+      "--from-schema-datamodel", $resolvedSchema,
+      "--to-schema-datasource", $resolvedSchema,
+      "--exit-code"
+    )
+  }
+  "Audit" {
+    Assert-StagingTarget
+    & node --import tsx (Join-Path $PSScriptRoot "audit-gradebook-staging-catalog.ts") --schema $resolvedSchema
+    if ($LASTEXITCODE -ne 0) {
+      throw "Staging catalog audit failed with exit code $LASTEXITCODE."
+    }
+  }
+}

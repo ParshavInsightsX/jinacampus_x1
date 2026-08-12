@@ -58,7 +58,10 @@ const environmentSchema = z.object({
   STAFF_LEAVE_DOCUMENTS_BUCKET: z.string().trim().min(1).default("staff-leave-documents"),
   STAFF_LEAVE_DOCUMENT_MAX_BYTES: z.coerce.number().int().min(1024).max(6_000_000).default(4_000_000),
   INSTITUTION_LOGOS_BUCKET: z.string().trim().min(1).default("institution-logos"),
-  INSTITUTION_LOGO_MAX_BYTES: z.coerce.number().int().min(1024).max(4_000_000).default(2_000_000)
+  INSTITUTION_LOGO_MAX_BYTES: z.coerce.number().int().min(1024).max(4_000_000).default(2_000_000),
+  GRADEBOOK_STORAGE_BUCKET: z.string().trim().min(1).default("gradebook-private"),
+  GRADEBOOK_IMPORT_MAX_BYTES: z.coerce.number().int().min(1024).max(20_000_000).default(10_000_000),
+  GRADEBOOK_REPORT_CARD_MAX_BYTES: z.coerce.number().int().min(1024).max(10_000_000).default(5_000_000)
 }).passthrough();
 
 function isLocalDatabaseUrl(value: string) {

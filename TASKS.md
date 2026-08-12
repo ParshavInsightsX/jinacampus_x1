@@ -1372,24 +1372,41 @@ Goal: introduce a tenant-safe assessment and marks ledger without duplicating Ac
 ### 11.2 Release Gates
 
 - [x] Apply `20260810213000_add_gradebook_foundation` to an approved non-production database with `prisma migrate deploy`.
+- [ ] Apply `20260811201500_expand_gradebook_phase_0_1` to an approved staging database with `prisma migrate deploy`.
 - [ ] Run DB-backed Principal class-subject, assessment, marks, publish, reopen, cancel, and report browser QA.
+- [ ] Run DB-backed Principal configuration, examination readiness, schedule, assignment, import, result, correction, report-card, and publication QA.
 - [x] Run Teacher assigned-class/subject access and unassigned-class denial QA.
-- [ ] Run Office Staff, Staff, cross-branch, and cross-tenant denial QA.
+- [ ] Run Office Staff, Staff, cross-branch, cross-year, and cross-tenant denial QA for the expanded workflows.
 - [ ] Verify existing CampusCore, Academia, student promotion, student attendance, StaffBoard, leave, calendar, and QR smoke flows.
-- [x] Enable GradeBook only for the approved pilot tenant through the Administrator Portal.
-- [x] Deploy through the approved release process and complete post-deployment smoke/observability review.
-- [ ] Stabilize the pilot and approve GradeBook for broad tenant enablement.
+- [ ] Enable the expanded GradeBook only for one approved staging/pilot tenant after migration and storage verification.
+- [ ] Deploy the expanded GradeBook through the approved release process and complete post-deployment smoke/observability review.
+- [ ] Verify private marks-import storage, signed report-card downloads, and audit/outbox records.
+- [ ] Stabilize the expanded pilot and approve GradeBook for broad tenant enablement.
+- [x] Record the controlled-release gate matrix, migration safety audit, staging procedure, and recovery strategy in `docs/gradebook-controlled-release.md`.
 
-### 11.3 Deferred GradeBook Scope
+### 11.3 Approved Expanded MVP Handoff
 
-- Grading-scale and weighted-term configuration.
-- Exam timetable and hall-ticket workflows.
-- Report-card PDF generation, transcripts, and board-specific templates.
-- Parent/student result portals and notification delivery.
-- Subject teacher workload/timetable automation.
-- GradeBook-driven promotion eligibility policy until final-result configuration is approved.
+- [x] Add disabled-by-default subfeature rollout controls.
+- [x] Add versioned schemes, terms, exam types, grade scales, and calculation rules.
+- [x] Add examination class-section/subject/component scope, schedules, readiness, and teacher assignments.
+- [x] Add roster-snapshot marks batches, optimistic versions, revisions, and submit/verify/approve/lock workflows.
+- [x] Add private CSV/XLSX marks-import staging, validation, apply, and cancellation.
+- [x] Add deterministic Decimal result runs, independent approval, adjustments, and correction versions.
+- [x] Add co-scholastic evaluation, subject/class-teacher/Principal remarks, and attendance snapshots.
+- [x] Add versioned report-card templates, immutable snapshots, private PDFs, approval, and controlled publication.
+- [x] Add approved-result analytics and academic history.
+- [x] Extend tenant deletion, navigation, environment validation, safe errors, documentation, and focused tests.
 
-### 11.4 SchoolCast Gate
+### 11.4 Deferred GradeBook Scope
+
+- Parent/student account portals and `/portal/results` until account roles and portal policy are approved.
+- Transcripts, hall tickets, and board-specific statutory report-card layouts.
+- GradeBook notification delivery through SchoolCast.
+- Subject teacher workload/timetable automation outside examination assignment.
+- GradeBook-driven promotion eligibility and automatic lifecycle mutation.
+- Broad production rollout before staging migration, role-matrix QA, storage QA, load testing, and pilot stabilization.
+
+### 11.5 SchoolCast Gate
 
 - [ ] Do not begin complete SchoolCast MVP implementation until every GradeBook release gate above is complete and the deployed pilot is stable.
 - [ ] After GradeBook stabilization, begin SchoolCast discovery with its own PRD, ownership boundaries, consent/delivery policy, feature flag, migrations, and rollout gates.

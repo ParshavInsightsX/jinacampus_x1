@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { cookies, headers } from "next/headers";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
@@ -20,6 +21,7 @@ export type TenantContext = {
   accessibleBranchIds: string[];
   activeAcademicYearId: string | null;
   activeAcademicYearName?: string | null;
+  institutionId?: string | null;
   institutionName?: string | null;
   institutionDisplayName?: string | null;
   institutionLogoUrl?: string | null;
@@ -28,6 +30,7 @@ export type TenantContext = {
   passwordChangeRequired?: boolean;
   ipAddress?: string;
   userAgent?: string;
+  correlationId?: string;
 };
 
 type TenantContextOptions = {
@@ -184,6 +187,7 @@ export async function getTenantContext(
     accessibleBranchIds,
     activeAcademicYearId: activeAcademicYear?.id ?? null,
     activeAcademicYearName: activeAcademicYear?.name ?? null,
+    institutionId: institution?.id ?? null,
     institutionName: institution?.name ?? null,
     institutionDisplayName: institution?.displayName ?? null,
     institutionLogoUrl: institution?.logoUrl ?? null,
@@ -191,7 +195,11 @@ export async function getTenantContext(
     roleCodes,
     passwordChangeRequired: session.user.passwordCredential?.mustChange ?? false,
     ipAddress: headerStore.get("x-forwarded-for") ?? undefined,
-    userAgent: headerStore.get("user-agent") ?? undefined
+    userAgent: headerStore.get("user-agent") ?? undefined,
+    correlationId: (() => {
+      const requestId = headerStore.get("x-request-id")?.trim();
+      return requestId && requestId.length <= 128 ? requestId : randomUUID();
+    })()
   };
   if (ctx.passwordChangeRequired && !options.allowPasswordChangeRequired) {
     throw new Error("PASSWORD_CHANGE_REQUIRED");

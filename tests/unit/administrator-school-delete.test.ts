@@ -20,6 +20,47 @@ const deleteDelegates = [
   "staffLeaveType",
   "staffLeaveSetting",
   "staffAttendanceQrToken",
+  "gradebookStudentResultPublication",
+  "gradebookResultPublication",
+  "gradebookReportCard",
+  "gradebookAttendanceSummarySnapshot",
+  "gradebookReportCardTemplateVersion",
+  "gradebookReportCardTemplate",
+  "gradebookMarkAdjustment",
+  "gradebookCorrectionRequest",
+  "gradebookStudentSubjectResult",
+  "gradebookStudentOverallResult",
+  "gradebookResultRun",
+  "gradebookTeacherRemark",
+  "gradebookCoScholasticEntry",
+  "gradebookCoScholasticIndicator",
+  "gradebookCoScholasticArea",
+  "gradebookCoScholasticSchemeVersion",
+  "gradebookRemarkTemplate",
+  "gradebookExamImportRow",
+  "gradebookExamImportJob",
+  "gradebookStudentMarkRevision",
+  "gradebookMarkWorkflowEvent",
+  "gradebookStudentMark",
+  "gradebookMarkEntryBatch",
+  "gradebookTeacherMarkAssignment",
+  "gradebookExamSchedule",
+  "gradebookExamSubjectComponent",
+  "gradebookExamSubject",
+  "gradebookExamClassSection",
+  "gradebookAssessmentComponent",
+  "gradebookExam",
+  "gradebookExamTerm",
+  "gradebookAssessmentSchemeVersion",
+  "gradebookAssessmentScheme",
+  "gradebookGradeRule",
+  "gradebookGradeScaleVersion",
+  "gradebookGradeScale",
+  "gradebookCalculationRuleSetVersion",
+  "gradebookCalculationRuleSet",
+  "gradebookExamType",
+  "gradebookJob",
+  "gradebookDomainEventOutbox",
   "gradebookMark",
   "gradebookAssessment",
   "classSectionSubject",
@@ -59,6 +100,19 @@ const mocks = vi.hoisted(() => {
     "staffLeaveApplicationAction", "inAppNotification", "studentAttendanceRecord",
     "staffAttendanceRecord", "academicCalendarEntry", "staffLeaveApplication", "staffLeaveBalance",
     "staffLeaveApprover", "staffLeaveType", "staffLeaveSetting", "staffAttendanceQrToken",
+    "gradebookStudentResultPublication", "gradebookResultPublication", "gradebookReportCard",
+    "gradebookAttendanceSummarySnapshot", "gradebookReportCardTemplateVersion", "gradebookReportCardTemplate",
+    "gradebookMarkAdjustment", "gradebookCorrectionRequest", "gradebookStudentSubjectResult",
+    "gradebookStudentOverallResult", "gradebookResultRun", "gradebookTeacherRemark",
+    "gradebookCoScholasticEntry", "gradebookCoScholasticIndicator", "gradebookCoScholasticArea",
+    "gradebookCoScholasticSchemeVersion", "gradebookRemarkTemplate", "gradebookExamImportRow",
+    "gradebookExamImportJob", "gradebookStudentMarkRevision", "gradebookMarkWorkflowEvent",
+    "gradebookStudentMark", "gradebookMarkEntryBatch", "gradebookTeacherMarkAssignment",
+    "gradebookExamSchedule", "gradebookExamSubjectComponent", "gradebookExamSubject",
+    "gradebookExamClassSection", "gradebookAssessmentComponent", "gradebookExam", "gradebookExamTerm",
+    "gradebookAssessmentSchemeVersion", "gradebookAssessmentScheme", "gradebookGradeRule",
+    "gradebookGradeScaleVersion", "gradebookGradeScale", "gradebookCalculationRuleSetVersion",
+    "gradebookCalculationRuleSet", "gradebookExamType", "gradebookJob", "gradebookDomainEventOutbox",
     "gradebookMark", "gradebookAssessment", "classSectionSubject",
     "studentPromotionItem", "studentPromotionBatch",
     "enrollment", "studentGuardianLink",
@@ -67,7 +121,10 @@ const mocks = vi.hoisted(() => {
     "session", "userBranchAccess", "userRoleAssignment", "rolePermission", "user", "role",
     "tenantSettings", "academicYear", "branch", "institution"
   ]) {
-    tx[delegate] = { deleteMany: vi.fn().mockResolvedValue({ count: 1 }) };
+    tx[delegate] = {
+      deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
+      updateMany: vi.fn().mockResolvedValue({ count: 1 })
+    };
   }
   tx.tenant = {
     findUnique: vi.fn(),
@@ -141,6 +198,10 @@ describe("permanent administrator school deletion", () => {
       const model = mocks.tx[delegate] as { deleteMany: ReturnType<typeof vi.fn> };
       expect(model.deleteMany).toHaveBeenCalledWith({ where: { tenantId: "school-id" } });
     }
+    expect((mocks.tx.gradebookExamSchedule as { updateMany: ReturnType<typeof vi.fn> }).updateMany)
+      .toHaveBeenCalledWith(expect.objectContaining({ where: { tenantId: "school-id", supersedesScheduleId: { not: null } } }));
+    expect((mocks.tx.gradebookResultRun as { updateMany: ReturnType<typeof vi.fn> }).updateMany)
+      .toHaveBeenCalledWith(expect.objectContaining({ where: { tenantId: "school-id", supersedesResultRunId: { not: null } } }));
     expect((mocks.tx.tenant as { delete: ReturnType<typeof vi.fn> }).delete)
       .toHaveBeenCalledWith({ where: { id: "school-id" } });
   });

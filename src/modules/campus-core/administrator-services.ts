@@ -243,7 +243,18 @@ export async function getSchoolByIdForAdministrator(
       createdAt: true,
       updatedAt: true,
       tenantSettings: {
-        select: { gradebookEnabled: true }
+        select: {
+          gradebookEnabled: true,
+          gradebookConfigurationEnabled: true,
+          gradebookMarksEntryEnabled: true,
+          gradebookImportEnabled: true,
+          gradebookResultCalculationEnabled: true,
+          gradebookCoScholasticEnabled: true,
+          gradebookReportCardsEnabled: true,
+          gradebookPublicationEnabled: true,
+          gradebookAnalyticsEnabled: true,
+          gradebookPortalResultsEnabled: true
+        }
       },
       institutions: {
         select: {
@@ -388,9 +399,36 @@ export async function updateSchool(
   input: z.infer<typeof updateSchoolSchema>
 ) {
   return db.$transaction(async (tx) => {
+    const gradebookSettingsData = {
+      gradebookEnabled: input.gradebookEnabled,
+      gradebookConfigurationEnabled: input.gradebookConfigurationEnabled,
+      gradebookMarksEntryEnabled: input.gradebookMarksEntryEnabled,
+      gradebookImportEnabled: input.gradebookImportEnabled,
+      gradebookResultCalculationEnabled: input.gradebookResultCalculationEnabled,
+      gradebookCoScholasticEnabled: input.gradebookCoScholasticEnabled,
+      gradebookReportCardsEnabled: input.gradebookReportCardsEnabled,
+      gradebookPublicationEnabled: input.gradebookPublicationEnabled,
+      gradebookAnalyticsEnabled: input.gradebookAnalyticsEnabled,
+      gradebookPortalResultsEnabled: input.gradebookPortalResultsEnabled
+    };
     const before = await tx.tenant.findUnique({
       where: { id: input.tenantId },
-      include: { tenantSettings: { select: { gradebookEnabled: true } } }
+      include: {
+        tenantSettings: {
+          select: {
+            gradebookEnabled: true,
+            gradebookConfigurationEnabled: true,
+            gradebookMarksEntryEnabled: true,
+            gradebookImportEnabled: true,
+            gradebookResultCalculationEnabled: true,
+            gradebookCoScholasticEnabled: true,
+            gradebookReportCardsEnabled: true,
+            gradebookPublicationEnabled: true,
+            gradebookAnalyticsEnabled: true,
+            gradebookPortalResultsEnabled: true
+          }
+        }
+      }
     });
     if (!before) throw notFound("SCHOOL_NOT_FOUND");
     const after = await tx.tenant.update({
@@ -420,11 +458,11 @@ export async function updateSchool(
       }
     }
 
-    if (input.gradebookEnabled !== undefined) {
+    if (Object.values(gradebookSettingsData).some((value) => value !== undefined)) {
       await tx.tenantSettings.upsert({
         where: { tenantId: input.tenantId },
-        create: { tenantId: input.tenantId, gradebookEnabled: input.gradebookEnabled },
-        update: { gradebookEnabled: input.gradebookEnabled }
+        create: { tenantId: input.tenantId, ...gradebookSettingsData },
+        update: gradebookSettingsData
       });
     }
 
@@ -439,7 +477,7 @@ export async function updateSchool(
         slug: before.slug,
         status: before.status,
         supportEmail: before.supportEmail,
-        gradebookEnabled: before.tenantSettings?.gradebookEnabled ?? false
+        gradebook: before.tenantSettings
       },
       after: {
         id: after.id,
@@ -447,7 +485,10 @@ export async function updateSchool(
         slug: after.slug,
         status: after.status,
         supportEmail: after.supportEmail,
-        gradebookEnabled: input.gradebookEnabled ?? before.tenantSettings?.gradebookEnabled ?? false
+        gradebook: {
+          ...before.tenantSettings,
+          ...gradebookSettingsData
+        }
       }
     }, tx);
     return after;
@@ -552,6 +593,26 @@ export async function deleteSchoolPermanently(
     if (!school) throw notFound("SCHOOL_NOT_FOUND");
 
     const dependencySummary = toSchoolDependencySummary(school._count);
+
+    // Version chains are nullable only to support immutable supersession. Clear
+    // their tenant-local links before deleting the complete tenant dataset.
+    await tx.gradebookExamSchedule.updateMany({
+      where: { tenantId: school.id, supersedesScheduleId: { not: null } },
+      data: { supersedesScheduleId: null }
+    });
+    await tx.gradebookResultRun.updateMany({
+      where: { tenantId: school.id, supersedesResultRunId: { not: null } },
+      data: { supersedesResultRunId: null }
+    });
+    await tx.gradebookReportCard.updateMany({
+      where: { tenantId: school.id, supersedesReportCardId: { not: null } },
+      data: { supersedesReportCardId: null }
+    });
+    await tx.gradebookResultPublication.updateMany({
+      where: { tenantId: school.id, supersedesPublicationId: { not: null } },
+      data: { supersedesPublicationId: null }
+    });
+
     const deletedRows = {
       notificationDeliveryLogs: (await tx.notificationDeliveryLog.deleteMany({ where: { tenantId: school.id } })).count,
       notificationOutboxItems: (await tx.notificationOutbox.deleteMany({ where: { tenantId: school.id } })).count,
@@ -570,6 +631,47 @@ export async function deleteSchoolPermanently(
       staffLeaveTypes: (await tx.staffLeaveType.deleteMany({ where: { tenantId: school.id } })).count,
       staffLeaveSettings: (await tx.staffLeaveSetting.deleteMany({ where: { tenantId: school.id } })).count,
       staffAttendanceQrTokens: (await tx.staffAttendanceQrToken.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookStudentResultPublications: (await tx.gradebookStudentResultPublication.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookResultPublications: (await tx.gradebookResultPublication.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookReportCards: (await tx.gradebookReportCard.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookAttendanceSnapshots: (await tx.gradebookAttendanceSummarySnapshot.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookReportCardTemplateVersions: (await tx.gradebookReportCardTemplateVersion.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookReportCardTemplates: (await tx.gradebookReportCardTemplate.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookMarkAdjustments: (await tx.gradebookMarkAdjustment.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookCorrectionRequests: (await tx.gradebookCorrectionRequest.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookStudentSubjectResults: (await tx.gradebookStudentSubjectResult.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookStudentOverallResults: (await tx.gradebookStudentOverallResult.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookResultRuns: (await tx.gradebookResultRun.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookTeacherRemarks: (await tx.gradebookTeacherRemark.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookCoScholasticEntries: (await tx.gradebookCoScholasticEntry.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookCoScholasticIndicators: (await tx.gradebookCoScholasticIndicator.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookCoScholasticAreas: (await tx.gradebookCoScholasticArea.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookCoScholasticSchemeVersions: (await tx.gradebookCoScholasticSchemeVersion.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookRemarkTemplates: (await tx.gradebookRemarkTemplate.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookExamImportRows: (await tx.gradebookExamImportRow.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookExamImportJobs: (await tx.gradebookExamImportJob.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookStudentMarkRevisions: (await tx.gradebookStudentMarkRevision.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookMarkWorkflowEvents: (await tx.gradebookMarkWorkflowEvent.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookStudentMarks: (await tx.gradebookStudentMark.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookMarkEntryBatches: (await tx.gradebookMarkEntryBatch.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookTeacherAssignments: (await tx.gradebookTeacherMarkAssignment.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookExamSchedules: (await tx.gradebookExamSchedule.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookExamSubjectComponents: (await tx.gradebookExamSubjectComponent.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookExamSubjects: (await tx.gradebookExamSubject.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookExamClassSections: (await tx.gradebookExamClassSection.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookAssessmentComponents: (await tx.gradebookAssessmentComponent.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookExams: (await tx.gradebookExam.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookExamTerms: (await tx.gradebookExamTerm.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookAssessmentSchemeVersions: (await tx.gradebookAssessmentSchemeVersion.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookAssessmentSchemes: (await tx.gradebookAssessmentScheme.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookGradeRules: (await tx.gradebookGradeRule.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookGradeScaleVersions: (await tx.gradebookGradeScaleVersion.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookGradeScales: (await tx.gradebookGradeScale.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookCalculationRuleSetVersions: (await tx.gradebookCalculationRuleSetVersion.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookCalculationRuleSets: (await tx.gradebookCalculationRuleSet.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookExamTypes: (await tx.gradebookExamType.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookJobs: (await tx.gradebookJob.deleteMany({ where: { tenantId: school.id } })).count,
+      gradebookDomainEvents: (await tx.gradebookDomainEventOutbox.deleteMany({ where: { tenantId: school.id } })).count,
       gradebookMarks: (await tx.gradebookMark.deleteMany({ where: { tenantId: school.id } })).count,
       gradebookAssessments: (await tx.gradebookAssessment.deleteMany({ where: { tenantId: school.id } })).count,
       classSectionSubjects: (await tx.classSectionSubject.deleteMany({ where: { tenantId: school.id } })).count,

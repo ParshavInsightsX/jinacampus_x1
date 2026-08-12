@@ -2,132 +2,199 @@
 
 ## Status
 
-Development foundation and the controlled staging pilot were verified and deployed on 10 August 2026. The additive migration is applied to the approved staging database, GradeBook is enabled for `jinacampus-demo`, and authenticated Principal, Teacher, and cross-tenant browser QA passed before and after deployment. GradeBook remains disabled by default for other institutions; broad rollout and pilot stabilization remain pending.
+Implementation-ready application code is complete locally as of 11 August 2026 for the approved GradeBook developer handoff. The earlier assessment-ledger foundation migration (`20260810213000_add_gradebook_foundation`) remains the deployed pilot baseline. The expanded additive migration (`20260811201500_expand_gradebook_phase_0_1`) has been generated and validated locally but has **not** been applied to staging or production in this implementation task.
+
+Controlled-release evidence, blockers, staging procedure, and recovery steps are maintained in `docs/gradebook-controlled-release.md`.
+
+Every new GradeBook subfeature flag defaults to disabled. Existing institutions therefore retain their current behavior until an authorised JinaCampus Platform Administrator enables an approved pilot scope after migration and QA.
 
 ## Product Boundary
 
-GradeBook is an assessment and marks ledger. It owns:
+GradeBook owns:
 
-- Class-section subject and subject-teacher assignments.
-- Assessments and their Open, Published, or Cancelled lifecycle.
-- Enrollment-linked result entries.
-- Published assessment summaries.
+- Versioned assessment schemes, terms, exam types, grade scales, and calculation rules.
+- Examination class-section, subject, component, schedule, and teacher-assignment scope.
+- Roster snapshots, marks-entry batches, immutable revisions, review, approval, and locking.
+- Validated CSV/XLSX marks imports stored in private object storage.
+- Deterministic result runs, subject/overall outcomes, adjustments, and correction requests.
+- Subject/class-teacher/Principal remarks and co-scholastic evaluations.
+- Attendance-summary snapshots used by report cards.
+- Versioned report-card templates, immutable card snapshots, private PDFs, and publication records.
+- Approved-result analytics and student academic history.
 
-It reuses, without duplicating:
+GradeBook references, without duplicating ownership of:
 
-- CampusCore tenant, institution, branch, academic-year, user, role, permission, feature-setting, and audit records.
-- Academia class, section, class-section, subject, student, and enrollment records.
+- CampusCore tenants, institutions, branches, academic years, users, roles, permissions, settings, and audits.
+- Academia classes, sections, class-sections, subjects, students, enrollments, and class-subject teacher mappings.
+- Student attendance records used only for explicit attendance-summary snapshots.
 
-GradeBook does not change attendance, student lifecycle, enrollment history, or promotion decisions. Full examination scheduling, weighted terms, grading scales, report cards, transcripts, parent/student portals, and notification delivery are deferred.
+GradeBook never creates or mutates Student or Enrollment records. It does not change attendance, leave, fee, payroll, or promotion data.
+
+## Rollout Controls
+
+The Administrator Portal controls the master `gradebookEnabled` flag and these disabled-by-default subfeatures:
+
+| Flag | Scope |
+|---|---|
+| `gradebookConfigurationEnabled` | Schemes, terms, exam types, grade scales, and calculation rules |
+| `gradebookMarksEntryEnabled` | Exams, assignments, marks batches, review, and approval |
+| `gradebookImportEnabled` | Private CSV/XLSX import validation and application |
+| `gradebookResultCalculationEnabled` | Deterministic result snapshots and approvals |
+| `gradebookCoScholasticEnabled` | Co-scholastic schemes, entries, and remarks |
+| `gradebookReportCardsEnabled` | Templates, attendance snapshots, and private PDF generation |
+| `gradebookPublicationEnabled` | Prepared, published, and revoked result versions |
+| `gradebookAnalyticsEnabled` | Approved-result analytics and academic history |
+| `gradebookPortalResultsEnabled` | Reserved for approved student/guardian portal access; no portal is exposed in this release |
+
+School users cannot enable GradeBook or any subfeature.
 
 ## Access Model
 
-| Capability | Principal | Teacher | Office Staff | Staff |
-|---|---:|---:|---:|---:|
-| View GradeBook | Yes | Assigned scope | No | No |
-| Configure class subjects | Yes | No | No | No |
-| Create/cancel assessments | Yes | No | No | No |
-| Enter marks | Yes | Assigned scope | No | No |
-| Publish/reopen results | Yes | No | No | No |
-| View published reports | Yes | Assigned scope | No | No |
+| Capability | Principal | Teacher | Office Staff | Staff | Platform Administrator |
+|---|---:|---:|---:|---:|---:|
+| Configure GradeBook | Yes | No | No | No | Feature flags only |
+| Create/schedule/activate exams | Yes | View assigned scope | No | No | No tenant access |
+| Assign teachers | Yes | No | No | No | No tenant access |
+| Enter/submit marks | Yes | Exact assigned scope | No | No | No tenant access |
+| Verify/approve/lock marks | Yes | No by default | No | No | No tenant access |
+| Calculate/approve results | Yes, with segregation rules | View assigned scope | No | No | No tenant access |
+| Generate/approve/publish report cards | Yes, with segregation rules | View authorised cards | No | No | No tenant access |
+| View analytics/history | Institution scope | Assigned class/subject/student scope | No | No | No tenant access |
 
-Teacher scope is resolved server-side. A Teacher must be the class teacher or assigned subject teacher for the assessment. An inaccessible assessment returns the same safe not-found behavior as a missing record.
+Platform Administrators are separate identities stored outside tenant user roles. Their GradeBook responsibility is limited to pilot feature controls; they do not receive routine school academic access.
 
-## Data Model
+Teacher permission grants never provide broad data access. Marks and result services additionally require an active, time-valid teacher assignment matching the exact exam, class-section, subject, and optional component. Inaccessible records return safe not-found responses.
 
-`ClassSectionSubject` links an existing class-section and subject, with an optional Teacher user. `GradebookAssessment` owns assessment metadata and publication state. `GradebookMark` links an assessment to an active Enrollment and repeats the server-derived Student identifier for scoped reporting and integrity checks.
+## Core Workflows
 
-All three models include `tenantId`, `branchId`, and `academicYearId`, indexed for operational queries. Unique constraints prevent duplicate class subjects, assessment codes within a class subject, and results for the same assessment/enrollment.
+### Configuration
 
-The migration is additive:
+1. Principal creates draft schemes, terms, exam types, grade scales, and calculation rules.
+2. Grade scales must cover 0-100 continuously with no overlaps or gaps at the configured precision.
+3. Terms reject ambiguous date overlap unless explicitly allowed.
+4. Configuration versions are hashed and activated explicitly; existing result runs retain their frozen version references.
 
-`prisma/migrations/20260810213000_add_gradebook_foundation/migration.sql`
+### Examination Setup
 
-It creates the models and permissions, adds `TenantSettings.gradebookEnabled` with a `false` default, assigns role defaults, and enables RLS without public policies. Server-side Prisma access, session context, and RBAC remain authoritative.
+1. Principal selects a term/type, class-sections, subjects, and components.
+2. Components validate maximum marks, pass marks, and weightage totals.
+3. Schedules reject conflicting class-section or room time windows.
+4. Teacher assignments validate active tenant, branch access, Teacher role, source class-subject mapping, and override reasons.
+5. Readiness requires active configuration, subjects/components, assignments, and schedules when the exam type requires them.
+6. Activation creates roster-snapshot marks batches; later roster changes cannot silently alter an in-progress batch.
 
-## Workflows
+### Marks and Imports
 
-### Setup
+1. Teacher opens only an exact assigned batch during its configured entry window.
+2. Numeric marks use Prisma Decimal and cannot exceed component maximums.
+3. Special statuses require permission and a reason where policy requires it.
+4. Each save uses optimistic batch versions and writes immutable row revisions.
+5. Batches move through draft, submitted, returned, verified, approved, and locked states using explicit transition rules.
+6. CSV/XLSX imports are uploaded to private storage, parsed into staged rows, validated, and applied transactionally to an eligible batch. Invalid rows remain reviewable and do not partially mutate marks.
 
-1. An Administrator enables GradeBook for an approved tenant.
-2. A Principal assigns existing Academia subjects to active class-sections.
-3. The Principal may assign an active, branch-authorised Teacher.
+### Results and Corrections
 
-### Assessment and Marks
+1. Calculation requires approved or locked primary marks batches.
+2. The pure result engine uses Prisma Decimal, explicit rounding modes, frozen configuration, and canonical hashes.
+3. Idempotency keys prevent duplicate runs for unchanged inputs.
+4. Result approval is independent from calculation where segregation of duties applies.
+5. Approved data is never edited in place. Adjustments and correction requests create auditable replacement versions that supersede, rather than erase, prior results.
 
-1. A Principal creates an assessment for an active class subject.
-2. The marks page loads only active enrollments from that class-section.
-3. An authorised user records Graded, Absent, or Exempt results.
-4. GradeBook derives student identity from Enrollment and rejects client-owned scope.
-5. Marks entry and publication serialize on the assessment state so publishing cannot race a late save.
+### Report Cards and Publication
 
-### Publication
+1. An active versioned template and approved result run are required.
+2. Optional attendance ranges create tenant-, branch-, year-, enrollment-, and period-scoped summary snapshots.
+3. Report-card snapshot JSON is immutable and each generated PDF is stored under a private tenant-scoped object key.
+4. Downloads use short-lived signed URLs after session, scope, feature, and permission checks.
+5. Publication creates recipient-scoped records from approved cards. Publication and revocation are versioned and audited.
 
-Publication requires one result for every active enrollment. Published results become read-only. A Principal must supply an audited reason to reopen them. An open assessment may be cancelled with an audited reason; published assessments must be reopened first.
+### Enrichment and Analytics
 
-## Audit and Security
-
-- Class-subject assignment/update, assessment creation, marks changes, publication, reopen, and cancellation are audited.
-- Marks audit records retain before/after result values for correction traceability.
-- Passwords, session tokens, QR payloads, and credential material never enter GradeBook responses or audit metadata.
-- Inputs do not accept tenant, branch, academic year, student, actor, role, permission, or publication status claims.
-- Queries require active session context, branch access, academic-year scope, tenant flag, and explicit permission.
-- Administrator school deletion removes GradeBook marks, assessments, and assignments in dependency-safe order.
+- Institution-defined co-scholastic areas and indicators are versioned before use.
+- Subject, class-teacher, and Principal remarks use server-validated scope and permissions.
+- Analytics read approved result snapshots only; they do not recompute or mutate official outcomes.
+- Academic history links back to immutable result and report-card versions.
 
 ## Routes
 
-- `/gradebook` - setup and assessment workspace.
-- `/gradebook/assessments/[assessmentId]` - roster marks ledger and lifecycle controls.
-- `/gradebook/reports` - published assessment summaries and links to read-only ledgers.
+| Area | Routes |
+|---|---|
+| Dashboard/configuration | `/gradebook`, `/gradebook/setup`, `/gradebook/schemes`, `/gradebook/terms`, `/gradebook/exam-types`, `/gradebook/grade-scales` |
+| Examinations | `/gradebook/exams`, `/gradebook/exams/create`, `/gradebook/exams/[examId]`, `/gradebook/exams/[examId]/schedule`, `/gradebook/exams/[examId]/assignments` |
+| Marks | `/gradebook/marks`, `/gradebook/marks/[batchId]`, `/gradebook/submissions`, `/gradebook/verification`, `/gradebook/approvals`, `/gradebook/imports` |
+| Results | `/gradebook/results`, `/gradebook/results/[runId]`, `/gradebook/corrections`, `/gradebook/enrichment` |
+| Report cards | `/gradebook/report-cards`, `/gradebook/publications` |
+| Analysis/history | `/gradebook/analytics`, `/gradebook/history` |
+| Legacy compatibility | `/gradebook/assessments/[assessmentId]`, `/gradebook/reports` |
 
-## Rollout Plan
+Import and private report-card download Route Handlers live under `/api/gradebook` and return JSON or controlled file responses only.
 
-1. Run Prisma format, validate, and generate.
-2. Apply the additive migration to an approved non-production database before deploying application code.
-3. Keep every tenant flag disabled.
-4. Run Principal and Teacher DB-backed browser QA plus Office Staff/Staff/cross-branch/cross-tenant denials.
-5. Run regression smoke across existing CampusCore, Academia, promotion, attendance, StaffBoard, leave, calendar, and QR workflows.
-6. Enable one approved pilot tenant from the Administrator Portal.
-7. Deploy, run post-deployment smoke, and monitor application/database errors.
-8. Expand only after pilot stabilization and explicit approval.
+## Storage Configuration
 
-## Rollback
+The GradeBook bucket must be private. Required server-only environment variables:
 
-Disable `gradebookEnabled` first. This immediately removes GradeBook navigation and rejects direct GradeBook access. If required, revert the application release while retaining the additive tables and column. Do not run a destructive down migration after schools have entered marks. Any later schema removal or data archival requires a separate, approved retention plan.
+```env
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+GRADEBOOK_STORAGE_BUCKET=gradebook-private
+GRADEBOOK_IMPORT_MAX_BYTES=10000000
+GRADEBOOK_REPORT_CARD_MAX_BYTES=5000000
+```
 
-## QA Checklist
+Never expose the service-role key through `NEXT_PUBLIC_` or mobile environment variables. Stored object keys include tenant, branch, academic year, and job/card identifiers; APIs never accept those scope identifiers from clients.
 
-- Principal can assign an active subject and branch-authorised Teacher.
-- Duplicate assignment and invalid Teacher fail safely.
-- Principal can create an in-year assessment; duplicate code and out-of-year date fail safely.
-- Teacher sees only assigned class or subject assessments.
-- Teacher cannot publish, cancel, configure subjects, or access unassigned assessments.
-- Marks reject inactive/wrong-class/cross-tenant enrollments, duplicates, and values above maximum.
-- Publishing fails with an incomplete roster and succeeds after all results exist.
-- Published results are read-only; audited reopen restores editing.
-- Cancellation retains history and requires a reason.
-- Office Staff and Staff receive safe denial.
-- Feature-disabled tenants have no GradeBook navigation and direct routes fail safely.
-- Permanent school deletion handles GradeBook dependencies.
-- Existing module smoke checks remain green.
+## Data and Security Rules
 
-## Staging Verification - 10 August 2026
+- Every new tenant-owned model includes `tenantId`; operational records also include `branchId` and `academicYearId` where applicable.
+- Unique constraints prevent duplicate configuration codes, exam scopes, batch marks, result rows, imports, report-card versions, and publications.
+- Protected queries derive tenant, institution, branch, academic year, user, and permissions from the session.
+- Zod schemas are strict and reject client-owned scope, actor, role, status, and permission fields.
+- Critical writes use Prisma transactions, optimistic versions, audit logs, and domain-event outbox records.
+- Sensitive credentials, password hashes, tokens, raw storage secrets, and internal Prisma errors are never returned.
+- GradeBook tables have RLS enabled as defense in depth; application session scope and RBAC remain authoritative.
+- Permanent tenant deletion includes every GradeBook dependency and clears nullable supersession links before transactionally deleting records.
 
-| Check | Result | Evidence |
-|---|---|---|
-| Additive migration | Pass | `prisma migrate deploy` applied `20260810213000_add_gradebook_foundation`; `prisma migrate status` reports all 20 migrations applied. |
-| Pilot feature flag | Pass | Enabled only for the approved `jinacampus-demo` pilot institution through the audited platform service. |
-| Principal workflow | Pass | Assigned a subject and branch-authorised Teacher, created and cancelled an assessment, reviewed Teacher-entered marks, published the complete assessment, and opened the published report summary. |
-| Teacher scope | Pass | Assigned assessment was visible and editable; setup, lifecycle controls, and an unassigned assessment remained unavailable through safe server-side denial. |
-| Cross-tenant isolation | Pass | A disposable second-tenant Principal could not resolve the pilot assessment and received the same safe response as a missing record. |
-| Existing-module browser smoke | Pass | Dashboard, Academia, and StaffBoard routes remained usable for the pilot Principal. |
-| Protected school baseline | Pass | The non-pilot RDA institution was not mutated and its GradeBook flag remained disabled. |
-| Automated release gates | Pass | Prisma format/validate/generate, typecheck, 106 test files with 880 tests, production build, and `git diff --check` passed. |
-| Production deployment | Pass | The verified preview was promoted to the canonical production domain; health/database connectivity and authenticated Principal, Teacher, and cross-tenant smoke checks passed. |
+## Migrations
 
-Temporary QA identities used generated credentials kept outside Git. Their sessions were revoked, their JinaCampus users were deactivated, the disposable cross-tenant tenant was deleted, and the local secret state was removed after post-deployment smoke. No password, token, tenant identifier, or private database URL is recorded here.
+1. `20260810213000_add_gradebook_foundation` - previously applied pilot assessment ledger.
+2. `20260811201500_expand_gradebook_phase_0_1` - additive configuration, exam, marks workflow, import, result, correction, enrichment, report-card, publication, analytics, permission, and subfeature-flag foundation.
 
-## Remaining Gates
+The second migration must be applied with `npx prisma migrate deploy` only against an approved deployment database. It is not applied by this local implementation task.
 
-- Complete Office Staff, Staff, cross-branch, reopen, and broad existing-module regression QA before any rollout beyond the pilot.
-- Stabilize GradeBook before beginning complete SchoolCast MVP development.
+## Rollout and Rollback
+
+1. Apply the expanded migration to an approved staging database.
+2. Keep all master/subfeature flags off.
+3. Enable one disposable or approved pilot institution through the Administrator Portal.
+4. Run Principal configuration/exam/marks/result/report-card/publication QA.
+5. Run assigned and unassigned Teacher QA plus Office Staff, Staff, cross-branch, cross-year, and cross-tenant denials.
+6. Verify CampusCore, Academia, attendance, promotion, StaffBoard, leave, calendar, and QR regressions.
+7. Verify private import/report-card storage and audit/event records.
+8. Deploy only after checks and browser QA pass.
+
+Rollback starts by disabling GradeBook and every subfeature. Revert application code if needed, but retain additive tables and historical academic data. Do not run destructive down migrations after marks exist without an approved retention plan.
+
+## Automated Verification
+
+Focused tests cover:
+
+- Decimal raw and weighted calculations, special statuses, and deterministic output.
+- Legal/illegal state transitions.
+- Strict rejection of client-owned scope/status fields.
+- Exam and grade-scale validation.
+- Server-derived request context and unauthorised branch denial.
+- Platform/school role separation and Teacher least privilege.
+- Default-off flags, RLS statements, private storage, and additive migration behavior.
+- Complete GradeBook dependency ordering during permanent school deletion.
+
+## Remaining Release Gates
+
+- Apply `20260811201500_expand_gradebook_phase_0_1` to approved staging.
+- Run DB-backed role-matrix and two-tenant/two-branch/two-year negative QA.
+- Verify private CSV/XLSX import, signed report-card download, and audit/outbox records against Supabase.
+- Verify representative CBSE, CISCE/ICSE, and State Board configuration fixtures with academic stakeholders.
+- Embed a Unicode font before certifying PDFs for names/scripts outside WinAnsi; the current standard PDF font is a pilot limitation.
+- Complete load/concurrency testing for large rosters and imports.
+- Stabilize the GradeBook pilot before beginning full SchoolCast MVP.
+
+Parent/student accounts, `/portal/results`, transcripts, hall tickets, board-specific statutory layouts, GradeBook notifications, and GradeBook-driven promotion eligibility remain deferred until separately approved. The reserved portal feature flag stays off and no unsupported portal UI is exposed.

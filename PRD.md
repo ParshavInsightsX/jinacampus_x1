@@ -345,20 +345,25 @@ Only `QR_SCAN` and `MANUAL_ADMIN` are implemented in first development. `IMPORT`
 
 ## 6.4 GradeBook MVP
 
-GradeBook owns assessment configuration, class-subject teaching assignments, marks entry, publication state, and published result summaries. It references, but does not duplicate, CampusCore users/settings or Academia classes, sections, subjects, students, academic years, and enrollments.
+GradeBook owns versioned assessment configuration, examinations, scoped marks entry/import, deterministic result calculation, corrections, report cards, controlled publication, approved-result analytics, and academic history. It references, but does not duplicate, CampusCore users/settings or Academia classes, sections, subjects, students, academic years, and enrollments.
 
 ### Required Features
 
 1. Platform-controlled, tenant-specific feature enablement.
-2. Class-section subject assignment using existing Academia subjects.
-3. Optional subject-teacher assignment with branch and Teacher-role validation.
-4. Assessment creation with code, title, type, date, maximum marks, and pass marks.
-5. Active-enrollment roster marks entry with Graded, Absent, and Exempt outcomes.
-6. Explicit Open, Published, and Cancelled lifecycle states.
-7. Complete-roster validation before publication.
-8. Audited reopen and cancellation flows with required reasons.
-9. Published assessment summaries and read-only published ledgers.
-10. Principal governance and assigned-class/subject Teacher access.
+2. Disabled-by-default subfeature flags for configuration, marks, import, calculation, co-scholastic, report cards, publication, analytics, and reserved portal access.
+3. Versioned assessment schemes, terms, exam types, grade scales, and calculation rules.
+4. Examination class-section, subject, component, timetable, readiness, and teacher-assignment workflows.
+5. Active-enrollment roster snapshots and optimistic-version marks batches.
+6. Numeric Decimal marks plus authorised special statuses and immutable revisions.
+7. Draft, submit, return, verify, approve, lock, reopen, and cancel state transitions.
+8. Private CSV/XLSX marks import with staged validation and transactional apply.
+9. Deterministic, hashed, idempotent subject and overall result runs with explicit approval.
+10. Audited mark adjustments and correction/replacement versions rather than in-place official-result edits.
+11. Subject/class-teacher/Principal remarks, co-scholastic evaluations, and attendance-summary snapshots.
+12. Versioned report-card templates, immutable snapshots, private PDF objects, approval, and signed downloads.
+13. Prepared/published/revoked recipient publication versions.
+14. Approved-result analytics and immutable academic history.
+15. Principal governance and exact exam/class-section/subject/component Teacher access.
 
 ### Integration Boundaries
 
@@ -367,20 +372,25 @@ GradeBook owns assessment configuration, class-subject teaching assignments, mar
 - GradeBook never creates or mutates Student or Enrollment records.
 - Marks reference the active enrollment and server-derived student identity; client-supplied tenant, branch, academic year, student, actor, role, and permission claims are rejected or ignored.
 - Student attendance and GradeBook remain separate records. Attendance does not implicitly create marks, and marks do not alter attendance.
-- Student promotion continues to preserve historical enrollments. A future GradeBook policy phase may replace the existing result-publication attestation only after schools can configure which published assessments constitute a final result.
+- Attendance enters GradeBook only through an explicit, immutable attendance-summary snapshot for an approved report-card period.
+- Student promotion continues to preserve historical enrollments. GradeBook does not automatically promote or change student lifecycle state.
+- Platform Administrators control rollout flags but do not receive routine tenant academic access.
 
 ### GradeBook Acceptance Criteria
 
 - The module remains inaccessible and absent from navigation while `TenantSettings.gradebookEnabled` is false.
 - Enabling the module requires the separate JinaCampus Administrator Portal; school users cannot self-enable it.
 - Every query and mutation is tenant-, branch-, and academic-year-scoped and permission checked server-side.
-- Teachers can access only class-sections where they are class teacher or assigned subject teacher.
-- Only active roster enrollments can receive results, and student identity is derived server-side.
-- Publishing is blocked until every active student has a valid result.
-- Published results cannot be edited without an audited reopen reason.
-- Marks updates, publication, reopening, cancellation, and class-subject changes are audited.
+- Teachers can access only exact active assignments for an exam, class-section, subject, and optional component.
+- Marks batches retain activation-time roster snapshots and student identity is derived server-side.
+- Decimal calculations use frozen configuration, explicit rounding, canonical hashes, and repeatable idempotency keys.
+- Grade scales reject overlaps/gaps, component rules reject invalid maxima/pass/weightage, and schedule conflicts fail safely.
+- Official results and report cards are immutable versions; approved data changes only through audited correction/replacement workflows.
+- Publication is blocked until required results and report cards are approved.
+- Imports and report-card documents remain private and are accessed only through authorised server routes and short-lived signed URLs.
+- Marks, workflow transitions, assignments, results, corrections, report cards, publications, configuration, and enrichment changes are audited.
 - Migration, authenticated role-matrix QA, regression checks, and pilot stabilization pass before broad enablement.
-- Full report cards, grading scales, exam timetable management, transcripts, parent/student portals, and SchoolCast delivery are deferred.
+- Parent/student portals, transcripts, hall tickets, board-specific statutory layouts, GradeBook notifications, and automated promotion eligibility remain deferred.
 
 ## 7. Data Model Requirements
 
@@ -419,6 +429,21 @@ Required Prisma models:
 - `ClassSectionSubject`
 - `GradebookAssessment`
 - `GradebookMark`
+- `GradebookAssessmentScheme` and `GradebookAssessmentSchemeVersion`
+- `GradebookExamTerm`, `GradebookExamType`, and `GradebookExam`
+- `GradebookGradeScale`, `GradebookGradeScaleVersion`, and `GradebookGradeRule`
+- `GradebookCalculationRuleSet` and `GradebookCalculationRuleSetVersion`
+- `GradebookExamClassSection`, `GradebookExamSubject`, and `GradebookExamSubjectComponent`
+- `GradebookExamSchedule` and `GradebookTeacherMarkAssignment`
+- `GradebookMarkEntryBatch`, `GradebookStudentMark`, `GradebookStudentMarkRevision`, and `GradebookMarkWorkflowEvent`
+- `GradebookExamImportJob` and `GradebookExamImportRow`
+- `GradebookResultRun`, `GradebookStudentSubjectResult`, and `GradebookStudentOverallResult`
+- `GradebookMarkAdjustment` and `GradebookCorrectionRequest`
+- `GradebookTeacherRemark`, `GradebookCoScholasticSchemeVersion`, `GradebookCoScholasticArea`, `GradebookCoScholasticIndicator`, and `GradebookCoScholasticEntry`
+- `GradebookAttendanceSummarySnapshot`
+- `GradebookReportCardTemplate`, `GradebookReportCardTemplateVersion`, and `GradebookReportCard`
+- `GradebookResultPublication` and `GradebookStudentResultPublication`
+- `GradebookJob` and `GradebookDomainEventOutbox`
 
 ### StaffBoard Lite
 

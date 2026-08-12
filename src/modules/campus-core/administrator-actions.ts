@@ -116,7 +116,16 @@ export async function updateSchoolAction(
       supportEmail: nullableS(formData, "supportEmail"),
       status: s(formData, "status"),
       institutionDisplayName: nullableS(formData, "institutionDisplayName"),
-      gradebookEnabled: optionalChecked(formData, "gradebookEnabled")
+      gradebookEnabled: optionalChecked(formData, "gradebookEnabled"),
+      gradebookConfigurationEnabled: optionalChecked(formData, "gradebookConfigurationEnabled"),
+      gradebookMarksEntryEnabled: optionalChecked(formData, "gradebookMarksEntryEnabled"),
+      gradebookImportEnabled: optionalChecked(formData, "gradebookImportEnabled"),
+      gradebookResultCalculationEnabled: optionalChecked(formData, "gradebookResultCalculationEnabled"),
+      gradebookCoScholasticEnabled: optionalChecked(formData, "gradebookCoScholasticEnabled"),
+      gradebookReportCardsEnabled: optionalChecked(formData, "gradebookReportCardsEnabled"),
+      gradebookPublicationEnabled: optionalChecked(formData, "gradebookPublicationEnabled"),
+      gradebookAnalyticsEnabled: optionalChecked(formData, "gradebookAnalyticsEnabled"),
+      gradebookPortalResultsEnabled: optionalChecked(formData, "gradebookPortalResultsEnabled")
     });
     await updateSchool(await getPlatformAdministratorContext(), input);
     revalidateAdministratorSchoolRoutes(input.tenantId);

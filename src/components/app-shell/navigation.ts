@@ -303,7 +303,8 @@ const ACTIVE_ROUTE_OVERRIDES = [
   { pattern: /^\/academia\/guardians\/[^/]+\/edit(?:\/|$)/, href: "/academia/guardians" },
   { pattern: /^\/academia\/enrollments\/[^/]+\/edit(?:\/|$)/, href: "/academia/enrollments" },
   { pattern: /^\/staffboard\/staff\/[^/]+\/edit(?:\/|$)/, href: "/staffboard/staff" },
-  { pattern: /^\/staffboard\/leave\/[0-9a-f-]+(?:\/|$)/i, href: "/staffboard/leave" }
+  { pattern: /^\/staffboard\/leave\/[0-9a-f-]+(?:\/|$)/i, href: "/staffboard/leave" },
+  { pattern: /^\/gradebook\/(?:setup|schemes|terms|exam-types|grade-scales|exams|marks|submissions|verification|approvals|imports|results|report-cards|publications|corrections|enrichment|analytics|history)(?:\/|$)/, href: "/gradebook" }
 ] as const;
 
 const DESKTOP_DOCK_GROUP_CONFIG = {

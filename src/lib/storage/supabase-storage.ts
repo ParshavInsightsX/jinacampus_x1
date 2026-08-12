@@ -14,6 +14,7 @@ let storageClient: SupabaseClient | null = null;
 let bucketReady: Promise<void> | null = null;
 let staffLeaveBucketReady: Promise<void> | null = null;
 let institutionLogosBucketReady: Promise<void> | null = null;
+let gradebookBucketReady: Promise<void> | null = null;
 
 function getStorageClient() {
   storageClient ??= createClient(env.SUPABASE_URL!, env.SUPABASE_SERVICE_ROLE_KEY!, {
@@ -154,4 +155,53 @@ export async function ensureInstitutionLogosBucket() {
   });
 
   return institutionLogosBucketReady;
+}
+
+const GRADEBOOK_MIME_TYPES = [
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "text/csv"
+] as const;
+
+export function getGradebookStorageClient() {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new AppError("GRADEBOOK_STORAGE_UNAVAILABLE", "GRADEBOOK_STORAGE_UNAVAILABLE", 503);
+  }
+
+  return {
+    client: getStorageClient(),
+    bucket: env.GRADEBOOK_STORAGE_BUCKET,
+    importMaxBytes: env.GRADEBOOK_IMPORT_MAX_BYTES,
+    reportCardMaxBytes: env.GRADEBOOK_REPORT_CARD_MAX_BYTES,
+    allowedMimeTypes: GRADEBOOK_MIME_TYPES
+  };
+}
+
+export async function ensureGradebookStorageBucket() {
+  if (gradebookBucketReady) return gradebookBucketReady;
+
+  gradebookBucketReady = (async () => {
+    const { client, bucket, importMaxBytes, allowedMimeTypes } = getGradebookStorageClient();
+    const { data, error } = await client.storage.getBucket(bucket);
+    if (!error && data) {
+      if (data.public) {
+        throw new AppError("GRADEBOOK_STORAGE_BUCKET_MUST_BE_PRIVATE", "GRADEBOOK_STORAGE_BUCKET_MUST_BE_PRIVATE", 503);
+      }
+      return;
+    }
+
+    const { error: createError } = await client.storage.createBucket(bucket, {
+      public: false,
+      fileSizeLimit: importMaxBytes,
+      allowedMimeTypes: [...allowedMimeTypes]
+    });
+    if (createError && !/already exists/i.test(createError.message)) {
+      throw new AppError("GRADEBOOK_STORAGE_UNAVAILABLE", "GRADEBOOK_STORAGE_UNAVAILABLE", 503);
+    }
+  })().catch((error) => {
+    gradebookBucketReady = null;
+    throw error;
+  });
+
+  return gradebookBucketReady;
 }

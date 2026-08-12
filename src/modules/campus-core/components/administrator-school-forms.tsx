@@ -32,6 +32,15 @@ type SchoolFormRecord = {
   supportEmail: string | null;
   tenantSettings: {
     gradebookEnabled: boolean;
+    gradebookConfigurationEnabled: boolean;
+    gradebookMarksEntryEnabled: boolean;
+    gradebookImportEnabled: boolean;
+    gradebookResultCalculationEnabled: boolean;
+    gradebookCoScholasticEnabled: boolean;
+    gradebookReportCardsEnabled: boolean;
+    gradebookPublicationEnabled: boolean;
+    gradebookAnalyticsEnabled: boolean;
+    gradebookPortalResultsEnabled: boolean;
   } | null;
   institutions: Array<{
     id: string;
@@ -44,6 +53,17 @@ type SchoolFormRecord = {
 const initialState: CampusCoreFormActionState = { ok: false };
 const inputClassName = "min-h-11 w-full rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-sm text-slate-900 shadow-sm premium-focus";
 const statusOptions: SchoolStatus[] = ["ACTIVE", "SUSPENDED", "ARCHIVED"];
+const gradebookFeatureOptions = [
+  ["gradebookConfigurationEnabled", "Configuration", "Schemes, terms, exam types, grade scales and calculation policy."],
+  ["gradebookMarksEntryEnabled", "Marks entry", "Assignments, draft marks, submission and approval queues."],
+  ["gradebookImportEnabled", "Spreadsheet import", "Private, validated CSV/XLSX marks import workflow."],
+  ["gradebookResultCalculationEnabled", "Result calculation", "Versioned deterministic result runs and approval."],
+  ["gradebookCoScholasticEnabled", "Co-scholastic", "Institution-defined areas, ratings and teacher evaluation."],
+  ["gradebookReportCardsEnabled", "Report cards", "Immutable report-card snapshots and private documents."],
+  ["gradebookPublicationEnabled", "Publication", "Controlled result/report-card recipient publication."],
+  ["gradebookAnalyticsEnabled", "Analytics", "Approved-result operational summaries and history."],
+  ["gradebookPortalResultsEnabled", "Portal results", "Published student/guardian result access when portals are approved."]
+] as const satisfies ReadonlyArray<readonly [keyof NonNullable<SchoolFormRecord["tenantSettings"]>, string, string]>;
 
 function fieldError(state: CampusCoreFormActionState, name: string) {
   return getFieldError(state.fieldErrors, name);
@@ -196,6 +216,23 @@ export function SchoolEditForm({ school }: { school: SchoolFormRecord }) {
             </span>
           </span>
         </label>
+        <div className="mt-4 grid gap-2 border-t border-campus-border pt-4 md:grid-cols-2">
+          {gradebookFeatureOptions.map(([name, label, help]) => (
+            <label key={name} className="flex min-h-11 items-start gap-3 rounded-lg border border-campus-border bg-white p-3 text-sm text-slate-700">
+              <input type="hidden" name={name} value="off" />
+              <input
+                type="checkbox"
+                name={name}
+                defaultChecked={school.tenantSettings?.[name] ?? false}
+                className="mt-1 size-5 rounded border-slate-300 text-brand-600 focus:ring-brand-200"
+              />
+              <span>
+                <span className="block font-semibold text-ink">{label}</span>
+                <span className="mt-1 block leading-5 text-slate-500">{help}</span>
+              </span>
+            </label>
+          ))}
+        </div>
       </section>
       <FieldErrorMessage id="school-edit-form-error" message={fieldError(state, "form")} />
       <FormActions pending={pending} label="Save School" pendingLabel="Saving..." backHref={`/administrator/schools/${school.id}`} />

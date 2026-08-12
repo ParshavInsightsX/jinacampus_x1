@@ -247,6 +247,277 @@ enum GradebookMarkStatus {
   EXEMPT
 }
 
+enum GradebookConfigurationStatus {
+  DRAFT
+  ACTIVE
+  SUPERSEDED
+  ARCHIVED
+}
+
+enum GradebookExamTermStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+  ARCHIVED
+  CANCELLED
+}
+
+enum GradebookExamTypeCategory {
+  WRITTEN
+  PRACTICAL
+  ORAL
+  PROJECT
+  INTERNAL
+  FORMATIVE
+  SUMMATIVE
+  OTHER
+}
+
+enum GradebookExamTypeStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum GradebookScoreBasis {
+  PERCENTAGE
+  WEIGHTED_PERCENTAGE
+  RAW_SCORE
+  GRADE_ONLY
+}
+
+enum GradebookRoundingMode {
+  HALF_UP
+  HALF_EVEN
+  FLOOR
+  CEILING
+}
+
+enum GradebookCalculationStrategy {
+  SUM_COMPONENTS_RAW
+  WEIGHTED_COMPONENTS
+  SCALE_TO_MAXIMUM
+}
+
+enum GradebookExamStatus {
+  DRAFT
+  CONFIGURED
+  SCHEDULED
+  MARKS_OPEN
+  UNDER_REVIEW
+  APPROVED
+  PUBLISHED
+  ARCHIVED
+  CANCELLED
+  REOPENED
+}
+
+enum GradebookPublicationPolicy {
+  MANUAL
+  SCHEDULED
+}
+
+enum GradebookScheduleStatus {
+  DRAFT
+  PUBLISHED
+  COMPLETED
+  RESCHEDULED
+  CANCELLED
+}
+
+enum GradebookTeacherAssignmentStatus {
+  DRAFT
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+enum GradebookJobType {
+  GENERATE_MARK_BATCHES
+  PARSE_MARKS_IMPORT
+  APPLY_MARKS_IMPORT
+  EXPORT_MARKS
+  CALCULATE_RESULT_RUN
+  GENERATE_ATTENDANCE_SUMMARIES
+  GENERATE_REPORT_CARDS
+  PUBLISH_RESULTS
+  REBUILD_RESULT_ANALYTICS
+  RETENTION_INTEGRITY
+}
+
+enum GradebookJobStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+  DEAD_LETTER
+}
+
+enum GradebookDomainEventStatus {
+  PENDING
+  PROCESSING
+  DELIVERED
+  FAILED
+  DEAD_LETTER
+}
+
+enum GradebookMarkEntryBatchStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  SUBMITTED
+  RETURNED
+  VERIFIED
+  APPROVED
+  LOCKED
+  REOPENED
+  CANCELLED
+}
+
+enum GradebookSpecialExamStatus {
+  ABSENT
+  EXEMPTED
+  MEDICAL_LEAVE
+  NOT_APPLICABLE
+  WITHHELD
+  RESULT_PENDING
+}
+
+enum GradebookImportStatus {
+  UPLOADED
+  PARSING
+  VALIDATED
+  READY_TO_APPLY
+  APPLYING
+  APPLIED
+  FAILED
+  CANCELLED
+  REJECTED
+}
+
+enum GradebookResultRunStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  PUBLISHED
+  FAILED
+  CANCELLED
+}
+
+enum GradebookSubjectResultStatus {
+  PASS
+  FAIL
+  PENDING
+  WITHHELD
+  EXEMPTED
+  NOT_APPLICABLE
+}
+
+enum GradebookOverallResultStatus {
+  PASS
+  FAIL
+  PROMOTED
+  NOT_PROMOTED
+  PENDING
+  WITHHELD
+}
+
+enum GradebookAdjustmentType {
+  GRACE
+  MODERATION
+  CORRECTION
+  OTHER_AUTHORISED
+}
+
+enum GradebookAdjustmentStatus {
+  DRAFT
+  REQUESTED
+  UNDER_REVIEW
+  RETURNED
+  APPROVED
+  REJECTED
+  APPLIED
+  CANCELLED
+}
+
+enum GradebookCorrectionType {
+  MARK_REOPEN
+  RESULT_CORRECTION
+  RE_EVALUATION
+  REPORT_CARD_REISSUE
+}
+
+enum GradebookCorrectionStatus {
+  DRAFT
+  REQUESTED
+  UNDER_REVIEW
+  RETURNED
+  APPROVED
+  REJECTED
+  OPENED
+  CORRECTED
+  RESUBMITTED
+  RECALCULATED
+  REPUBLISHED
+  CLOSED
+  CANCELLED
+}
+
+enum GradebookRemarkType {
+  SUBJECT_TEACHER
+  CLASS_TEACHER
+  PRINCIPAL
+}
+
+enum GradebookEntryStatus {
+  DRAFT
+  SUBMITTED
+  RETURNED
+  VERIFIED
+  APPROVED
+  LOCKED
+}
+
+enum GradebookAttendanceSnapshotStatus {
+  PENDING
+  GENERATED
+  VERIFIED
+  FROZEN
+  STALE
+}
+
+enum GradebookReportCardStatus {
+  QUEUED
+  GENERATING
+  GENERATED
+  REVIEWED
+  APPROVED
+  PUBLISHED
+  FAILED
+  REJECTED
+  SUPERSEDED
+  REVOKED
+}
+
+enum GradebookPublicationStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  PARTIALLY_PUBLISHED
+  REVOKED
+  SUPERSEDED
+  CANCELLED
+}
+
+enum GradebookPublicationAudience {
+  STUDENT
+  GUARDIAN
+  STUDENT_AND_GUARDIAN
+}
+
 enum StaffType {
   TEACHER
   ADMIN
@@ -387,53 +658,94 @@ model Tenant {
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
-  institutions             Institution[]
-  branches                 Branch[]
-  academicYears            AcademicYear[]
-  academicCalendarEntries  AcademicCalendarEntry[]
-  users                    User[]
-  roles                    Role[]
-  rolePermissions          RolePermission[]
-  roleAssignments          UserRoleAssignment[]
-  branchAccesses           UserBranchAccess[]
-  sessions                 Session[]
-  loginOtps                LoginOtp[]
-  passkeyCredentials       PasskeyCredential[]
-  passkeyChallenges        PasskeyChallenge[]
-  tenantSettings           TenantSettings?
-  attendanceSettings       AttendanceSetting[]
-  auditLogs                AuditLog[]
-  classes                  Class[]
-  sections                 Section[]
-  classSections            ClassSection[]
-  subjects                 Subject[]
-  students                 Student[]
-  studentDocuments         StudentDocument[]
-  guardians                Guardian[]
-  studentGuardianLinks     StudentGuardianLink[]
-  enrollments              Enrollment[]
-  studentPromotionBatches  StudentPromotionBatch[]
-  studentPromotionItems    StudentPromotionItem[]
-  studentAttendanceRecords StudentAttendanceRecord[]
-  classSectionSubjects     ClassSectionSubject[]
-  gradebookAssessments     GradebookAssessment[]
-  gradebookMarks           GradebookMark[]
-  staffProfiles            StaffProfile[]
-  staffAttendanceRecords   StaffAttendanceRecord[]
-  staffAttendanceQrTokens  StaffAttendanceQrToken[]
-  staffLeaveSettings       StaffLeaveSetting[]
-  staffLeaveTypes          StaffLeaveType[]
-  staffLeaveApprovers      StaffLeaveApprover[]
-  staffLeaveBalances       StaffLeaveBalance[]
-  staffLeaveApplications   StaffLeaveApplication[]
-  staffLeaveActions        StaffLeaveApplicationAction[]
-  staffLeaveDocuments      StaffLeaveDocument[]
-  inAppNotifications       InAppNotification[]
-  communicationPreferences CommunicationPreference[]
-  notificationTemplates    NotificationTemplate[]
-  notificationOutboxItems  NotificationOutbox[]
-  notificationDeliveryLogs NotificationDeliveryLog[]
-  whatsAppSettings         WhatsAppIntegrationSetting[]
+  institutions                        Institution[]
+  branches                            Branch[]
+  academicYears                       AcademicYear[]
+  academicCalendarEntries             AcademicCalendarEntry[]
+  users                               User[]
+  roles                               Role[]
+  rolePermissions                     RolePermission[]
+  roleAssignments                     UserRoleAssignment[]
+  branchAccesses                      UserBranchAccess[]
+  sessions                            Session[]
+  loginOtps                           LoginOtp[]
+  passkeyCredentials                  PasskeyCredential[]
+  passkeyChallenges                   PasskeyChallenge[]
+  tenantSettings                      TenantSettings?
+  attendanceSettings                  AttendanceSetting[]
+  auditLogs                           AuditLog[]
+  classes                             Class[]
+  sections                            Section[]
+  classSections                       ClassSection[]
+  subjects                            Subject[]
+  students                            Student[]
+  studentDocuments                    StudentDocument[]
+  guardians                           Guardian[]
+  studentGuardianLinks                StudentGuardianLink[]
+  enrollments                         Enrollment[]
+  studentPromotionBatches             StudentPromotionBatch[]
+  studentPromotionItems               StudentPromotionItem[]
+  studentAttendanceRecords            StudentAttendanceRecord[]
+  classSectionSubjects                ClassSectionSubject[]
+  gradebookAssessments                GradebookAssessment[]
+  gradebookMarks                      GradebookMark[]
+  gradebookAssessmentSchemes          GradebookAssessmentScheme[]
+  gradebookAssessmentSchemeVersions   GradebookAssessmentSchemeVersion[]
+  gradebookExamTerms                  GradebookExamTerm[]
+  gradebookExamTypes                  GradebookExamType[]
+  gradebookGradeScales                GradebookGradeScale[]
+  gradebookGradeScaleVersions         GradebookGradeScaleVersion[]
+  gradebookGradeRules                 GradebookGradeRule[]
+  gradebookCalculationRuleSets        GradebookCalculationRuleSet[]
+  gradebookCalculationRuleSetVersions GradebookCalculationRuleSetVersion[]
+  gradebookExams                      GradebookExam[]
+  gradebookExamClassSections          GradebookExamClassSection[]
+  gradebookExamSubjects               GradebookExamSubject[]
+  gradebookAssessmentComponents       GradebookAssessmentComponent[]
+  gradebookExamSubjectComponents      GradebookExamSubjectComponent[]
+  gradebookExamSchedules              GradebookExamSchedule[]
+  gradebookTeacherMarkAssignments     GradebookTeacherMarkAssignment[]
+  gradebookJobs                       GradebookJob[]
+  gradebookDomainEvents               GradebookDomainEventOutbox[]
+  staffProfiles                       StaffProfile[]
+  staffAttendanceRecords              StaffAttendanceRecord[]
+  staffAttendanceQrTokens             StaffAttendanceQrToken[]
+  staffLeaveSettings                  StaffLeaveSetting[]
+  staffLeaveTypes                     StaffLeaveType[]
+  staffLeaveApprovers                 StaffLeaveApprover[]
+  staffLeaveBalances                  StaffLeaveBalance[]
+  staffLeaveApplications              StaffLeaveApplication[]
+  staffLeaveActions                   StaffLeaveApplicationAction[]
+  staffLeaveDocuments                 StaffLeaveDocument[]
+  inAppNotifications                  InAppNotification[]
+  communicationPreferences            CommunicationPreference[]
+  notificationTemplates               NotificationTemplate[]
+  notificationOutboxItems             NotificationOutbox[]
+  notificationDeliveryLogs            NotificationDeliveryLog[]
+  whatsAppSettings                    WhatsAppIntegrationSetting[]
+  GradebookMarkEntryBatch             GradebookMarkEntryBatch[]
+  GradebookStudentMark                GradebookStudentMark[]
+  GradebookStudentMarkRevision        GradebookStudentMarkRevision[]
+  GradebookMarkWorkflowEvent          GradebookMarkWorkflowEvent[]
+  GradebookExamImportJob              GradebookExamImportJob[]
+  GradebookExamImportRow              GradebookExamImportRow[]
+  GradebookResultRun                  GradebookResultRun[]
+  GradebookStudentSubjectResult       GradebookStudentSubjectResult[]
+  GradebookStudentOverallResult       GradebookStudentOverallResult[]
+  GradebookMarkAdjustment             GradebookMarkAdjustment[]
+  GradebookCorrectionRequest          GradebookCorrectionRequest[]
+  GradebookRemarkTemplate             GradebookRemarkTemplate[]
+  GradebookTeacherRemark              GradebookTeacherRemark[]
+  GradebookCoScholasticSchemeVersion  GradebookCoScholasticSchemeVersion[]
+  GradebookCoScholasticArea           GradebookCoScholasticArea[]
+  GradebookCoScholasticIndicator      GradebookCoScholasticIndicator[]
+  GradebookCoScholasticEntry          GradebookCoScholasticEntry[]
+  GradebookAttendanceSummarySnapshot  GradebookAttendanceSummarySnapshot[]
+  GradebookReportCardTemplate         GradebookReportCardTemplate[]
+  GradebookReportCardTemplateVersion  GradebookReportCardTemplateVersion[]
+  GradebookReportCard                 GradebookReportCard[]
+  GradebookResultPublication          GradebookResultPublication[]
+  GradebookStudentResultPublication   GradebookStudentResultPublication[]
 
   @@index([status])
   @@map("tenants")
@@ -531,10 +843,17 @@ model Institution {
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 
-  tenant                  Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  branches                Branch[]
-  academicYears           AcademicYear[]
-  academicCalendarEntries AcademicCalendarEntry[]
+  tenant                             Tenant                               @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  branches                           Branch[]
+  academicYears                      AcademicYear[]
+  academicCalendarEntries            AcademicCalendarEntry[]
+  gradebookAssessmentSchemes         GradebookAssessmentScheme[]
+  gradebookExamTerms                 GradebookExamTerm[]
+  gradebookGradeScales               GradebookGradeScale[]
+  gradebookCalculationRuleSets       GradebookCalculationRuleSet[]
+  gradebookExams                     GradebookExam[]
+  GradebookCoScholasticSchemeVersion GradebookCoScholasticSchemeVersion[]
+  GradebookReportCardTemplate        GradebookReportCardTemplate[]
 
   @@unique([tenantId, code])
   @@index([tenantId, status])
@@ -562,37 +881,51 @@ model Branch {
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
-  tenant                   Tenant                        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  institution              Institution                   @relation(fields: [institutionId], references: [id], onDelete: Restrict)
-  academicCalendarEntries  AcademicCalendarEntry[]
-  userBranchAccesses       UserBranchAccess[]
-  attendanceSetting        AttendanceSetting?
-  auditLogs                AuditLog[]
-  classSections            ClassSection[]
-  students                 Student[]
-  studentDocuments         StudentDocument[]
-  enrollments              Enrollment[]
-  studentPromotionBatches  StudentPromotionBatch[]
-  studentPromotionItems    StudentPromotionItem[]
-  studentAttendanceRecords StudentAttendanceRecord[]
-  classSectionSubjects     ClassSectionSubject[]
-  gradebookAssessments     GradebookAssessment[]
-  gradebookMarks           GradebookMark[]
-  staffProfiles            StaffProfile[]
-  staffAttendanceRecords   StaffAttendanceRecord[]
-  staffAttendanceQrTokens  StaffAttendanceQrToken[]
-  staffLeaveSetting        StaffLeaveSetting?
-  staffLeaveTypes          StaffLeaveType[]
-  staffLeaveApprovers      StaffLeaveApprover[]
-  staffLeaveBalances       StaffLeaveBalance[]
-  staffLeaveApplications   StaffLeaveApplication[]
-  staffLeaveActions        StaffLeaveApplicationAction[]
-  staffLeaveDocuments      StaffLeaveDocument[]
-  inAppNotifications       InAppNotification[]
-  communicationPreferences CommunicationPreference[]
-  notificationTemplates    NotificationTemplate[]
-  notificationOutboxItems  NotificationOutbox[]
-  whatsAppSettings         WhatsAppIntegrationSetting[]
+  tenant                          Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  institution                     Institution                      @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  academicCalendarEntries         AcademicCalendarEntry[]
+  userBranchAccesses              UserBranchAccess[]
+  attendanceSetting               AttendanceSetting?
+  auditLogs                       AuditLog[]
+  classSections                   ClassSection[]
+  students                        Student[]
+  studentDocuments                StudentDocument[]
+  enrollments                     Enrollment[]
+  studentPromotionBatches         StudentPromotionBatch[]
+  studentPromotionItems           StudentPromotionItem[]
+  studentAttendanceRecords        StudentAttendanceRecord[]
+  classSectionSubjects            ClassSectionSubject[]
+  gradebookAssessments            GradebookAssessment[]
+  gradebookExamClassSections      GradebookExamClassSection[]
+  gradebookMarks                  GradebookMark[]
+  gradebookAssessmentSchemes      GradebookAssessmentScheme[]
+  gradebookExamTerms              GradebookExamTerm[]
+  gradebookGradeScales            GradebookGradeScale[]
+  gradebookCalculationRuleSets    GradebookCalculationRuleSet[]
+  gradebookExams                  GradebookExam[]
+  gradebookExamSchedules          GradebookExamSchedule[]
+  gradebookTeacherMarkAssignments GradebookTeacherMarkAssignment[]
+  gradebookJobs                   GradebookJob[]
+  gradebookDomainEvents           GradebookDomainEventOutbox[]
+  staffProfiles                   StaffProfile[]
+  staffAttendanceRecords          StaffAttendanceRecord[]
+  staffAttendanceQrTokens         StaffAttendanceQrToken[]
+  staffLeaveSetting               StaffLeaveSetting?
+  staffLeaveTypes                 StaffLeaveType[]
+  staffLeaveApprovers             StaffLeaveApprover[]
+  staffLeaveBalances              StaffLeaveBalance[]
+  staffLeaveApplications          StaffLeaveApplication[]
+  staffLeaveActions               StaffLeaveApplicationAction[]
+  staffLeaveDocuments             StaffLeaveDocument[]
+  inAppNotifications              InAppNotification[]
+  communicationPreferences        CommunicationPreference[]
+  notificationTemplates           NotificationTemplate[]
+  notificationOutboxItems         NotificationOutbox[]
+  whatsAppSettings                WhatsAppIntegrationSetting[]
+  GradebookMarkEntryBatch         GradebookMarkEntryBatch[]
+  GradebookResultRun              GradebookResultRun[]
+  GradebookReportCardTemplate     GradebookReportCardTemplate[]
+  GradebookReportCard             GradebookReportCard[]
 
   @@unique([tenantId, code])
   @@index([tenantId, institutionId])
@@ -614,20 +947,34 @@ model AcademicYear {
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
 
-  tenant                   Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  institution              Institution               @relation(fields: [institutionId], references: [id], onDelete: Restrict)
-  auditLogs                AuditLog[]
-  classSections            ClassSection[]
-  enrollments              Enrollment[]
-  sourcePromotionBatches   StudentPromotionBatch[]   @relation("StudentPromotionSourceAcademicYear")
-  targetPromotionBatches   StudentPromotionBatch[]   @relation("StudentPromotionTargetAcademicYear")
-  studentAttendanceRecords StudentAttendanceRecord[]
-  classSectionSubjects     ClassSectionSubject[]
-  gradebookAssessments     GradebookAssessment[]
-  gradebookMarks           GradebookMark[]
-  staffAttendanceRecords   StaffAttendanceRecord[]
-  academicCalendarEntries  AcademicCalendarEntry[]
-  notificationOutboxItems  NotificationOutbox[]
+  tenant                              Tenant                               @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  institution                         Institution                          @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  auditLogs                           AuditLog[]
+  classSections                       ClassSection[]
+  enrollments                         Enrollment[]
+  sourcePromotionBatches              StudentPromotionBatch[]              @relation("StudentPromotionSourceAcademicYear")
+  targetPromotionBatches              StudentPromotionBatch[]              @relation("StudentPromotionTargetAcademicYear")
+  studentAttendanceRecords            StudentAttendanceRecord[]
+  classSectionSubjects                ClassSectionSubject[]
+  gradebookAssessments                GradebookAssessment[]
+  gradebookMarks                      GradebookMark[]
+  gradebookAssessmentSchemeVersions   GradebookAssessmentSchemeVersion[]
+  gradebookExamTerms                  GradebookExamTerm[]
+  gradebookGradeScaleVersions         GradebookGradeScaleVersion[]
+  gradebookCalculationRuleSetVersions GradebookCalculationRuleSetVersion[]
+  gradebookExams                      GradebookExam[]
+  gradebookExamSchedules              GradebookExamSchedule[]
+  gradebookTeacherMarkAssignments     GradebookTeacherMarkAssignment[]
+  gradebookJobs                       GradebookJob[]
+  gradebookDomainEvents               GradebookDomainEventOutbox[]
+  staffAttendanceRecords              StaffAttendanceRecord[]
+  academicCalendarEntries             AcademicCalendarEntry[]
+  notificationOutboxItems             NotificationOutbox[]
+  GradebookExamClassSection           GradebookExamClassSection[]
+  GradebookMarkEntryBatch             GradebookMarkEntryBatch[]
+  GradebookResultRun                  GradebookResultRun[]
+  GradebookCoScholasticSchemeVersion  GradebookCoScholasticSchemeVersion[]
+  GradebookReportCard                 GradebookReportCard[]
 
   @@unique([tenantId, institutionId, name])
   @@index([tenantId, institutionId, status])
@@ -686,35 +1033,36 @@ model User {
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
-  tenant                        Tenant                        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  passwordCredential            PasswordCredential?
-  sessions                      Session[]
-  loginOtps                     LoginOtp[]
-  passkeyCredentials            PasskeyCredential[]
-  passkeyChallenges             PasskeyChallenge[]
-  roleAssignments               UserRoleAssignment[]
-  branchAccesses                UserBranchAccess[]
-  auditLogs                     AuditLog[]                    @relation("AuditActor")
-  classSectionsAsTeacher        ClassSection[]                @relation("ClassSectionTeacher")
-  markedStudentAttendance       StudentAttendanceRecord[]     @relation("StudentAttendanceMarkedBy")
-  correctedStudentAttendance    StudentAttendanceRecord[]     @relation("StudentAttendanceCorrectedBy")
-  staffProfile                  StaffProfile?                 @relation("StaffProfileUser")
-  markedStaffAttendance         StaffAttendanceRecord[]       @relation("StaffAttendanceMarkedBy")
-  updatedStaffAttendance        StaffAttendanceRecord[]       @relation("StaffAttendanceUpdatedBy")
-  createdStaffQrTokens          StaffAttendanceQrToken[]      @relation("StaffAttendanceQrTokenCreatedBy")
-  deactivatedStaffQrTokens      StaffAttendanceQrToken[]      @relation("StaffAttendanceQrTokenDeactivatedBy")
-  staffLeaveApproverScopes      StaffLeaveApprover[]          @relation("StaffLeaveApproverUser")
-  actionedStaffLeave            StaffLeaveApplication[]       @relation("StaffLeaveApplicationActionedBy")
-  staffLeaveActions             StaffLeaveApplicationAction[] @relation("StaffLeaveActionActor")
-  inAppNotifications            InAppNotification[]
-  createdPromotionBatches       StudentPromotionBatch[]       @relation("StudentPromotionCreatedBy")
-  reversedPromotionBatches      StudentPromotionBatch[]       @relation("StudentPromotionReversedBy")
-  reversedPromotionItems        StudentPromotionItem[]        @relation("StudentPromotionItemReversedBy")
-  classSectionSubjectsTaught    ClassSectionSubject[]         @relation("ClassSectionSubjectTeacher")
-  createdGradebookAssessments   GradebookAssessment[]         @relation("GradebookAssessmentCreatedBy")
-  publishedGradebookAssessments GradebookAssessment[]         @relation("GradebookAssessmentPublishedBy")
-  cancelledGradebookAssessments GradebookAssessment[]         @relation("GradebookAssessmentCancelledBy")
-  enteredGradebookMarks         GradebookMark[]               @relation("GradebookMarkEnteredBy")
+  tenant                          Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  passwordCredential              PasswordCredential?
+  sessions                        Session[]
+  loginOtps                       LoginOtp[]
+  passkeyCredentials              PasskeyCredential[]
+  passkeyChallenges               PasskeyChallenge[]
+  roleAssignments                 UserRoleAssignment[]
+  branchAccesses                  UserBranchAccess[]
+  auditLogs                       AuditLog[]                       @relation("AuditActor")
+  classSectionsAsTeacher          ClassSection[]                   @relation("ClassSectionTeacher")
+  markedStudentAttendance         StudentAttendanceRecord[]        @relation("StudentAttendanceMarkedBy")
+  correctedStudentAttendance      StudentAttendanceRecord[]        @relation("StudentAttendanceCorrectedBy")
+  staffProfile                    StaffProfile?                    @relation("StaffProfileUser")
+  markedStaffAttendance           StaffAttendanceRecord[]          @relation("StaffAttendanceMarkedBy")
+  updatedStaffAttendance          StaffAttendanceRecord[]          @relation("StaffAttendanceUpdatedBy")
+  createdStaffQrTokens            StaffAttendanceQrToken[]         @relation("StaffAttendanceQrTokenCreatedBy")
+  deactivatedStaffQrTokens        StaffAttendanceQrToken[]         @relation("StaffAttendanceQrTokenDeactivatedBy")
+  staffLeaveApproverScopes        StaffLeaveApprover[]             @relation("StaffLeaveApproverUser")
+  actionedStaffLeave              StaffLeaveApplication[]          @relation("StaffLeaveApplicationActionedBy")
+  staffLeaveActions               StaffLeaveApplicationAction[]    @relation("StaffLeaveActionActor")
+  inAppNotifications              InAppNotification[]
+  createdPromotionBatches         StudentPromotionBatch[]          @relation("StudentPromotionCreatedBy")
+  reversedPromotionBatches        StudentPromotionBatch[]          @relation("StudentPromotionReversedBy")
+  reversedPromotionItems          StudentPromotionItem[]           @relation("StudentPromotionItemReversedBy")
+  classSectionSubjectsTaught      ClassSectionSubject[]            @relation("ClassSectionSubjectTeacher")
+  createdGradebookAssessments     GradebookAssessment[]            @relation("GradebookAssessmentCreatedBy")
+  publishedGradebookAssessments   GradebookAssessment[]            @relation("GradebookAssessmentPublishedBy")
+  cancelledGradebookAssessments   GradebookAssessment[]            @relation("GradebookAssessmentCancelledBy")
+  enteredGradebookMarks           GradebookMark[]                  @relation("GradebookMarkEnteredBy")
+  gradebookTeacherMarkAssignments GradebookTeacherMarkAssignment[] @relation("GradebookTeacherMarkAssignmentTeacher")
 
   @@unique([tenantId, email])
   @@unique([tenantId, phone])
@@ -929,22 +1277,31 @@ model UserBranchAccess {
 }
 
 model TenantSettings {
-  id                               String   @id @default(uuid()) @db.Uuid
-  tenantId                         String   @unique @db.Uuid
-  brandName                        String   @default("JinaCampus")
-  brandByline                      String   @default("powered by Parshav Insights")
-  primaryColor                     String?
-  logoUrl                          String?
-  timezone                         String   @default("Asia/Kolkata")
-  locale                           String   @default("en-IN")
-  dateFormat                       String   @default("dd/MM/yyyy")
-  currency                         String   @default("INR")
-  allowMultipleActiveAcademicYears Boolean  @default(false)
-  gradebookEnabled                 Boolean  @default(false)
-  createdById                      String?  @db.Uuid
-  updatedById                      String?  @db.Uuid
-  createdAt                        DateTime @default(now())
-  updatedAt                        DateTime @updatedAt
+  id                                String   @id @default(uuid()) @db.Uuid
+  tenantId                          String   @unique @db.Uuid
+  brandName                         String   @default("JinaCampus")
+  brandByline                       String   @default("powered by Parshav Insights")
+  primaryColor                      String?
+  logoUrl                           String?
+  timezone                          String   @default("Asia/Kolkata")
+  locale                            String   @default("en-IN")
+  dateFormat                        String   @default("dd/MM/yyyy")
+  currency                          String   @default("INR")
+  allowMultipleActiveAcademicYears  Boolean  @default(false)
+  gradebookEnabled                  Boolean  @default(false)
+  gradebookConfigurationEnabled     Boolean  @default(false)
+  gradebookMarksEntryEnabled        Boolean  @default(false)
+  gradebookImportEnabled            Boolean  @default(false)
+  gradebookResultCalculationEnabled Boolean  @default(false)
+  gradebookCoScholasticEnabled      Boolean  @default(false)
+  gradebookReportCardsEnabled       Boolean  @default(false)
+  gradebookPublicationEnabled       Boolean  @default(false)
+  gradebookAnalyticsEnabled         Boolean  @default(false)
+  gradebookPortalResultsEnabled     Boolean  @default(false)
+  createdById                       String?  @db.Uuid
+  updatedById                       String?  @db.Uuid
+  createdAt                         DateTime @default(now())
+  updatedAt                         DateTime @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -1079,19 +1436,20 @@ model ClassSection {
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
 
-  tenant                   Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  branch                   Branch                    @relation(fields: [branchId], references: [id], onDelete: Restrict)
-  academicYear             AcademicYear              @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
-  academicClass            Class                     @relation(fields: [classId], references: [id], onDelete: Restrict)
-  section                  Section                   @relation(fields: [sectionId], references: [id], onDelete: Restrict)
-  classTeacherUser         User?                     @relation("ClassSectionTeacher", fields: [classTeacherUserId], references: [id], onDelete: SetNull)
-  enrollments              Enrollment[]
-  sourcePromotionBatches   StudentPromotionBatch[]   @relation("StudentPromotionSourceClassSection")
-  targetPromotionBatches   StudentPromotionBatch[]   @relation("StudentPromotionDefaultTargetClassSection")
-  targetPromotionItems     StudentPromotionItem[]    @relation("StudentPromotionItemTargetClassSection")
-  studentAttendanceRecords StudentAttendanceRecord[]
-  classSectionSubjects     ClassSectionSubject[]
-  gradebookAssessments     GradebookAssessment[]
+  tenant                     Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch                     Branch                      @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  academicYear               AcademicYear                @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  academicClass              Class                       @relation(fields: [classId], references: [id], onDelete: Restrict)
+  section                    Section                     @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  classTeacherUser           User?                       @relation("ClassSectionTeacher", fields: [classTeacherUserId], references: [id], onDelete: SetNull)
+  enrollments                Enrollment[]
+  sourcePromotionBatches     StudentPromotionBatch[]     @relation("StudentPromotionSourceClassSection")
+  targetPromotionBatches     StudentPromotionBatch[]     @relation("StudentPromotionDefaultTargetClassSection")
+  targetPromotionItems       StudentPromotionItem[]      @relation("StudentPromotionItemTargetClassSection")
+  studentAttendanceRecords   StudentAttendanceRecord[]
+  classSectionSubjects       ClassSectionSubject[]
+  gradebookAssessments       GradebookAssessment[]
+  gradebookExamClassSections GradebookExamClassSection[]
 
   @@unique([tenantId, branchId, academicYearId, classId, sectionId])
   @@index([tenantId, branchId, academicYearId, status])
@@ -1113,8 +1471,9 @@ model Subject {
   createdAt   DateTime             @default(now())
   updatedAt   DateTime             @updatedAt
 
-  tenant               Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  classSectionSubjects ClassSectionSubject[]
+  tenant                Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  classSectionSubjects  ClassSectionSubject[]
+  gradebookExamSubjects GradebookExamSubject[]
 
   @@unique([tenantId, code])
   @@unique([tenantId, name])
@@ -1166,14 +1525,22 @@ model Student {
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 
-  tenant                   Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  branch                   Branch                    @relation(fields: [branchId], references: [id], onDelete: Restrict)
-  guardianLinks            StudentGuardianLink[]
-  enrollments              Enrollment[]
-  promotionItems           StudentPromotionItem[]
-  studentAttendanceRecords StudentAttendanceRecord[]
-  gradebookMarks           GradebookMark[]
-  documents                StudentDocument[]
+  tenant                             Tenant                               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch                             Branch                               @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  guardianLinks                      StudentGuardianLink[]
+  enrollments                        Enrollment[]
+  promotionItems                     StudentPromotionItem[]
+  studentAttendanceRecords           StudentAttendanceRecord[]
+  gradebookMarks                     GradebookMark[]
+  documents                          StudentDocument[]
+  GradebookStudentMark               GradebookStudentMark[]
+  GradebookStudentSubjectResult      GradebookStudentSubjectResult[]
+  GradebookStudentOverallResult      GradebookStudentOverallResult[]
+  GradebookTeacherRemark             GradebookTeacherRemark[]
+  GradebookCoScholasticEntry         GradebookCoScholasticEntry[]
+  GradebookAttendanceSummarySnapshot GradebookAttendanceSummarySnapshot[]
+  GradebookReportCard                GradebookReportCard[]
+  GradebookStudentResultPublication  GradebookStudentResultPublication[]
 
   @@unique([tenantId, admissionNumber])
   @@index([tenantId, branchId, status])
@@ -1281,15 +1648,23 @@ model Enrollment {
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 
-  tenant                   Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  branch                   Branch                    @relation(fields: [branchId], references: [id], onDelete: Restrict)
-  academicYear             AcademicYear              @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
-  student                  Student                   @relation(fields: [studentId], references: [id], onDelete: Restrict)
-  classSection             ClassSection              @relation(fields: [classSectionId], references: [id], onDelete: Restrict)
-  studentAttendanceRecords StudentAttendanceRecord[]
-  sourcePromotionItems     StudentPromotionItem[]    @relation("StudentPromotionSourceEnrollment")
-  targetPromotionItems     StudentPromotionItem[]    @relation("StudentPromotionTargetEnrollment")
-  gradebookMarks           GradebookMark[]
+  tenant                             Tenant                               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch                             Branch                               @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  academicYear                       AcademicYear                         @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  student                            Student                              @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  classSection                       ClassSection                         @relation(fields: [classSectionId], references: [id], onDelete: Restrict)
+  studentAttendanceRecords           StudentAttendanceRecord[]
+  sourcePromotionItems               StudentPromotionItem[]               @relation("StudentPromotionSourceEnrollment")
+  targetPromotionItems               StudentPromotionItem[]               @relation("StudentPromotionTargetEnrollment")
+  gradebookMarks                     GradebookMark[]
+  GradebookStudentMark               GradebookStudentMark[]
+  GradebookStudentSubjectResult      GradebookStudentSubjectResult[]
+  GradebookStudentOverallResult      GradebookStudentOverallResult[]
+  GradebookTeacherRemark             GradebookTeacherRemark[]
+  GradebookCoScholasticEntry         GradebookCoScholasticEntry[]
+  GradebookAttendanceSummarySnapshot GradebookAttendanceSummarySnapshot[]
+  GradebookReportCard                GradebookReportCard[]
+  GradebookStudentResultPublication  GradebookStudentResultPublication[]
 
   @@unique([tenantId, academicYearId, studentId])
   @@unique([tenantId, academicYearId, classSectionId, rollNumber])
@@ -1312,13 +1687,14 @@ model ClassSectionSubject {
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt
 
-  tenant       Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  branch       Branch                @relation(fields: [branchId], references: [id], onDelete: Restrict)
-  academicYear AcademicYear          @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
-  classSection ClassSection          @relation(fields: [classSectionId], references: [id], onDelete: Restrict)
-  subject      Subject               @relation(fields: [subjectId], references: [id], onDelete: Restrict)
-  teacherUser  User?                 @relation("ClassSectionSubjectTeacher", fields: [teacherUserId], references: [id], onDelete: SetNull)
-  assessments  GradebookAssessment[]
+  tenant                          Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch                          Branch                           @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  academicYear                    AcademicYear                     @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  classSection                    ClassSection                     @relation(fields: [classSectionId], references: [id], onDelete: Restrict)
+  subject                         Subject                          @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  teacherUser                     User?                            @relation("ClassSectionSubjectTeacher", fields: [teacherUserId], references: [id], onDelete: SetNull)
+  assessments                     GradebookAssessment[]
+  gradebookTeacherMarkAssignments GradebookTeacherMarkAssignment[]
 
   @@unique([tenantId, classSectionId, subjectId])
   @@index([tenantId, branchId, academicYearId, status])
@@ -1396,6 +1772,1299 @@ model GradebookMark {
   @@index([tenantId, studentId, academicYearId])
   @@index([tenantId, enrollmentId])
   @@map("gradebook_marks")
+}
+
+model GradebookAssessmentScheme {
+  id            String                       @id @default(uuid()) @db.Uuid
+  tenantId      String                       @db.Uuid
+  institutionId String?                      @db.Uuid
+  branchId      String?                      @db.Uuid
+  code          String
+  name          String
+  description   String?                      @db.Text
+  status        GradebookConfigurationStatus @default(DRAFT)
+  createdById   String                       @db.Uuid
+  updatedById   String                       @db.Uuid
+  createdAt     DateTime                     @default(now())
+  updatedAt     DateTime                     @updatedAt
+
+  tenant      Tenant                             @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  institution Institution?                       @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  branch      Branch?                            @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  versions    GradebookAssessmentSchemeVersion[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, institutionId, branchId, status])
+  @@map("gradebook_assessment_schemes")
+}
+
+model GradebookAssessmentSchemeVersion {
+  id                String                       @id @default(uuid()) @db.Uuid
+  tenantId          String                       @db.Uuid
+  schemeId          String                       @db.Uuid
+  academicYearId    String?                      @db.Uuid
+  versionNumber     Int
+  configurationJson Json
+  configurationHash String
+  status            GradebookConfigurationStatus @default(DRAFT)
+  effectiveFrom     DateTime?                    @db.Date
+  effectiveUntil    DateTime?                    @db.Date
+  activatedAt       DateTime?
+  activatedById     String?                      @db.Uuid
+  createdById       String                       @db.Uuid
+  createdAt         DateTime                     @default(now())
+  updatedAt         DateTime                     @updatedAt
+
+  tenant       Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  scheme       GradebookAssessmentScheme @relation(fields: [schemeId], references: [id], onDelete: Restrict)
+  academicYear AcademicYear?             @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  terms        GradebookExamTerm[]
+  exams        GradebookExam[]
+
+  @@unique([tenantId, schemeId, versionNumber])
+  @@index([tenantId, academicYearId, status])
+  @@index([tenantId, configurationHash])
+  @@map("gradebook_assessment_scheme_versions")
+}
+
+model GradebookExamTerm {
+  id                       String                  @id @default(uuid()) @db.Uuid
+  tenantId                 String                  @db.Uuid
+  institutionId            String                  @db.Uuid
+  branchId                 String                  @db.Uuid
+  academicYearId           String                  @db.Uuid
+  schemeVersionId          String?                 @db.Uuid
+  code                     String
+  name                     String
+  displayName              String?
+  sequence                 Int
+  startDate                DateTime                @db.Date
+  endDate                  DateTime                @db.Date
+  resultPublicationStartAt DateTime?
+  isReportCardTerm         Boolean                 @default(true)
+  allowDateOverlap         Boolean                 @default(false)
+  metadataJson             Json?
+  status                   GradebookExamTermStatus @default(DRAFT)
+  version                  Int                     @default(1)
+  createdById              String                  @db.Uuid
+  updatedById              String                  @db.Uuid
+  activatedById            String?                 @db.Uuid
+  activatedAt              DateTime?
+  closedById               String?                 @db.Uuid
+  closedAt                 DateTime?
+  archivedById             String?                 @db.Uuid
+  archivedAt               DateTime?
+  cancellationReason       String?                 @db.Text
+  createdAt                DateTime                @default(now())
+  updatedAt                DateTime                @updatedAt
+
+  tenant                             Tenant                               @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  institution                        Institution                          @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  branch                             Branch                               @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  academicYear                       AcademicYear                         @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  schemeVersion                      GradebookAssessmentSchemeVersion?    @relation(fields: [schemeVersionId], references: [id], onDelete: Restrict)
+  exams                              GradebookExam[]
+  GradebookCoScholasticEntry         GradebookCoScholasticEntry[]
+  GradebookAttendanceSummarySnapshot GradebookAttendanceSummarySnapshot[]
+
+  @@unique([tenantId, branchId, academicYearId, code])
+  @@index([tenantId, branchId, academicYearId, status, sequence])
+  @@index([tenantId, institutionId, academicYearId])
+  @@map("gradebook_exam_terms")
+}
+
+model GradebookExamType {
+  id                      String                    @id @default(uuid()) @db.Uuid
+  tenantId                String                    @db.Uuid
+  code                    String
+  name                    String
+  category                GradebookExamTypeCategory
+  defaultMaximumMarks     Decimal?                  @db.Decimal(10, 2)
+  defaultPassingMarks     Decimal?                  @db.Decimal(10, 2)
+  defaultWeightagePercent Decimal?                  @db.Decimal(7, 4)
+  allowsSpecialStatuses   Boolean                   @default(true)
+  requiresSchedule        Boolean                   @default(true)
+  requiresRoom            Boolean                   @default(false)
+  isSystem                Boolean                   @default(false)
+  status                  GradebookExamTypeStatus   @default(DRAFT)
+  version                 Int                       @default(1)
+  createdById             String                    @db.Uuid
+  updatedById             String                    @db.Uuid
+  activatedAt             DateTime?
+  archivedAt              DateTime?
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+
+  tenant            Tenant                          @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  exams             GradebookExam[]
+  components        GradebookAssessmentComponent[]
+  subjectComponents GradebookExamSubjectComponent[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, status, category])
+  @@map("gradebook_exam_types")
+}
+
+model GradebookGradeScale {
+  id            String                       @id @default(uuid()) @db.Uuid
+  tenantId      String                       @db.Uuid
+  institutionId String?                      @db.Uuid
+  branchId      String?                      @db.Uuid
+  code          String
+  name          String
+  description   String?                      @db.Text
+  status        GradebookConfigurationStatus @default(DRAFT)
+  createdById   String                       @db.Uuid
+  updatedById   String                       @db.Uuid
+  createdAt     DateTime                     @default(now())
+  updatedAt     DateTime                     @updatedAt
+
+  tenant      Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  institution Institution?                 @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  branch      Branch?                      @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  versions    GradebookGradeScaleVersion[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, institutionId, branchId, status])
+  @@map("gradebook_grade_scales")
+}
+
+model GradebookGradeScaleVersion {
+  id                String                       @id @default(uuid()) @db.Uuid
+  tenantId          String                       @db.Uuid
+  gradeScaleId      String                       @db.Uuid
+  academicYearId    String?                      @db.Uuid
+  versionNumber     Int
+  scoreBasis        GradebookScoreBasis          @default(PERCENTAGE)
+  roundingMode      GradebookRoundingMode        @default(HALF_UP)
+  decimalPlaces     Int                          @default(2)
+  configurationHash String
+  status            GradebookConfigurationStatus @default(DRAFT)
+  effectiveFrom     DateTime?                    @db.Date
+  effectiveUntil    DateTime?                    @db.Date
+  activatedAt       DateTime?
+  activatedById     String?                      @db.Uuid
+  createdById       String                       @db.Uuid
+  createdAt         DateTime                     @default(now())
+  updatedAt         DateTime                     @updatedAt
+
+  tenant       Tenant               @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  gradeScale   GradebookGradeScale  @relation(fields: [gradeScaleId], references: [id], onDelete: Restrict)
+  academicYear AcademicYear?        @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  rules        GradebookGradeRule[]
+  exams        GradebookExam[]
+
+  @@unique([tenantId, gradeScaleId, versionNumber])
+  @@index([tenantId, academicYearId, status])
+  @@index([tenantId, configurationHash])
+  @@map("gradebook_grade_scale_versions")
+}
+
+model GradebookGradeRule {
+  id                  String   @id @default(uuid()) @db.Uuid
+  tenantId            String   @db.Uuid
+  gradeScaleVersionId String   @db.Uuid
+  minimumInclusive    Decimal  @db.Decimal(12, 4)
+  maximumInclusive    Decimal  @db.Decimal(12, 4)
+  letterGrade         String
+  gradePoint          Decimal? @db.Decimal(7, 4)
+  remarkTemplate      String?
+  isPassing           Boolean  @default(true)
+  displayOrder        Int
+  createdAt           DateTime @default(now())
+
+  tenant            Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  gradeScaleVersion GradebookGradeScaleVersion @relation(fields: [gradeScaleVersionId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, gradeScaleVersionId, letterGrade])
+  @@index([tenantId, gradeScaleVersionId, displayOrder])
+  @@map("gradebook_grade_rules")
+}
+
+model GradebookCalculationRuleSet {
+  id            String                       @id @default(uuid()) @db.Uuid
+  tenantId      String                       @db.Uuid
+  institutionId String?                      @db.Uuid
+  branchId      String?                      @db.Uuid
+  code          String
+  name          String
+  description   String?                      @db.Text
+  status        GradebookConfigurationStatus @default(DRAFT)
+  createdById   String                       @db.Uuid
+  updatedById   String                       @db.Uuid
+  createdAt     DateTime                     @default(now())
+  updatedAt     DateTime                     @updatedAt
+
+  tenant      Tenant                               @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  institution Institution?                         @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  branch      Branch?                              @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  versions    GradebookCalculationRuleSetVersion[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, institutionId, branchId, status])
+  @@map("gradebook_calculation_rule_sets")
+}
+
+model GradebookCalculationRuleSetVersion {
+  id                String                       @id @default(uuid()) @db.Uuid
+  tenantId          String                       @db.Uuid
+  ruleSetId         String                       @db.Uuid
+  academicYearId    String?                      @db.Uuid
+  versionNumber     Int
+  strategy          GradebookCalculationStrategy
+  rulesJson         Json
+  configurationHash String
+  status            GradebookConfigurationStatus @default(DRAFT)
+  effectiveFrom     DateTime?                    @db.Date
+  effectiveUntil    DateTime?                    @db.Date
+  activatedAt       DateTime?
+  activatedById     String?                      @db.Uuid
+  createdById       String                       @db.Uuid
+  createdAt         DateTime                     @default(now())
+  updatedAt         DateTime                     @updatedAt
+
+  tenant       Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  ruleSet      GradebookCalculationRuleSet @relation(fields: [ruleSetId], references: [id], onDelete: Restrict)
+  academicYear AcademicYear?               @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  exams        GradebookExam[]
+
+  @@unique([tenantId, ruleSetId, versionNumber])
+  @@index([tenantId, academicYearId, status])
+  @@index([tenantId, configurationHash])
+  @@map("gradebook_calculation_rule_set_versions")
+}
+
+model GradebookExam {
+  id                          String                     @id @default(uuid()) @db.Uuid
+  tenantId                    String                     @db.Uuid
+  institutionId               String                     @db.Uuid
+  branchId                    String                     @db.Uuid
+  academicYearId              String                     @db.Uuid
+  termId                      String                     @db.Uuid
+  examTypeId                  String                     @db.Uuid
+  schemeVersionId             String?                    @db.Uuid
+  gradeScaleVersionId         String?                    @db.Uuid
+  calculationRuleSetVersionId String?                    @db.Uuid
+  code                        String
+  name                        String
+  description                 String?                    @db.Text
+  instructions                String?                    @db.Text
+  marksEntryOpensAt           DateTime?
+  marksEntryClosesAt          DateTime?
+  resultPublicationPolicy     GradebookPublicationPolicy @default(MANUAL)
+  scheduledPublishAt          DateTime?
+  status                      GradebookExamStatus        @default(DRAFT)
+  version                     Int                        @default(1)
+  createdById                 String                     @db.Uuid
+  updatedById                 String                     @db.Uuid
+  activatedById               String?                    @db.Uuid
+  activatedAt                 DateTime?
+  cancelledById               String?                    @db.Uuid
+  cancelledAt                 DateTime?
+  cancellationReason          String?                    @db.Text
+  createdAt                   DateTime                   @default(now())
+  updatedAt                   DateTime                   @updatedAt
+
+  tenant                     Tenant                              @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  institution                Institution                         @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  branch                     Branch                              @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  academicYear               AcademicYear                        @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  term                       GradebookExamTerm                   @relation(fields: [termId], references: [id], onDelete: Restrict)
+  examType                   GradebookExamType                   @relation(fields: [examTypeId], references: [id], onDelete: Restrict)
+  schemeVersion              GradebookAssessmentSchemeVersion?   @relation(fields: [schemeVersionId], references: [id], onDelete: Restrict)
+  gradeScaleVersion          GradebookGradeScaleVersion?         @relation(fields: [gradeScaleVersionId], references: [id], onDelete: Restrict)
+  calculationRuleSetVersion  GradebookCalculationRuleSetVersion? @relation(fields: [calculationRuleSetVersionId], references: [id], onDelete: Restrict)
+  classSections              GradebookExamClassSection[]
+  subjects                   GradebookExamSubject[]
+  schedules                  GradebookExamSchedule[]
+  teacherAssignments         GradebookTeacherMarkAssignment[]
+  GradebookMarkEntryBatch    GradebookMarkEntryBatch[]
+  GradebookResultRun         GradebookResultRun[]
+  GradebookCorrectionRequest GradebookCorrectionRequest[]
+  GradebookTeacherRemark     GradebookTeacherRemark[]
+  GradebookResultPublication GradebookResultPublication[]
+
+  @@unique([tenantId, branchId, academicYearId, code])
+  @@index([tenantId, branchId, academicYearId, termId, status])
+  @@index([tenantId, institutionId, status])
+  @@map("gradebook_exams")
+}
+
+model GradebookExamClassSection {
+  id             String   @id @default(uuid()) @db.Uuid
+  tenantId       String   @db.Uuid
+  branchId       String   @db.Uuid
+  academicYearId String   @db.Uuid
+  examId         String   @db.Uuid
+  classSectionId String   @db.Uuid
+  createdAt      DateTime @default(now())
+
+  tenant                  Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  branch                  Branch                           @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  academicYear            AcademicYear                     @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  exam                    GradebookExam                    @relation(fields: [examId], references: [id], onDelete: Restrict)
+  classSection            ClassSection                     @relation(fields: [classSectionId], references: [id], onDelete: Restrict)
+  schedules               GradebookExamSchedule[]
+  teacherAssignments      GradebookTeacherMarkAssignment[]
+  GradebookMarkEntryBatch GradebookMarkEntryBatch[]
+  GradebookResultRun      GradebookResultRun[]
+
+  @@unique([tenantId, examId, classSectionId])
+  @@index([tenantId, branchId, academicYearId, classSectionId])
+  @@map("gradebook_exam_class_sections")
+}
+
+model GradebookExamSubject {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @db.Uuid
+  examId       String   @db.Uuid
+  subjectId    String   @db.Uuid
+  displayName  String?
+  maximumMarks Decimal? @db.Decimal(10, 2)
+  passingMarks Decimal? @db.Decimal(10, 2)
+  displayOrder Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tenant                        Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  exam                          GradebookExam                    @relation(fields: [examId], references: [id], onDelete: Restrict)
+  subject                       Subject                          @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  components                    GradebookExamSubjectComponent[]
+  schedules                     GradebookExamSchedule[]
+  teacherAssignments            GradebookTeacherMarkAssignment[]
+  GradebookMarkEntryBatch       GradebookMarkEntryBatch[]
+  GradebookStudentSubjectResult GradebookStudentSubjectResult[]
+  GradebookTeacherRemark        GradebookTeacherRemark[]
+
+  @@unique([tenantId, examId, subjectId])
+  @@index([tenantId, examId, displayOrder])
+  @@index([tenantId, subjectId, examId])
+  @@map("gradebook_exam_subjects")
+}
+
+model GradebookAssessmentComponent {
+  id          String                       @id @default(uuid()) @db.Uuid
+  tenantId    String                       @db.Uuid
+  examTypeId  String?                      @db.Uuid
+  code        String
+  name        String
+  description String?                      @db.Text
+  status      GradebookConfigurationStatus @default(DRAFT)
+  createdById String                       @db.Uuid
+  updatedById String                       @db.Uuid
+  createdAt   DateTime                     @default(now())
+  updatedAt   DateTime                     @updatedAt
+
+  tenant            Tenant                          @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  examType          GradebookExamType?              @relation(fields: [examTypeId], references: [id], onDelete: Restrict)
+  subjectComponents GradebookExamSubjectComponent[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, status])
+  @@map("gradebook_assessment_components")
+}
+
+model GradebookExamSubjectComponent {
+  id                      String                 @id @default(uuid()) @db.Uuid
+  tenantId                String                 @db.Uuid
+  examSubjectId           String                 @db.Uuid
+  componentId             String?                @db.Uuid
+  examTypeId              String?                @db.Uuid
+  componentCode           String
+  componentName           String
+  maximumMarks            Decimal                @db.Decimal(10, 2)
+  passingMarks            Decimal?               @db.Decimal(10, 2)
+  weightagePercent        Decimal?               @db.Decimal(7, 4)
+  displayOrder            Int
+  isOptional              Boolean                @default(false)
+  roundingMode            GradebookRoundingMode?
+  decimalPlaces           Int?
+  specialStatusPolicyJson Json?
+  createdAt               DateTime               @default(now())
+  updatedAt               DateTime               @updatedAt
+
+  tenant               Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  examSubject          GradebookExamSubject             @relation(fields: [examSubjectId], references: [id], onDelete: Restrict)
+  component            GradebookAssessmentComponent?    @relation(fields: [componentId], references: [id], onDelete: Restrict)
+  examType             GradebookExamType?               @relation(fields: [examTypeId], references: [id], onDelete: Restrict)
+  schedules            GradebookExamSchedule[]
+  teacherAssignments   GradebookTeacherMarkAssignment[]
+  GradebookStudentMark GradebookStudentMark[]
+
+  @@unique([tenantId, examSubjectId, componentCode])
+  @@index([tenantId, examSubjectId, displayOrder])
+  @@map("gradebook_exam_subject_components")
+}
+
+model GradebookExamSchedule {
+  id                     String                  @id @default(uuid()) @db.Uuid
+  tenantId               String                  @db.Uuid
+  branchId               String                  @db.Uuid
+  academicYearId         String                  @db.Uuid
+  examId                 String                  @db.Uuid
+  examClassSectionId     String                  @db.Uuid
+  examSubjectId          String                  @db.Uuid
+  examSubjectComponentId String?                 @db.Uuid
+  examDate               DateTime                @db.Date
+  startTime              String
+  endTime                String
+  reportingTime          String?
+  roomName               String?
+  instructions           String?                 @db.Text
+  studentGroupRuleJson   Json?
+  invigilatorUserIdsJson Json?
+  status                 GradebookScheduleStatus @default(DRAFT)
+  version                Int                     @default(1)
+  supersedesScheduleId   String?                 @db.Uuid
+  changeReason           String?                 @db.Text
+  createdById            String                  @db.Uuid
+  updatedById            String                  @db.Uuid
+  publishedAt            DateTime?
+  cancelledAt            DateTime?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+
+  tenant               Tenant                         @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  branch               Branch                         @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  academicYear         AcademicYear                   @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  exam                 GradebookExam                  @relation(fields: [examId], references: [id], onDelete: Restrict)
+  examClassSection     GradebookExamClassSection      @relation(fields: [examClassSectionId], references: [id], onDelete: Restrict)
+  examSubject          GradebookExamSubject           @relation(fields: [examSubjectId], references: [id], onDelete: Restrict)
+  examSubjectComponent GradebookExamSubjectComponent? @relation(fields: [examSubjectComponentId], references: [id], onDelete: Restrict)
+  supersedesSchedule   GradebookExamSchedule?         @relation("GradebookScheduleVersions", fields: [supersedesScheduleId], references: [id], onDelete: Restrict)
+  replacementSchedules GradebookExamSchedule[]        @relation("GradebookScheduleVersions")
+
+  @@index([tenantId, branchId, academicYearId, examDate, startTime])
+  @@index([tenantId, examClassSectionId, examDate])
+  @@index([tenantId, roomName, examDate])
+  @@map("gradebook_exam_schedules")
+}
+
+model GradebookTeacherMarkAssignment {
+  id                          String                           @id @default(uuid()) @db.Uuid
+  tenantId                    String                           @db.Uuid
+  branchId                    String                           @db.Uuid
+  academicYearId              String                           @db.Uuid
+  examId                      String                           @db.Uuid
+  examClassSectionId          String                           @db.Uuid
+  examSubjectId               String                           @db.Uuid
+  examSubjectComponentId      String?                          @db.Uuid
+  teacherUserId               String                           @db.Uuid
+  sourceClassSectionSubjectId String?                          @db.Uuid
+  isPrimary                   Boolean                          @default(true)
+  canEdit                     Boolean                          @default(true)
+  canSubmit                   Boolean                          @default(true)
+  status                      GradebookTeacherAssignmentStatus @default(DRAFT)
+  validFrom                   DateTime?
+  validUntil                  DateTime?
+  overrideReason              String?                          @db.Text
+  createdById                 String                           @db.Uuid
+  revokedById                 String?                          @db.Uuid
+  revokedAt                   DateTime?
+  createdAt                   DateTime                         @default(now())
+  updatedAt                   DateTime                         @updatedAt
+
+  tenant                    Tenant                         @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  branch                    Branch                         @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  academicYear              AcademicYear                   @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  exam                      GradebookExam                  @relation(fields: [examId], references: [id], onDelete: Restrict)
+  examClassSection          GradebookExamClassSection      @relation(fields: [examClassSectionId], references: [id], onDelete: Restrict)
+  examSubject               GradebookExamSubject           @relation(fields: [examSubjectId], references: [id], onDelete: Restrict)
+  examSubjectComponent      GradebookExamSubjectComponent? @relation(fields: [examSubjectComponentId], references: [id], onDelete: Restrict)
+  teacherUser               User                           @relation("GradebookTeacherMarkAssignmentTeacher", fields: [teacherUserId], references: [id], onDelete: Restrict)
+  sourceClassSectionSubject ClassSectionSubject?           @relation(fields: [sourceClassSectionSubjectId], references: [id], onDelete: SetNull)
+  markEntryBatches          GradebookMarkEntryBatch[]
+
+  @@index([tenantId, teacherUserId, status])
+  @@index([tenantId, examId, examClassSectionId, examSubjectId])
+  @@index([tenantId, branchId, academicYearId, status])
+  @@map("gradebook_teacher_mark_assignments")
+}
+
+model GradebookJob {
+  id               String             @id @default(uuid()) @db.Uuid
+  tenantId         String             @db.Uuid
+  branchId         String?            @db.Uuid
+  academicYearId   String?            @db.Uuid
+  jobType          GradebookJobType
+  scopeJson        Json
+  idempotencyKey   String             @unique
+  status           GradebookJobStatus @default(QUEUED)
+  attemptCount     Int                @default(0)
+  maxAttempts      Int                @default(5)
+  scheduledAt      DateTime           @default(now())
+  lockedAt         DateTime?
+  lockedBy         String?
+  startedAt        DateTime?
+  completedAt      DateTime?
+  lastErrorCode    String?
+  lastErrorMessage String?
+  createdById      String?            @db.Uuid
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch       Branch?       @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  academicYear AcademicYear? @relation(fields: [academicYearId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, status, scheduledAt])
+  @@index([tenantId, jobType, createdAt])
+  @@map("gradebook_jobs")
+}
+
+model GradebookDomainEventOutbox {
+  id               String                     @id @default(uuid()) @db.Uuid
+  tenantId         String                     @db.Uuid
+  branchId         String?                    @db.Uuid
+  academicYearId   String?                    @db.Uuid
+  eventType        String
+  eventVersion     Int                        @default(1)
+  aggregateType    String
+  aggregateId      String
+  payloadJson      Json
+  idempotencyKey   String                     @unique
+  status           GradebookDomainEventStatus @default(PENDING)
+  attemptCount     Int                        @default(0)
+  scheduledAt      DateTime                   @default(now())
+  lockedAt         DateTime?
+  deliveredAt      DateTime?
+  lastErrorCode    String?
+  lastErrorMessage String?
+  correlationId    String
+  createdAt        DateTime                   @default(now())
+  updatedAt        DateTime                   @updatedAt
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch       Branch?       @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  academicYear AcademicYear? @relation(fields: [academicYearId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, status, scheduledAt])
+  @@index([tenantId, eventType, createdAt])
+  @@index([tenantId, aggregateType, aggregateId])
+  @@map("gradebook_domain_event_outbox")
+}
+
+model GradebookMarkEntryBatch {
+  id                      String                        @id @default(uuid()) @db.Uuid
+  tenantId                String                        @db.Uuid
+  branchId                String                        @db.Uuid
+  academicYearId          String                        @db.Uuid
+  teacherMarkAssignmentId String                        @db.Uuid
+  examId                  String                        @db.Uuid
+  examClassSectionId      String                        @db.Uuid
+  examSubjectId           String                        @db.Uuid
+  status                  GradebookMarkEntryBatchStatus @default(NOT_STARTED)
+  version                 Int                           @default(1)
+  entryOpenedAt           DateTime?
+  entryClosedAt           DateTime?
+  submittedAt             DateTime?
+  submittedById           String?                       @db.Uuid
+  verifiedAt              DateTime?
+  verifiedById            String?                       @db.Uuid
+  approvedAt              DateTime?
+  approvedById            String?                       @db.Uuid
+  lockedAt                DateTime?
+  lockedById              String?                       @db.Uuid
+  returnedAt              DateTime?
+  returnedById            String?                       @db.Uuid
+  returnReason            String?                       @db.Text
+  approvalComment         String?                       @db.Text
+  verificationJson        Json?
+  completionCountsJson    Json?
+  rosterSnapshotJson      Json
+  snapshotHash            String?
+  createdById             String                        @db.Uuid
+  createdAt               DateTime                      @default(now())
+  updatedAt               DateTime                      @updatedAt
+
+  tenant            Tenant                         @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  branch            Branch                         @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  academicYear      AcademicYear                   @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  teacherAssignment GradebookTeacherMarkAssignment @relation(fields: [teacherMarkAssignmentId], references: [id], onDelete: Restrict)
+  exam              GradebookExam                  @relation(fields: [examId], references: [id], onDelete: Restrict)
+  examClassSection  GradebookExamClassSection      @relation(fields: [examClassSectionId], references: [id], onDelete: Restrict)
+  examSubject       GradebookExamSubject           @relation(fields: [examSubjectId], references: [id], onDelete: Restrict)
+  marks             GradebookStudentMark[]
+  revisions         GradebookStudentMarkRevision[]
+  workflowEvents    GradebookMarkWorkflowEvent[]
+  importJobs        GradebookExamImportJob[]
+
+  @@unique([tenantId, teacherMarkAssignmentId])
+  @@index([tenantId, examId, examClassSectionId, examSubjectId, status])
+  @@index([tenantId, branchId, academicYearId, status])
+  @@map("gradebook_mark_entry_batches")
+}
+
+model GradebookStudentMark {
+  id                     String                      @id @default(uuid()) @db.Uuid
+  tenantId               String                      @db.Uuid
+  branchId               String                      @db.Uuid
+  academicYearId         String                      @db.Uuid
+  markEntryBatchId       String                      @db.Uuid
+  examSubjectComponentId String                      @db.Uuid
+  enrollmentId           String                      @db.Uuid
+  studentId              String                      @db.Uuid
+  marksObtained          Decimal?                    @db.Decimal(10, 2)
+  specialStatus          GradebookSpecialExamStatus?
+  statusReason           String?                     @db.Text
+  publicRemark           String?                     @db.Text
+  teacherRemark          String?                     @db.Text
+  rowVersion             Int                         @default(1)
+  createdById            String                      @db.Uuid
+  updatedById            String                      @db.Uuid
+  createdAt              DateTime                    @default(now())
+  updatedAt              DateTime                    @updatedAt
+
+  tenant     Tenant                         @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  batch      GradebookMarkEntryBatch        @relation(fields: [markEntryBatchId], references: [id], onDelete: Restrict)
+  component  GradebookExamSubjectComponent  @relation(fields: [examSubjectComponentId], references: [id], onDelete: Restrict)
+  enrollment Enrollment                     @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+  student    Student                        @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  revisions  GradebookStudentMarkRevision[]
+
+  @@unique([tenantId, markEntryBatchId, enrollmentId, examSubjectComponentId])
+  @@index([tenantId, enrollmentId, academicYearId])
+  @@index([tenantId, studentId, academicYearId])
+  @@map("gradebook_student_marks")
+}
+
+model GradebookStudentMarkRevision {
+  id               String   @id @default(uuid()) @db.Uuid
+  tenantId         String   @db.Uuid
+  markEntryBatchId String   @db.Uuid
+  studentMarkId    String   @db.Uuid
+  batchVersion     Int
+  beforeJson       Json?
+  afterJson        Json
+  reason           String?  @db.Text
+  actorUserId      String   @db.Uuid
+  correlationId    String
+  createdAt        DateTime @default(now())
+
+  tenant      Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  batch       GradebookMarkEntryBatch @relation(fields: [markEntryBatchId], references: [id], onDelete: Restrict)
+  studentMark GradebookStudentMark    @relation(fields: [studentMarkId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, studentMarkId, createdAt])
+  @@index([tenantId, markEntryBatchId, batchVersion])
+  @@map("gradebook_student_mark_revisions")
+}
+
+model GradebookMarkWorkflowEvent {
+  id               String                         @id @default(uuid()) @db.Uuid
+  tenantId         String                         @db.Uuid
+  markEntryBatchId String                         @db.Uuid
+  fromStatus       GradebookMarkEntryBatchStatus?
+  toStatus         GradebookMarkEntryBatchStatus
+  batchVersion     Int
+  reason           String?                        @db.Text
+  metadataJson     Json?
+  actorUserId      String                         @db.Uuid
+  correlationId    String
+  createdAt        DateTime                       @default(now())
+
+  tenant Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  batch  GradebookMarkEntryBatch @relation(fields: [markEntryBatchId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, markEntryBatchId, createdAt])
+  @@index([tenantId, toStatus, createdAt])
+  @@map("gradebook_mark_workflow_events")
+}
+
+model GradebookExamImportJob {
+  id                  String                @id @default(uuid()) @db.Uuid
+  tenantId            String                @db.Uuid
+  branchId            String                @db.Uuid
+  academicYearId      String                @db.Uuid
+  markEntryBatchId    String                @db.Uuid
+  originalFileName    String
+  originalObjectKey   String
+  errorObjectKey      String?
+  fileHash            String
+  templateVersion     Int
+  status              GradebookImportStatus @default(UPLOADED)
+  totalRowCount       Int                   @default(0)
+  validRowCount       Int                   @default(0)
+  invalidRowCount     Int                   @default(0)
+  warningRowCount     Int                   @default(0)
+  applyIdempotencyKey String?               @unique
+  failureCode         String?
+  failureSummary      String?
+  uploadedById        String                @db.Uuid
+  appliedById         String?               @db.Uuid
+  appliedAt           DateTime?
+  cancelledById       String?               @db.Uuid
+  cancelledAt         DateTime?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+
+  tenant Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  batch  GradebookMarkEntryBatch  @relation(fields: [markEntryBatchId], references: [id], onDelete: Restrict)
+  rows   GradebookExamImportRow[]
+
+  @@unique([tenantId, markEntryBatchId, fileHash])
+  @@index([tenantId, status, createdAt])
+  @@index([tenantId, branchId, academicYearId, createdAt])
+  @@map("gradebook_exam_import_jobs")
+}
+
+model GradebookExamImportRow {
+  id                     String    @id @default(uuid()) @db.Uuid
+  tenantId               String    @db.Uuid
+  importJobId            String    @db.Uuid
+  rowNumber              Int
+  enrollmentId           String?   @db.Uuid
+  examSubjectComponentId String?   @db.Uuid
+  parsedValueJson        Json?
+  normalisedValueJson    Json?
+  validationErrorsJson   Json?
+  validationWarningsJson Json?
+  isValid                Boolean   @default(false)
+  appliedAt              DateTime?
+  createdAt              DateTime  @default(now())
+
+  tenant Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  job    GradebookExamImportJob @relation(fields: [importJobId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, importJobId, rowNumber])
+  @@index([tenantId, importJobId, isValid])
+  @@map("gradebook_exam_import_rows")
+}
+
+model GradebookResultRun {
+  id                        String                   @id @default(uuid()) @db.Uuid
+  tenantId                  String                   @db.Uuid
+  branchId                  String                   @db.Uuid
+  academicYearId            String                   @db.Uuid
+  examId                    String                   @db.Uuid
+  examClassSectionId        String?                  @db.Uuid
+  inputSnapshotHash         String
+  configurationHash         String
+  engineVersion             String
+  idempotencyKey            String                   @unique
+  status                    GradebookResultRunStatus @default(QUEUED)
+  supersedesResultRunId     String?                  @db.Uuid
+  startedById               String                   @db.Uuid
+  approvedById              String?                  @db.Uuid
+  rejectedById              String?                  @db.Uuid
+  startedAt                 DateTime?
+  completedAt               DateTime?
+  approvedAt                DateTime?
+  rejectedAt                DateTime?
+  rejectionReason           String?                  @db.Text
+  failureCode               String?
+  summaryJson               Json?
+  configurationSnapshotJson Json
+  createdAt                 DateTime                 @default(now())
+  updatedAt                 DateTime                 @updatedAt
+
+  tenant              Tenant                               @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  branch              Branch                               @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  academicYear        AcademicYear                         @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  exam                GradebookExam                        @relation(fields: [examId], references: [id], onDelete: Restrict)
+  examClassSection    GradebookExamClassSection?           @relation(fields: [examClassSectionId], references: [id], onDelete: Restrict)
+  supersedesResultRun GradebookResultRun?                  @relation("GradebookResultRunVersions", fields: [supersedesResultRunId], references: [id], onDelete: Restrict)
+  replacementRuns     GradebookResultRun[]                 @relation("GradebookResultRunVersions")
+  subjectResults      GradebookStudentSubjectResult[]
+  overallResults      GradebookStudentOverallResult[]
+  attendanceSnapshots GradebookAttendanceSummarySnapshot[]
+  reportCards         GradebookReportCard[]
+  publications        GradebookResultPublication[]
+
+  @@index([tenantId, examId, examClassSectionId, status])
+  @@index([tenantId, branchId, academicYearId, status])
+  @@map("gradebook_result_runs")
+}
+
+model GradebookStudentSubjectResult {
+  id                    String                       @id @default(uuid()) @db.Uuid
+  tenantId              String                       @db.Uuid
+  resultRunId           String                       @db.Uuid
+  enrollmentId          String                       @db.Uuid
+  studentId             String                       @db.Uuid
+  examSubjectId         String                       @db.Uuid
+  rawMarks              Decimal?                     @db.Decimal(12, 4)
+  maximumMarks          Decimal?                     @db.Decimal(12, 4)
+  weightedScore         Decimal?                     @db.Decimal(12, 4)
+  percentage            Decimal?                     @db.Decimal(9, 4)
+  letterGrade           String?
+  gradePoint            Decimal?                     @db.Decimal(7, 4)
+  resultStatus          GradebookSubjectResultStatus
+  specialStatus         GradebookSpecialExamStatus?
+  adjustmentTotal       Decimal                      @default(0) @db.Decimal(10, 2)
+  calculationDetailJson Json
+  createdAt             DateTime                     @default(now())
+
+  tenant      Tenant               @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  resultRun   GradebookResultRun   @relation(fields: [resultRunId], references: [id], onDelete: Restrict)
+  enrollment  Enrollment           @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+  student     Student              @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  examSubject GradebookExamSubject @relation(fields: [examSubjectId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, resultRunId, enrollmentId, examSubjectId])
+  @@index([tenantId, enrollmentId, resultRunId])
+  @@index([tenantId, examSubjectId, resultStatus])
+  @@map("gradebook_student_subject_results")
+}
+
+model GradebookStudentOverallResult {
+  id                    String                       @id @default(uuid()) @db.Uuid
+  tenantId              String                       @db.Uuid
+  resultRunId           String                       @db.Uuid
+  enrollmentId          String                       @db.Uuid
+  studentId             String                       @db.Uuid
+  totalMarks            Decimal?                     @db.Decimal(12, 4)
+  maximumMarks          Decimal?                     @db.Decimal(12, 4)
+  overallPercentage     Decimal?                     @db.Decimal(9, 4)
+  overallLetterGrade    String?
+  overallGradePoint     Decimal?                     @db.Decimal(7, 4)
+  passedSubjectCount    Int                          @default(0)
+  failedSubjectCount    Int                          @default(0)
+  pendingSubjectCount   Int                          @default(0)
+  resultStatus          GradebookOverallResultStatus
+  promotionEligible     Boolean?
+  calculationDetailJson Json
+  createdAt             DateTime                     @default(now())
+
+  tenant     Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  resultRun  GradebookResultRun @relation(fields: [resultRunId], references: [id], onDelete: Restrict)
+  enrollment Enrollment         @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+  student    Student            @relation(fields: [studentId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, resultRunId, enrollmentId])
+  @@index([tenantId, enrollmentId, resultRunId])
+  @@index([tenantId, resultStatus, resultRunId])
+  @@map("gradebook_student_overall_results")
+}
+
+model GradebookMarkAdjustment {
+  id                     String                    @id @default(uuid()) @db.Uuid
+  tenantId               String                    @db.Uuid
+  branchId               String                    @db.Uuid
+  academicYearId         String                    @db.Uuid
+  adjustmentType         GradebookAdjustmentType
+  targetType             String
+  targetId               String                    @db.Uuid
+  originalValueJson      Json
+  proposedDelta          Decimal?                  @db.Decimal(10, 2)
+  proposedValue          Decimal?                  @db.Decimal(10, 2)
+  appliedValue           Decimal?                  @db.Decimal(10, 2)
+  maximumAllowed         Decimal?                  @db.Decimal(10, 2)
+  policyVersionHash      String
+  reason                 String                    @db.Text
+  evidenceObjectKey      String?
+  impactPreviewJson      Json
+  status                 GradebookAdjustmentStatus @default(DRAFT)
+  requestedById          String                    @db.Uuid
+  reviewedById           String?                   @db.Uuid
+  approvedById           String?                   @db.Uuid
+  appliedById            String?                   @db.Uuid
+  replacementResultRunId String?                   @db.Uuid
+  reviewedAt             DateTime?
+  approvedAt             DateTime?
+  appliedAt              DateTime?
+  createdAt              DateTime                  @default(now())
+  updatedAt              DateTime                  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, targetType, targetId, status])
+  @@index([tenantId, replacementResultRunId])
+  @@index([tenantId, branchId, academicYearId, createdAt])
+  @@map("gradebook_mark_adjustments")
+}
+
+model GradebookCorrectionRequest {
+  id                   String                    @id @default(uuid()) @db.Uuid
+  tenantId             String                    @db.Uuid
+  branchId             String                    @db.Uuid
+  academicYearId       String                    @db.Uuid
+  examId               String                    @db.Uuid
+  requestType          GradebookCorrectionType
+  targetType           String
+  targetId             String                    @db.Uuid
+  reason               String                    @db.Text
+  requestedChangeJson  Json
+  impactPreviewJson    Json
+  status               GradebookCorrectionStatus @default(DRAFT)
+  approvedScopeJson    Json?
+  approvedUntil        DateTime?
+  supersededVersionId  String?                   @db.Uuid
+  replacementVersionId String?                   @db.Uuid
+  requestedById        String                    @db.Uuid
+  reviewedById         String?                   @db.Uuid
+  approvedById         String?                   @db.Uuid
+  openedById           String?                   @db.Uuid
+  closedById           String?                   @db.Uuid
+  reviewReason         String?                   @db.Text
+  requestedAt          DateTime                  @default(now())
+  reviewedAt           DateTime?
+  approvedAt           DateTime?
+  openedAt             DateTime?
+  closedAt             DateTime?
+  createdAt            DateTime                  @default(now())
+  updatedAt            DateTime                  @updatedAt
+
+  tenant Tenant        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  exam   GradebookExam @relation(fields: [examId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, examId, status, requestedAt])
+  @@index([tenantId, targetType, targetId, status])
+  @@map("gradebook_correction_requests")
+}
+
+model GradebookRemarkTemplate {
+  id           String                       @id @default(uuid()) @db.Uuid
+  tenantId     String                       @db.Uuid
+  code         String
+  name         String
+  remarkType   GradebookRemarkType
+  text         String                       @db.Text
+  languageCode String                       @default("en")
+  status       GradebookConfigurationStatus @default(DRAFT)
+  createdById  String                       @db.Uuid
+  updatedById  String                       @db.Uuid
+  createdAt    DateTime                     @default(now())
+  updatedAt    DateTime                     @updatedAt
+
+  tenant  Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  remarks GradebookTeacherRemark[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, remarkType, status])
+  @@map("gradebook_remark_templates")
+}
+
+model GradebookTeacherRemark {
+  id             String               @id @default(uuid()) @db.Uuid
+  tenantId       String               @db.Uuid
+  branchId       String               @db.Uuid
+  academicYearId String               @db.Uuid
+  examId         String               @db.Uuid
+  enrollmentId   String               @db.Uuid
+  studentId      String               @db.Uuid
+  examSubjectId  String?              @db.Uuid
+  templateId     String?              @db.Uuid
+  remarkType     GradebookRemarkType
+  remarkText     String               @db.Text
+  languageCode   String               @default("en")
+  status         GradebookEntryStatus @default(DRAFT)
+  enteredById    String               @db.Uuid
+  approvedById   String?              @db.Uuid
+  approvedAt     DateTime?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  tenant      Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  exam        GradebookExam            @relation(fields: [examId], references: [id], onDelete: Restrict)
+  enrollment  Enrollment               @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+  student     Student                  @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  examSubject GradebookExamSubject?    @relation(fields: [examSubjectId], references: [id], onDelete: Restrict)
+  template    GradebookRemarkTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, examId, enrollmentId, examSubjectId, remarkType])
+  @@index([tenantId, branchId, academicYearId, status])
+  @@map("gradebook_teacher_remarks")
+}
+
+model GradebookCoScholasticSchemeVersion {
+  id                String                       @id @default(uuid()) @db.Uuid
+  tenantId          String                       @db.Uuid
+  institutionId     String                       @db.Uuid
+  academicYearId    String?                      @db.Uuid
+  code              String
+  name              String
+  versionNumber     Int
+  ratingScaleJson   Json
+  configurationHash String
+  status            GradebookConfigurationStatus @default(DRAFT)
+  createdById       String                       @db.Uuid
+  activatedById     String?                      @db.Uuid
+  activatedAt       DateTime?
+  createdAt         DateTime                     @default(now())
+  updatedAt         DateTime                     @updatedAt
+
+  tenant       Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  institution  Institution                  @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  academicYear AcademicYear?                @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  areas        GradebookCoScholasticArea[]
+  entries      GradebookCoScholasticEntry[]
+
+  @@unique([tenantId, code, versionNumber])
+  @@index([tenantId, institutionId, academicYearId, status])
+  @@map("gradebook_co_scholastic_scheme_versions")
+}
+
+model GradebookCoScholasticArea {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @db.Uuid
+  schemeVersionId String   @db.Uuid
+  code            String
+  name            String
+  description     String?  @db.Text
+  category        String?
+  displayOrder    Int
+  createdAt       DateTime @default(now())
+
+  tenant        Tenant                             @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  schemeVersion GradebookCoScholasticSchemeVersion @relation(fields: [schemeVersionId], references: [id], onDelete: Restrict)
+  indicators    GradebookCoScholasticIndicator[]
+
+  @@unique([tenantId, schemeVersionId, code])
+  @@index([tenantId, schemeVersionId, displayOrder])
+  @@map("gradebook_co_scholastic_areas")
+}
+
+model GradebookCoScholasticIndicator {
+  id             String   @id @default(uuid()) @db.Uuid
+  tenantId       String   @db.Uuid
+  areaId         String   @db.Uuid
+  code           String
+  name           String
+  description    String?  @db.Text
+  displayOrder   Int
+  remarkRequired Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  tenant  Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  area    GradebookCoScholasticArea    @relation(fields: [areaId], references: [id], onDelete: Restrict)
+  entries GradebookCoScholasticEntry[]
+
+  @@unique([tenantId, areaId, code])
+  @@index([tenantId, areaId, displayOrder])
+  @@map("gradebook_co_scholastic_indicators")
+}
+
+model GradebookCoScholasticEntry {
+  id              String               @id @default(uuid()) @db.Uuid
+  tenantId        String               @db.Uuid
+  branchId        String               @db.Uuid
+  academicYearId  String               @db.Uuid
+  schemeVersionId String               @db.Uuid
+  termId          String               @db.Uuid
+  enrollmentId    String               @db.Uuid
+  studentId       String               @db.Uuid
+  indicatorId     String               @db.Uuid
+  ratingCode      String
+  observation     String?              @db.Text
+  status          GradebookEntryStatus @default(DRAFT)
+  evaluatorUserId String               @db.Uuid
+  approvedById    String?              @db.Uuid
+  approvedAt      DateTime?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  tenant        Tenant                             @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  schemeVersion GradebookCoScholasticSchemeVersion @relation(fields: [schemeVersionId], references: [id], onDelete: Restrict)
+  term          GradebookExamTerm                  @relation(fields: [termId], references: [id], onDelete: Restrict)
+  enrollment    Enrollment                         @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+  student       Student                            @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  indicator     GradebookCoScholasticIndicator     @relation(fields: [indicatorId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, schemeVersionId, termId, enrollmentId, indicatorId])
+  @@index([tenantId, branchId, academicYearId, status])
+  @@map("gradebook_co_scholastic_entries")
+}
+
+model GradebookAttendanceSummarySnapshot {
+  id                   String                            @id @default(uuid()) @db.Uuid
+  tenantId             String                            @db.Uuid
+  branchId             String                            @db.Uuid
+  academicYearId       String                            @db.Uuid
+  enrollmentId         String                            @db.Uuid
+  studentId            String                            @db.Uuid
+  termId               String?                           @db.Uuid
+  resultRunId          String?                           @db.Uuid
+  periodStart          DateTime                          @db.Date
+  periodEnd            DateTime                          @db.Date
+  eligibleDays         Int
+  markedDays           Int
+  presentDays          Decimal                           @db.Decimal(8, 2)
+  absentDays           Decimal                           @db.Decimal(8, 2)
+  lateDays             Decimal                           @db.Decimal(8, 2)
+  halfDays             Decimal                           @db.Decimal(8, 2)
+  leaveDays            Decimal                           @db.Decimal(8, 2)
+  excusedDays          Decimal                           @db.Decimal(8, 2)
+  unmarkedDays         Int
+  attendancePercentage Decimal?                          @db.Decimal(9, 4)
+  sourceCutoffAt       DateTime
+  sourceHash           String
+  attendancePolicyHash String
+  status               GradebookAttendanceSnapshotStatus @default(GENERATED)
+  version              Int                               @default(1)
+  generatedById        String                            @db.Uuid
+  verifiedById         String?                           @db.Uuid
+  verifiedAt           DateTime?
+  frozenAt             DateTime?
+  createdAt            DateTime                          @default(now())
+  updatedAt            DateTime                          @updatedAt
+
+  tenant      Tenant                @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  enrollment  Enrollment            @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+  student     Student               @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  term        GradebookExamTerm?    @relation(fields: [termId], references: [id], onDelete: Restrict)
+  resultRun   GradebookResultRun?   @relation(fields: [resultRunId], references: [id], onDelete: Restrict)
+  reportCards GradebookReportCard[]
+
+  @@unique([tenantId, enrollmentId, periodStart, periodEnd, version])
+  @@index([tenantId, branchId, academicYearId, status])
+  @@index([tenantId, resultRunId, enrollmentId])
+  @@map("gradebook_attendance_summary_snapshots")
+}
+
+model GradebookReportCardTemplate {
+  id            String                       @id @default(uuid()) @db.Uuid
+  tenantId      String                       @db.Uuid
+  institutionId String                       @db.Uuid
+  branchId      String?                      @db.Uuid
+  code          String
+  name          String
+  description   String?                      @db.Text
+  status        GradebookConfigurationStatus @default(DRAFT)
+  createdById   String                       @db.Uuid
+  updatedById   String                       @db.Uuid
+  createdAt     DateTime                     @default(now())
+  updatedAt     DateTime                     @updatedAt
+
+  tenant      Tenant                               @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  institution Institution                          @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  branch      Branch?                              @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  versions    GradebookReportCardTemplateVersion[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, institutionId, branchId, status])
+  @@map("gradebook_report_card_templates")
+}
+
+model GradebookReportCardTemplateVersion {
+  id                String                       @id @default(uuid()) @db.Uuid
+  tenantId          String                       @db.Uuid
+  templateId        String                       @db.Uuid
+  versionNumber     Int
+  configurationJson Json
+  configurationHash String
+  locale            String                       @default("en-IN")
+  status            GradebookConfigurationStatus @default(DRAFT)
+  activatedById     String?                      @db.Uuid
+  activatedAt       DateTime?
+  createdById       String                       @db.Uuid
+  createdAt         DateTime                     @default(now())
+  updatedAt         DateTime                     @updatedAt
+
+  tenant      Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  template    GradebookReportCardTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  reportCards GradebookReportCard[]
+
+  @@unique([tenantId, templateId, versionNumber])
+  @@index([tenantId, status, createdAt])
+  @@map("gradebook_report_card_template_versions")
+}
+
+model GradebookReportCard {
+  id                          String                    @id @default(uuid()) @db.Uuid
+  tenantId                    String                    @db.Uuid
+  branchId                    String                    @db.Uuid
+  academicYearId              String                    @db.Uuid
+  enrollmentId                String                    @db.Uuid
+  studentId                   String                    @db.Uuid
+  resultRunId                 String                    @db.Uuid
+  templateVersionId           String                    @db.Uuid
+  attendanceSummarySnapshotId String?                   @db.Uuid
+  version                     Int
+  snapshotJson                Json
+  snapshotHash                String
+  pdfObjectKey                String?
+  pdfChecksum                 String?
+  status                      GradebookReportCardStatus @default(QUEUED)
+  supersedesReportCardId      String?                   @db.Uuid
+  generationErrorCode         String?
+  generatedAt                 DateTime?
+  approvedAt                  DateTime?
+  approvedById                String?                   @db.Uuid
+  publishedAt                 DateTime?
+  revokedAt                   DateTime?
+  revokedById                 String?                   @db.Uuid
+  revocationReason            String?                   @db.Text
+  createdById                 String                    @db.Uuid
+  createdAt                   DateTime                  @default(now())
+  updatedAt                   DateTime                  @updatedAt
+
+  tenant                    Tenant                              @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  branch                    Branch                              @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  academicYear              AcademicYear                        @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  enrollment                Enrollment                          @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+  student                   Student                             @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  resultRun                 GradebookResultRun                  @relation(fields: [resultRunId], references: [id], onDelete: Restrict)
+  templateVersion           GradebookReportCardTemplateVersion  @relation(fields: [templateVersionId], references: [id], onDelete: Restrict)
+  attendanceSummarySnapshot GradebookAttendanceSummarySnapshot? @relation(fields: [attendanceSummarySnapshotId], references: [id], onDelete: Restrict)
+  supersedesReportCard      GradebookReportCard?                @relation("GradebookReportCardVersions", fields: [supersedesReportCardId], references: [id], onDelete: Restrict)
+  replacementReportCards    GradebookReportCard[]               @relation("GradebookReportCardVersions")
+  studentPublications       GradebookStudentResultPublication[]
+
+  @@unique([tenantId, enrollmentId, resultRunId, version])
+  @@index([tenantId, resultRunId, status])
+  @@index([tenantId, studentId, academicYearId, status])
+  @@index([tenantId, pdfObjectKey])
+  @@map("gradebook_report_cards")
+}
+
+model GradebookResultPublication {
+  id                      String                       @id @default(uuid()) @db.Uuid
+  tenantId                String                       @db.Uuid
+  branchId                String                       @db.Uuid
+  academicYearId          String                       @db.Uuid
+  examId                  String                       @db.Uuid
+  resultRunId             String                       @db.Uuid
+  audience                GradebookPublicationAudience
+  publicationVersion      Int
+  publishAt               DateTime
+  status                  GradebookPublicationStatus   @default(DRAFT)
+  readinessSnapshotJson   Json
+  supersedesPublicationId String?                      @db.Uuid
+  preparedById            String                       @db.Uuid
+  publishedById           String?                      @db.Uuid
+  publishedAt             DateTime?
+  revokedById             String?                      @db.Uuid
+  revokedAt               DateTime?
+  reason                  String?                      @db.Text
+  createdAt               DateTime                     @default(now())
+  updatedAt               DateTime                     @updatedAt
+
+  tenant                  Tenant                              @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  exam                    GradebookExam                       @relation(fields: [examId], references: [id], onDelete: Restrict)
+  resultRun               GradebookResultRun                  @relation(fields: [resultRunId], references: [id], onDelete: Restrict)
+  supersedesPublication   GradebookResultPublication?         @relation("GradebookPublicationVersions", fields: [supersedesPublicationId], references: [id], onDelete: Restrict)
+  replacementPublications GradebookResultPublication[]        @relation("GradebookPublicationVersions")
+  studentPublications     GradebookStudentResultPublication[]
+
+  @@unique([tenantId, resultRunId, publicationVersion])
+  @@index([tenantId, examId, status, publishAt])
+  @@index([tenantId, branchId, academicYearId, status])
+  @@map("gradebook_result_publications")
+}
+
+model GradebookStudentResultPublication {
+  id            String    @id @default(uuid()) @db.Uuid
+  tenantId      String    @db.Uuid
+  publicationId String    @db.Uuid
+  enrollmentId  String    @db.Uuid
+  studentId     String    @db.Uuid
+  reportCardId  String?   @db.Uuid
+  isEligible    Boolean   @default(true)
+  exclusionCode String?
+  publishedAt   DateTime?
+  createdAt     DateTime  @default(now())
+
+  tenant      Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  publication GradebookResultPublication @relation(fields: [publicationId], references: [id], onDelete: Restrict)
+  enrollment  Enrollment                 @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+  student     Student                    @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  reportCard  GradebookReportCard?       @relation(fields: [reportCardId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, publicationId, enrollmentId])
+  @@index([tenantId, studentId, publishedAt])
+  @@index([tenantId, reportCardId])
+  @@map("gradebook_student_result_publications")
 }
 
 model StudentPromotionBatch {
