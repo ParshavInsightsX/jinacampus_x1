@@ -418,7 +418,8 @@ export async function requestPasswordRecoveryAction(
   try {
     const input = forgotPasswordSchema.parse({
       tenantSlug: formData.get("tenantSlug"),
-      email: formData.get("email")
+      email: formData.get("email"),
+      ...(formData.has("principalId") ? { principalId: formData.get("principalId") } : {})
     });
     const headerStore = await headers();
     await requestPasswordRecoveryService(input, {

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { isPermissionCode } from "@/lib/rbac/permissions";
 import { isValidTimeZone } from "@/lib/dates/time-zone";
+import { principalPasswordRecoveryRequestSchema } from "@/modules/campus-core/principal-password-recovery.schemas";
 
 const hhmm = /^([01]\d|2[0-3]):[0-5]\d$/;
 const tenantSlug = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -198,15 +199,7 @@ export const changeOwnPasswordSchema = z.object({
   path: ["confirmNewPassword"]
 });
 
-export const forgotPasswordSchema = z.object({
-  tenantSlug: z.string()
-    .trim()
-    .min(3, "Enter your School ID.")
-    .max(50)
-    .transform((value) => value.toLowerCase())
-    .refine((value) => /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value), "Enter a valid School ID."),
-  email: z.string().trim().email("Enter a valid email address.").max(180).transform((value) => value.toLowerCase())
-}).strict();
+export const forgotPasswordSchema = principalPasswordRecoveryRequestSchema;
 
 export const createRoleSchema = z.object({
   code: roleCode,

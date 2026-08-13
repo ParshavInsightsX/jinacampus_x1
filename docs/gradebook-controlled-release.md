@@ -1,7 +1,7 @@
 # GradeBook MVP Controlled Release Ledger
 
-Status date: 12 August 2026
-Overall status: **Staging database and private-storage infrastructure verified; application release gates remain blocked**
+Status date: 13 August 2026
+Overall status: **Staging pilot and role/scope browser QA verified; remaining application release gates are blocked**
 
 This ledger is the evidence and decision record for the controlled GradeBook MVP release. A gate is complete only when its evidence is recorded here or linked from an approved private release record. Local compilation is not staging, academic, load, device, or production certification.
 
@@ -20,17 +20,18 @@ This ledger is the evidence and decision record for the controlled GradeBook MVP
 | Check | Result | Evidence |
 |---|---|---|
 | Local Prisma schema | Pass | `prisma format`, `prisma validate`, and `prisma generate` passed. |
-| Local application gates | Pass | Typecheck, 111 test files / 909 tests, and the 98-route production build passed. |
+| Local application gates | Pass | Typecheck, 112 test files / 917 tests, and the 98-route production build passed. |
 | Production deployment baseline | Pass | Vercel identifies production commit `14ddafece378fac209bce872c9fa309e6d1e300f`; its isolated source snapshot contains exactly 20 Prisma migrations through `20260810213000_add_gradebook_foundation`. |
 | Isolated staging database | Pass | The separate `gradebook-mvp-staging` Supabase project is active and healthy. No production data was copied. |
 | Local database configuration | Pass | The masked setup writes an ACL-protected `.local` file under `%LOCALAPPDATA%\\JinaCampus\\secrets`, outside the repository. The runner never uses the Windows clipboard and refuses any target other than the approved staging project. |
 | Docker staging fallback | Blocked | Docker Desktop is not running in the current QA environment. |
-| Staging migration state | Pass | The superseded fresh install was removed from staging `public`; Supabase system schemas remained intact. The exact 20-migration production snapshot was applied and seeded, then only migration `20260811201500_expand_gradebook_phase_0_1` was applied. Post-deploy status reports 21 migrations and an up-to-date schema. |
+| Staging migration state | Pass | The exact 20-migration production snapshot was applied and seeded, followed by the approved GradeBook expansion and additive Principal recovery migrations. Post-deploy status reports 22 migrations and an up-to-date schema. Production remains unchanged. |
 | Migration-history integrity | Pass | Ordered names and migration checksums match the selected snapshots. The audit accepts only equivalent LF/CRLF encodings so Windows cannot create a false mismatch; substantive SQL edits still fail. No migration history was copied or synthesized. |
-| Schema drift comparison | Baseline issue recorded | Pre- and post-upgrade Prisma diffs are identical. Existing production-baseline differences are limited to legacy index-name truncation and SQL defaults not represented in the Prisma schema; migration 21 introduced no additional drift. |
+| Schema drift comparison | Baseline issue recorded | Existing differences remain limited to legacy index-name truncation and SQL defaults not represented in the Prisma schema. Neither the GradeBook expansion nor Principal recovery migration introduced an additional model/table drift item. |
 | Main GradeBook rollout state | Safe | The existing master GradeBook flag is off. Expanded feature columns are treated as disabled until migration. |
-| Private GradeBook bucket | Infrastructure pass | The committed idempotent storage migration is recorded in staging Supabase migration history. `gradebook-private` is private, limited to 10 MB PDF/XLSX/CSV objects, and has zero direct `public`/`anon`/`authenticated` policies. End-to-end upload/download/retention QA remains pending. |
-| Public Data API surface | Staging pass | The separately approved staging hardening revoked browser-role access and enabled RLS on all 96 public tables. Browser table grants are zero. Supabase reports no security errors or warnings; server-only tables intentionally have no Data API policies. Production remains unchanged. |
+| Private GradeBook bucket | Infrastructure pass / application blocked | The committed idempotent storage migration is recorded in staging Supabase migration history. `gradebook-private` is private, limited to 10 MB PDF/XLSX/CSV objects, and has zero direct `public`/`anon`/`authenticated` policies. Server-only staging configuration, synthetic upload/download, direct-access denial, MIME rejection, signed expiry, cleanup, and QA audit evidence passed. Validation-report objects, import retention/expiry, cancelled/failed cleanup, and audited deletion are not implemented. |
+| Synthetic staging pilot | Pass | Only `jinacampus-demo` is enabled; every other staging tenant remains disabled and portal results remain off. Principal, coordinator, assigned/unassigned Teacher, Staff, cross-institution/branch/year/tenant, direct-record, cookie-tampering, and disabled-tenant checks are recorded in `docs/gradebook-staging-pilot-browser-qa.md`. |
+| Public Data API surface | Staging pass | The separately approved staging hardening revoked browser-role access. The recovery tables are server-only and use the same guarded application path; browser table grants remain zero. The staging catalog now contains 97 public application tables. Production remains unchanged. |
 | Unicode PDF font | Blocked | Current PDF rendering uses WinAnsi standard fonts and intentionally rejects unsupported Unicode text. |
 | GradeBook workers | Blocked | Job and outbox persistence exists, but no executable queue/cron worker is implemented or load-certified. |
 | Academic board sign-off | Blocked | No qualified CBSE, CISCE/ICSE, State Board, or institution-specific approval evidence is available. |
@@ -58,11 +59,11 @@ Static review does not replace applying the migration to isolated staging and va
 | Isolated staging target | Pass | Dedicated zero-data Supabase project created at the approved USD 0 monthly project cost in the same organisation and region. |
 | Verified production baseline | Pass | Production commit `14ddafe` supplied exactly 20 migrations. Staging was rebuilt from them and seeded with synthetic records: 1 tenant/institution/branch/year, 5 users, 18 students/enrollments, 45 student-attendance rows, 32 staff-attendance rows, and 5 subjects. |
 | Staging GradeBook upgrade | Pass | Exactly `20260811201500_expand_gradebook_phase_0_1` was pending; it applied successfully and post-deploy migration status is current. |
-| Catalog integrity | Pass | 95 application tables, 43 GradeBook tables with RLS, 320 foreign keys, all 86 Prisma-declared unique keys backed by 91 unique indexes, 389 valid indexes overall, zero invalid indexes, zero unvalidated constraints, verified migration checksums, and preserved synthetic fixtures. |
-| Recovery rehearsal | Partial | The isolated application schema was reset and rebuilt from immutable migrations while Supabase system schemas remained intact. Pilot feature-disable and provider backup/PITR restoration evidence remain pending. |
-| Private file storage | Infrastructure pass | Reproducible bucket migration, private access, MIME/size restrictions, tenant/branch/year paths, and 60-second signed URL source controls verified. Upload/download, access-audit, cleanup, and retention browser/worker QA remain pending. |
-| Pilot-only flags | Pending | Exactly one approved pilot tenant enabled; all other tenants disabled; server-side denial verified. |
-| Role and scope matrix | Pending | Principal, approved coordinator/custom role, assigned teacher, class teacher, forbidden roles, and all negative scopes. |
+| Catalog integrity | Pass | 97 application tables, 43 GradeBook tables, 325 foreign keys, 88 declared unique keys backed by 94 unique indexes, 402 valid indexes overall, zero invalid indexes, zero unvalidated constraints, verified migration history, and preserved synthetic fixtures. |
+| Recovery rehearsal | Partial | The isolated application schema was reset and rebuilt from immutable migrations while Supabase system schemas remained intact. Pilot feature-disable/re-enable preserved GradeBook data and passed. Provider backup/PITR restoration evidence remains pending. |
+| Private file storage | Infrastructure pass / application blocked | Reproducible bucket migration, private access, MIME/size restrictions, tenant/branch/year paths, and 60-second signed URL source controls verified. The protected staging configuration and deterministic synthetic object probe passed without exposing credentials or retaining QA objects. Validation-report objects, import retention/expiry, cancelled/failed cleanup, and audited deletion remain missing. |
+| Pilot-only flags | Pass | Exactly one synthetic pilot tenant is enabled, portal results are off, every non-pilot tenant is disabled, and feature-disable fails closed without deleting GradeBook data. |
+| Role and scope matrix | Pass | Principal, staging Examination Coordinator, assigned and unassigned Teacher, Staff, cross-institution, cross-branch, cross-year, cross-tenant, direct URL, modified branch cookie, and client-owned scope injection checks passed. |
 | Student/guardian publication access | Blocked | Approved account/identity model and linked-student server authorization. |
 | Functional regression | Pending | Import, marks lifecycle, calculation, corrections, publication, report cards, history, and existing-module smoke. |
 | Concurrency and load | Pending | No lost update, idempotent retry, large roster/import limits, timing, and resource evidence. |
@@ -86,10 +87,12 @@ Static review does not replace applying the migration to isolated staging and va
 10. Deploy migration 21, run `-Command Status`, `-Command Drift`, and `-Command Audit`, then validate catalog evidence independently.
 11. Run existing-module smoke before enabling any GradeBook flag.
 12. Apply the recorded private-storage infrastructure and verify it is not public and has no browser-role access policy.
-13. Select one disposable or formally approved pilot institution. Enable the master flag and only the subfeatures currently under test.
-14. Run the role/scope, workflow, concurrency, load, failure, report-card, and history matrices.
-15. Disable the master feature flag and verify navigation and server routes deny access while data remains intact.
-16. Re-enable only after every mandatory staging gate has passed and evidence has been reviewed.
+13. Run `scripts/configure-gradebook-staging-storage.ps1` and enter the staging server key only at its masked prompt; do not use the clipboard or repository environment files.
+14. Run `StorageAssert` and `StorageProbe`, then record the synthetic object cleanup and signed-expiry evidence.
+15. Select one disposable or formally approved pilot institution. Enable the master flag and only the subfeatures currently under test.
+16. Run the role/scope, workflow, concurrency, load, failure, report-card, and history matrices.
+17. Disable the master feature flag and verify navigation and server routes deny access while data remains intact.
+18. Re-enable only after every mandatory staging gate has passed and evidence has been reviewed.
 
 ### Provisioning attempt: 12 August 2026
 
@@ -109,6 +112,17 @@ Static review does not replace applying the migration to isolated staging and va
 - Advisor result: zero security errors/warnings; 96 intentional server-only `rls_enabled_no_policy` information notices; 205 unindexed-foreign-key and 198 unused-index information notices remain a separate performance-review task.
 - The main JinaCampus project remained unchanged.
 
+### Pilot and browser QA result: 12 August 2026
+
+- The synthetic pilot was enabled only after migration and bucket infrastructure verification.
+- The custom Examination Coordinator is a staging-only permission bundle; canonical production role seeds remain unchanged.
+- The feature-disable rehearsal generated platform audit evidence, denied all server access, preserved fixture counts, and re-enabled only the pilot.
+- A staging wrapper defect reused the migration connection limit for the browser runtime. The wrapper now preserves the protected URL and adjusts only bounded, in-process QA parameters; the secret file is not rewritten.
+- Application-level pilot commands now use that bounded runtime, and synthetic identity contexts load serially so hosted direct-connection limits do not create false authorization failures.
+- Expected GradeBook role/feature denials now return safe not-found responses instead of generic server failures.
+- Authenticated headless Chrome confirmed that the Principal can open the authorised assessment while a direct URL to the second institution's assessment returns a safe not-found page without restricted content.
+- Complete evidence is in `docs/gradebook-staging-pilot-browser-qa.md`.
+
 ## Storage Acceptance
 
 The application currently enforces these controls in server code:
@@ -122,7 +136,7 @@ The application currently enforces these controls in server code:
 - 60-second signed report-card download URLs after permission and scope checks.
 - Audit records for report-card downloads and import lifecycle actions.
 
-Infrastructure verification, retention cleanup, temporary-file cleanup, validation-report objects, and supporting-document policy remain release gates.
+Infrastructure verification is complete, including live synthetic server upload/download, direct-access denial, signed URL expiry, and cleanup. Retention/expiry, validation-report objects, cancelled/failed import deletion, audited cleanup, and supporting-document policy remain application release gates. See `docs/gradebook-staging-storage-qa.md`.
 
 ## Recovery Strategy
 
@@ -156,4 +170,4 @@ Production migration and restoration require a separately verified provider back
 
 ## Release Decision
 
-GradeBook is **not release-ready and must remain disabled in production**. The staging database upgrade, catalog integrity, Data API hardening, and private bucket infrastructure gates are complete. The next executable task is controlled pilot feature-flag setup followed by authenticated Principal/coordinator/Teacher/forbidden-role/cross-scope browser QA. Worker certification, multilingual PDF support, load/concurrency evidence, academic sign-off, backup/PITR evidence, production migration, production storage mutation, deployment, and production enablement remain prohibited.
+GradeBook is **not release-ready and must remain disabled in production**. The staging database upgrade, catalog integrity, Data API hardening, private bucket infrastructure and synthetic object lifecycle, pilot-only feature flags, feature-disable rehearsal, and authenticated role/scope browser matrix are complete. Required import validation-report, retention, cleanup, and audited deletion controls are not yet implemented. Worker certification, multilingual PDF support, load/concurrency evidence, academic sign-off, backup/PITR evidence, full functional regression, production migration, production storage mutation, deployment, and production enablement remain prohibited.

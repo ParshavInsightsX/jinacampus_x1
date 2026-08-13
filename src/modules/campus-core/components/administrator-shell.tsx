@@ -1,19 +1,40 @@
-import { CirclePlus, LayoutDashboard, School, ShieldCheck, UserRound, type LucideIcon } from "lucide-react";
+import { CirclePlus, KeyRound, LayoutDashboard, School, ShieldCheck, UserRound, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { BrandLogo } from "@/components/brand/brand-logo";
 import type { PlatformAdministratorContext } from "@/lib/auth/platform-administrator-session";
 
-const administratorNavItems: readonly { href: string; label: string; Icon: LucideIcon }[] = [
+const administratorNavItems: readonly {
+  href: string;
+  label: string;
+  Icon: LucideIcon;
+  requiresPrincipalRecoveryAccess?: boolean;
+}[] = [
   { href: "/administrator", label: "Dashboard", Icon: LayoutDashboard },
   { href: "/administrator/schools", label: "Schools", Icon: School },
   { href: "/administrator/schools/create", label: "Create School", Icon: CirclePlus },
+  {
+    href: "/administrator/principal-recovery",
+    label: "Principal Recovery",
+    Icon: KeyRound,
+    requiresPrincipalRecoveryAccess: true
+  },
   { href: "/administrator/profile", label: "Profile", Icon: UserRound }
 ];
 
-function AdministratorNavigationLinks({ activeHref, desktop = false }: { activeHref?: string; desktop?: boolean }) {
-  return administratorNavItems.map((item) => {
+function AdministratorNavigationLinks({
+  activeHref,
+  canManagePrincipalRecovery,
+  desktop = false
+}: {
+  activeHref?: string;
+  canManagePrincipalRecovery: boolean;
+  desktop?: boolean;
+}) {
+  return administratorNavItems
+    .filter((item) => !item.requiresPrincipalRecoveryAccess || canManagePrincipalRecovery)
+    .map((item) => {
     const isActive = activeHref === item.href;
     const Icon = item.Icon;
 
@@ -116,7 +137,10 @@ export function AdministratorShell({
       <div className="mx-auto grid w-full max-w-[100rem] gap-6 px-4 py-6 sm:px-6 lg:block lg:px-7 lg:pb-40 xl:px-10">
         <aside className="premium-card h-max p-3 lg:hidden">
           <nav aria-label="Administrator navigation" className="grid gap-2">
-            <AdministratorNavigationLinks activeHref={activeHref} />
+            <AdministratorNavigationLinks
+              activeHref={activeHref}
+              canManagePrincipalRecovery={ctx.canManagePrincipalRecovery}
+            />
             <div className="mt-2 rounded-xl border border-dashed border-slate-200 bg-white/60 px-3 py-2 text-xs leading-5 text-slate-500">
               Platform administrators manage school records only. School workspaces and school user sessions remain separate.
             </div>
@@ -131,7 +155,11 @@ export function AdministratorShell({
           className="pointer-events-auto w-fit max-w-[calc(100vw-2rem)] rounded-[1.75rem] border border-white/90 bg-white/75 px-3 py-2.5 shadow-[0_24px_70px_rgba(11,22,56,0.22),inset_0_1px_0_rgba(255,255,255,0.95)] backdrop-blur-2xl"
         >
           <ul className="m-0 flex min-h-[4.75rem] list-none items-end justify-center gap-1 p-0">
-            <AdministratorNavigationLinks activeHref={activeHref} desktop />
+            <AdministratorNavigationLinks
+              activeHref={activeHref}
+              canManagePrincipalRecovery={ctx.canManagePrincipalRecovery}
+              desktop
+            />
           </ul>
         </nav>
       </div>

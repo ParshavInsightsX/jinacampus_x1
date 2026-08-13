@@ -100,6 +100,19 @@ describe("CampusCore schemas", () => {
       email: "teacher@example.test"
     });
     expect(forgotPasswordSchema.safeParse({ tenantSlug: "school-a", email: "not-an-email" }).success).toBe(false);
+    expect(forgotPasswordSchema.parse({
+      tenantSlug: "School-A",
+      principalId: "principal-001"
+    })).toEqual({
+      tenantSlug: "school-a",
+      principalId: "PRINCIPAL-001"
+    });
+    expect(forgotPasswordSchema.safeParse({ tenantSlug: "school-a" }).success).toBe(false);
+    expect(forgotPasswordSchema.safeParse({
+      tenantSlug: "school-a",
+      email: "principal@example.test",
+      principalId: "PRINCIPAL-001"
+    }).success).toBe(false);
     expect(forgotPasswordSchema.safeParse({
       tenantSlug: "school-a",
       email: "teacher@example.test",

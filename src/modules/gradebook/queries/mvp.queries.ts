@@ -169,7 +169,9 @@ export async function getGradebookMvpDashboard(ctx: TenantContext) {
 }
 
 export async function getGradebookSectionNavigation(ctx: TenantContext) {
-  const request = await resolveGradebookRequestContext(ctx);
+  const request = await resolveGradebookRequestContext(ctx, {
+    permission: "gradebook.dashboard.view"
+  });
   const features = await getGradebookFeatureState(request);
   const items: Array<{ title: string; href: string }> = [
     { title: "Dashboard", href: "/gradebook" }

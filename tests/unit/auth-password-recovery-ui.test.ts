@@ -77,11 +77,41 @@ describe("auth password recovery and password visibility UX", () => {
     expect(pageSource).toContain("ForgotPasswordForm");
     expect(formSource).toContain("Forgot password?");
     expect(formSource).toContain("/api/auth/forgot/request");
+    expect(formSource).toContain("PRINCIPAL_ID");
+    expect(formSource).toContain("Principal ID");
     expect(formSource).toContain("Back to login");
     expect(formSource).toContain("PASSWORD_RECOVERY_PUBLIC_MESSAGE");
     expect(formSource).not.toContain("/api/auth/forgot/reset");
     expect(formSource).not.toContain("newPassword");
     expect(formSource).not.toMatch(/Email not found|User does not exist|teacher role|staff role/i);
+  });
+
+  it("uses a fragment-carried single-use token and strong password fields on the Principal reset page", () => {
+    const pageSource = source("src/app/(auth)/principal-password-reset/page.tsx");
+    const formSource = source("src/components/auth/principal-password-reset-form.tsx");
+    const routeSource = source("src/app/api/auth/principal-recovery/reset/route.ts");
+
+    expect(pageSource).toContain("PrincipalPasswordResetForm");
+    expect(pageSource).toContain("index: false");
+    expect(formSource).toContain("window.location.hash");
+    expect(formSource).toContain("window.history.replaceState");
+    expect(formSource).toContain("/api/auth/principal-recovery/reset");
+    expect(formSource.match(/<PasswordInput/g)?.length).toBe(2);
+    expect(formSource).not.toMatch(/toLowerCase\\(\\).*Password|trim\\(\\).*Password/i);
+    expect(routeSource).toContain("completePrincipalPasswordResetSchema");
+    expect(routeSource).toContain("origin !== new URL(request.url).origin");
+  });
+
+  it("filters Principal recovery navigation by explicit platform administrator capability", () => {
+    const shellSource = source("src/modules/campus-core/components/administrator-shell.tsx");
+    const pageSource = source("src/app/administrator/principal-recovery/page.tsx");
+    const actionSource = source("src/modules/campus-core/administrator-actions.ts");
+
+    expect(shellSource).toContain("requiresPrincipalRecoveryAccess");
+    expect(shellSource).toContain("ctx.canManagePrincipalRecovery");
+    expect(pageSource).toContain("if (!ctx.canManagePrincipalRecovery)");
+    expect(pageSource).toContain("getPrincipalPasswordRecoveryRequests(ctx)");
+    expect(actionSource).toContain("await getPlatformAdministratorContext()");
   });
 
   it("login exposes passkey and password fallback without transforming password case", () => {

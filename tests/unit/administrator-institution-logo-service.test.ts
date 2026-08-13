@@ -60,6 +60,7 @@ const context: PlatformAdministratorContext = {
   sessionId: "administrator-session-id",
   email: "administrator@example.test",
   displayName: "Administrator",
+  canManagePrincipalRecovery: false,
   passwordChangeRequired: false
 };
 

@@ -1,11 +1,14 @@
 [CmdletBinding()]
 param(
   [Parameter(Mandatory = $true)]
-  [ValidateSet("AssertTarget", "Connectivity", "ResetApplicationSchema", "Status", "ExpectedGradebookPending", "Deploy", "Generate", "Seed", "Drift", "Audit")]
+  [ValidateSet("AssertTarget", "Connectivity", "ResetApplicationSchema", "Status", "ExpectedGradebookPending", "Deploy", "Generate", "Seed", "Drift", "Audit", "PilotPrepare", "PilotVerify", "PilotDisable", "PilotInspect", "PilotLocalReady", "StorageAssert", "StorageProbe", "RecoveryPrepare", "RecoveryInspect", "RecoveryExpireLatestPilot", "RecoveryExpireActiveSynthetic", "RecoveryVerify", "RecoveryRestoreSyntheticPasswords", "DevServer")]
   [string]$Command,
 
   [string]$EnvironmentFile = (Join-Path $env:LOCALAPPDATA "JinaCampus\secrets\.env.gradebook-staging.local"),
-  [string]$SchemaPath = "prisma/schema.prisma"
+  [string]$SchemaPath = "prisma/schema.prisma",
+  [ValidateRange(1024, 65535)]
+  [int]$Port = 3100,
+  [switch]$UseWebpack
 )
 
 Set-StrictMode -Version Latest
@@ -94,6 +97,33 @@ function Assert-StagingTarget {
   Write-Host "Verified staging target: gradebook-mvp-staging ($expectedStagingRef)."
 }
 
+function Assert-StagingStorageEnvironment {
+  foreach ($name in @("SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "GRADEBOOK_STORAGE_BUCKET")) {
+    if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($name, "Process"))) {
+      throw "$name is required for GradeBook staging storage QA."
+    }
+  }
+  try {
+    $storageUri = [Uri]$env:SUPABASE_URL
+  }
+  catch {
+    throw "SUPABASE_URL must be a valid URL."
+  }
+  if ($storageUri.Scheme -ne "https" -or $storageUri.DnsSafeHost.ToLowerInvariant() -ne "$expectedStagingRef.supabase.co") {
+    throw "SUPABASE_URL must target the approved GradeBook staging project over HTTPS."
+  }
+  if ($env:SUPABASE_URL -match $productionRef) {
+    throw "Production Supabase storage target detected. Operation refused."
+  }
+  if ($env:GRADEBOOK_STORAGE_BUCKET -ne "gradebook-private") {
+    throw "GRADEBOOK_STORAGE_BUCKET must be gradebook-private for controlled staging QA."
+  }
+  if (-not [string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable("NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY", "Process"))) {
+    throw "A service-role key must never use a NEXT_PUBLIC_ environment variable."
+  }
+  Write-Host "Verified private GradeBook staging storage configuration."
+}
+
 function Use-StagingDirectConnection {
   $source = [Uri]$env:DIRECT_URL
   $userInfo = $source.UserInfo.Split(":", 2)
@@ -108,6 +138,51 @@ function Use-StagingDirectConnection {
   Write-Host "Using the project-specific staging direct connection."
 }
 
+function Use-StagingQaRuntimeConnection {
+  $runtimeUrl = $script:protectedStagingRuntimeUrl
+  if ([string]::IsNullOrWhiteSpace($runtimeUrl)) {
+    throw "The protected staging runtime URL is unavailable."
+  }
+  if ($runtimeUrl -match '([?&])connection_limit=[^&]*') {
+    $runtimeUrl = [regex]::Replace($runtimeUrl, '([?&])connection_limit=[^&]*', '$1connection_limit=3')
+  }
+  else {
+    $runtimeUrl += $(if ($runtimeUrl.Contains('?')) { '&' } else { '?' }) + 'connection_limit=3'
+  }
+  if ($runtimeUrl -match '([?&])pool_timeout=[^&]*') {
+    $runtimeUrl = [regex]::Replace($runtimeUrl, '([?&])pool_timeout=[^&]*', '$1pool_timeout=30')
+  }
+  else {
+    $runtimeUrl += '&pool_timeout=30'
+  }
+  $runtimeUri = [Uri]$runtimeUrl
+  if ($runtimeUri.DnsSafeHost -ne "db.$($expectedStagingRef).supabase.co") {
+    throw "The bounded staging runtime URL resolved to unexpected host '$($runtimeUri.DnsSafeHost)'."
+  }
+  $env:DATABASE_URL = $runtimeUrl
+  Assert-StagingTarget
+  Write-Host "Using the bounded staging QA runtime connection."
+}
+
+function Assert-LocalPortAvailable([int]$RequestedPort) {
+  $existingListener = Get-NetTCPConnection -State Listen -LocalPort $RequestedPort -ErrorAction SilentlyContinue |
+    Select-Object -First 1
+  if ($null -ne $existingListener) {
+    throw "Local port $RequestedPort is already in use. Stop the current JinaCampus server, then rerun the GradeBook staging launcher."
+  }
+
+  $probe = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, $RequestedPort)
+  try {
+    $probe.Start()
+  }
+  catch {
+    throw "Local port $RequestedPort is already in use. Stop the current JinaCampus server, then rerun the GradeBook staging launcher."
+  }
+  finally {
+    $probe.Stop()
+  }
+}
+
 function Invoke-Prisma([string[]]$Arguments) {
   Assert-StagingTarget
   & $prisma @Arguments
@@ -116,8 +191,53 @@ function Invoke-Prisma([string[]]$Arguments) {
   }
 }
 
+function Invoke-SyntheticRecoveryProvision([string]$Email, [string]$DisplayName) {
+  if ($env:NODE_ENV -eq "production" -or $env:DEV_DEMO_SEED_ENABLED -ne "true") {
+    throw "Synthetic recovery provisioning is restricted to non-production staging."
+  }
+  if ([string]::IsNullOrWhiteSpace($env:DEV_DEMO_USER_PASSWORD)) {
+    throw "DEV_DEMO_USER_PASSWORD is required for synthetic recovery QA."
+  }
+  $env:PLATFORM_ADMIN_BOOTSTRAP_ENABLED = "true"
+  $env:PLATFORM_ADMIN_EMAIL = $Email
+  $env:PLATFORM_ADMIN_TEMP_PASSWORD = $env:DEV_DEMO_USER_PASSWORD
+  $env:PLATFORM_ADMIN_DISPLAY_NAME = $DisplayName
+  try {
+    & node --import tsx (Join-Path $PSScriptRoot "provision-platform-administrator.ts")
+    if ($LASTEXITCODE -ne 0) {
+      throw "Synthetic recovery administrator provisioning failed with exit code $LASTEXITCODE."
+    }
+  }
+  finally {
+    Remove-Item Env:PLATFORM_ADMIN_BOOTSTRAP_ENABLED -ErrorAction SilentlyContinue
+    Remove-Item Env:PLATFORM_ADMIN_EMAIL -ErrorAction SilentlyContinue
+    Remove-Item Env:PLATFORM_ADMIN_TEMP_PASSWORD -ErrorAction SilentlyContinue
+    Remove-Item Env:PLATFORM_ADMIN_DISPLAY_NAME -ErrorAction SilentlyContinue
+  }
+}
+
+function Invoke-SyntheticRecoveryAccess([string]$Email, [ValidateSet("grant", "revoke")][string]$Access) {
+  $env:PLATFORM_ADMIN_PRINCIPAL_RECOVERY_AUTHORIZATION_ENABLED = "true"
+  $env:PLATFORM_ADMIN_EMAIL = $Email
+  $env:PLATFORM_ADMIN_PRINCIPAL_RECOVERY_ACCESS = $Access
+  $env:PLATFORM_ADMIN_PRINCIPAL_RECOVERY_CONFIRM = "CONFIRM_PRINCIPAL_RECOVERY_ACCESS_CHANGE"
+  try {
+    & node --import tsx (Join-Path $PSScriptRoot "set-platform-principal-recovery-access.ts")
+    if ($LASTEXITCODE -ne 0) {
+      throw "Synthetic recovery authorization failed with exit code $LASTEXITCODE."
+    }
+  }
+  finally {
+    Remove-Item Env:PLATFORM_ADMIN_PRINCIPAL_RECOVERY_AUTHORIZATION_ENABLED -ErrorAction SilentlyContinue
+    Remove-Item Env:PLATFORM_ADMIN_EMAIL -ErrorAction SilentlyContinue
+    Remove-Item Env:PLATFORM_ADMIN_PRINCIPAL_RECOVERY_ACCESS -ErrorAction SilentlyContinue
+    Remove-Item Env:PLATFORM_ADMIN_PRINCIPAL_RECOVERY_CONFIRM -ErrorAction SilentlyContinue
+  }
+}
+
 Import-ProtectedEnvironment $EnvironmentFile
 Assert-StagingTarget
+$script:protectedStagingRuntimeUrl = $env:DATABASE_URL
 Use-StagingDirectConnection
 
 $resolvedSchema = (Resolve-Path (Join-Path $root $SchemaPath)).Path
@@ -201,6 +321,128 @@ switch ($Command) {
     & node --import tsx (Join-Path $PSScriptRoot "audit-gradebook-staging-catalog.ts") --schema $resolvedSchema
     if ($LASTEXITCODE -ne 0) {
       throw "Staging catalog audit failed with exit code $LASTEXITCODE."
+    }
+  }
+  "PilotPrepare" {
+    Use-StagingQaRuntimeConnection
+    & node --import tsx (Join-Path $PSScriptRoot "gradebook-staging-pilot.ts") prepare
+    if ($LASTEXITCODE -ne 0) {
+      throw "GradeBook staging pilot preparation failed with exit code $LASTEXITCODE."
+    }
+  }
+  "PilotVerify" {
+    Use-StagingQaRuntimeConnection
+    & node --import tsx (Join-Path $PSScriptRoot "gradebook-staging-pilot.ts") verify
+    if ($LASTEXITCODE -ne 0) {
+      throw "GradeBook staging pilot verification failed with exit code $LASTEXITCODE."
+    }
+  }
+  "PilotDisable" {
+    Use-StagingQaRuntimeConnection
+    & node --import tsx (Join-Path $PSScriptRoot "gradebook-staging-pilot.ts") disable
+    if ($LASTEXITCODE -ne 0) {
+      throw "GradeBook staging pilot disable failed with exit code $LASTEXITCODE."
+    }
+  }
+  "PilotInspect" {
+    Use-StagingQaRuntimeConnection
+    & node --import tsx (Join-Path $PSScriptRoot "gradebook-staging-pilot.ts") inspect
+    if ($LASTEXITCODE -ne 0) {
+      throw "GradeBook staging pilot inspection failed with exit code $LASTEXITCODE."
+    }
+  }
+  "PilotLocalReady" {
+    Use-StagingQaRuntimeConnection
+    & node --import tsx (Join-Path $PSScriptRoot "gradebook-staging-pilot.ts") local-ready
+    if ($LASTEXITCODE -ne 0) {
+      throw "GradeBook staging local UI readiness check failed with exit code $LASTEXITCODE."
+    }
+  }
+  "StorageAssert" {
+    Assert-StagingStorageEnvironment
+  }
+  "StorageProbe" {
+    Assert-StagingStorageEnvironment
+    Use-StagingQaRuntimeConnection
+    & node --import tsx (Join-Path $PSScriptRoot "gradebook-staging-storage-probe.ts")
+    if ($LASTEXITCODE -ne 0) {
+      throw "GradeBook staging storage probe failed with exit code $LASTEXITCODE."
+    }
+  }
+  "RecoveryPrepare" {
+    Use-StagingQaRuntimeConnection
+    Invoke-SyntheticRecoveryProvision "gradebook-release-operator@qa.invalid" "Principal Recovery Staging Operator"
+    Invoke-SyntheticRecoveryProvision "principal-recovery-observer@qa.invalid" "Principal Recovery Staging Observer"
+    Invoke-SyntheticRecoveryAccess "gradebook-release-operator@qa.invalid" "grant"
+    Invoke-SyntheticRecoveryAccess "principal-recovery-observer@qa.invalid" "revoke"
+    & node --import tsx (Join-Path $PSScriptRoot "principal-recovery-staging-qa.ts") prepare
+    if ($LASTEXITCODE -ne 0) {
+      throw "Principal recovery staging preparation failed with exit code $LASTEXITCODE."
+    }
+  }
+  "RecoveryInspect" {
+    Use-StagingQaRuntimeConnection
+    & node --import tsx (Join-Path $PSScriptRoot "principal-recovery-staging-qa.ts") inspect
+    if ($LASTEXITCODE -ne 0) {
+      throw "Principal recovery staging inspection failed with exit code $LASTEXITCODE."
+    }
+  }
+  "RecoveryExpireLatestPilot" {
+    Use-StagingQaRuntimeConnection
+    & node --import tsx (Join-Path $PSScriptRoot "principal-recovery-staging-qa.ts") expire-latest-pilot
+    if ($LASTEXITCODE -ne 0) {
+      throw "Principal recovery staging expiry preparation failed with exit code $LASTEXITCODE."
+    }
+  }
+  "RecoveryExpireActiveSynthetic" {
+    Use-StagingQaRuntimeConnection
+    & node --import tsx (Join-Path $PSScriptRoot "principal-recovery-staging-qa.ts") expire-active-synthetic
+    if ($LASTEXITCODE -ne 0) {
+      throw "Principal recovery staging synthetic cleanup failed with exit code $LASTEXITCODE."
+    }
+  }
+  "RecoveryVerify" {
+    Use-StagingQaRuntimeConnection
+    & node --import tsx (Join-Path $PSScriptRoot "principal-recovery-staging-qa.ts") verify
+    if ($LASTEXITCODE -ne 0) {
+      throw "Principal recovery staging verification failed with exit code $LASTEXITCODE."
+    }
+  }
+  "RecoveryRestoreSyntheticPasswords" {
+    Use-StagingQaRuntimeConnection
+    & node --import tsx (Join-Path $PSScriptRoot "principal-recovery-staging-qa.ts") restore-synthetic-passwords
+    if ($LASTEXITCODE -ne 0) {
+      throw "Principal recovery synthetic credential restoration failed with exit code $LASTEXITCODE."
+    }
+  }
+  "DevServer" {
+    if ($env:NODE_ENV -eq "production") {
+      throw "The staging QA development server cannot run with NODE_ENV=production."
+    }
+    Assert-LocalPortAvailable $Port
+    Assert-StagingStorageEnvironment
+    Use-StagingQaRuntimeConnection
+    & node --import tsx (Join-Path $PSScriptRoot "gradebook-staging-pilot.ts") local-ready
+    if ($LASTEXITCODE -ne 0) {
+      throw "GradeBook staging local UI readiness check failed with exit code $LASTEXITCODE."
+    }
+    $localOrigin = "http://localhost:$Port"
+    $env:APP_URL = $localOrigin
+    $env:WEBAUTHN_ORIGIN = $localOrigin
+    $env:WEBAUTHN_RP_ID = "localhost"
+    Push-Location $root
+    try {
+      $devArguments = @("run", "dev", "--", "--hostname", "127.0.0.1", "--port", $Port.ToString())
+      if ($UseWebpack) {
+        $devArguments += "--webpack"
+      }
+      & npm.cmd @devArguments
+      if ($LASTEXITCODE -ne 0) {
+        throw "The staging QA development server stopped with exit code $LASTEXITCODE."
+      }
+    }
+    finally {
+      Pop-Location
     }
   }
 }

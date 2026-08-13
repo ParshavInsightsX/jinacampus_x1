@@ -29,8 +29,17 @@ const mocks = vi.hoisted(() => {
   const requirePermission = vi.fn();
   const verifyPassword = vi.fn();
   const writeAuditLog = vi.fn();
+  const requestPrincipalPasswordRecovery = vi.fn();
 
-  return { db, hashPassword, requirePermission, tx, verifyPassword, writeAuditLog };
+  return {
+    db,
+    hashPassword,
+    requestPrincipalPasswordRecovery,
+    requirePermission,
+    tx,
+    verifyPassword,
+    writeAuditLog
+  };
 });
 
 vi.mock("@/lib/db", () => ({ db: mocks.db }));
@@ -40,6 +49,9 @@ vi.mock("@/lib/auth/password", () => ({
 }));
 vi.mock("@/lib/rbac/require-permission", () => ({ requirePermission: mocks.requirePermission }));
 vi.mock("@/lib/audit/audit-log", () => ({ writeAuditLog: mocks.writeAuditLog }));
+vi.mock("@/modules/campus-core/principal-password-recovery.service", () => ({
+  requestPrincipalPasswordRecovery: mocks.requestPrincipalPasswordRecovery
+}));
 
 const tenantId = "00000000-0000-0000-0000-000000000001";
 const actorUserId = "00000000-0000-0000-0000-000000000002";
@@ -69,6 +81,8 @@ function resetMocks() {
   mocks.hashPassword.mockResolvedValue("hashed-password");
   mocks.requirePermission.mockReset();
   mocks.requirePermission.mockResolvedValue(true);
+  mocks.requestPrincipalPasswordRecovery.mockReset();
+  mocks.requestPrincipalPasswordRecovery.mockResolvedValue({ requested: true });
   mocks.verifyPassword.mockReset();
   mocks.verifyPassword.mockResolvedValue(true);
   mocks.writeAuditLog.mockReset();
@@ -377,67 +391,30 @@ describe("CampusCore institution/profile and account repair", () => {
     expect(mocks.writeAuditLog).not.toHaveBeenCalled();
   });
 
-  it("records public password recovery requests only for existing users without selecting password hashes", async () => {
-    mocks.tx.tenant.findUnique.mockResolvedValue({
-      id: tenantId,
-      name: "Demo Tenant",
-      status: "ACTIVE"
-    });
-    mocks.tx.user.findUnique.mockResolvedValue({
-      id: userId,
-      tenantId,
-      email: "teacher@example.test",
-      status: "ACTIVE",
-      userType: "STAFF",
-      branchAccesses: [{ branchId, isPrimary: true }]
-    });
-
+  it("delegates public password recovery without selecting or returning credential data", async () => {
     const result = await requestPasswordRecoveryService(
-      { tenantSlug: "school-a", email: "teacher@example.test" },
+      { tenantSlug: "school-a", email: "principal@example.test" },
       { ipAddress: "127.0.0.1", userAgent: "vitest" }
     );
 
     expect(result).toEqual({ requested: true });
-    expect(mocks.tx.tenant.findUnique).toHaveBeenCalledWith({
-      where: { slug: "school-a" },
-      select: { id: true, name: true, status: true }
-    });
-    expect(mocks.tx.user.findUnique).toHaveBeenCalledWith(expect.objectContaining({
-      where: {
-        tenantId_email: {
-          tenantId,
-          email: "teacher@example.test"
-        }
-      }
-    }));
-    expect(JSON.stringify(mocks.tx.user.findUnique.mock.calls[0][0].select)).not.toContain("passwordHash");
-    expect(mocks.writeAuditLog).toHaveBeenCalledWith(expect.objectContaining({
-      action: "auth.password_recovery_requested",
-      entityType: "User",
-      entityId: userId,
-      metadata: {
-        recoveryMode: "administrator_assisted",
-        emailDeliveryConfigured: false,
-        publicResetEnabled: false
-      }
-    }));
-    expect(JSON.stringify(mocks.writeAuditLog.mock.calls)).not.toMatch(/passwordHash|reset token|raw password/i);
+    expect(mocks.requestPrincipalPasswordRecovery).toHaveBeenCalledWith(
+      { tenantSlug: "school-a", email: "principal@example.test" },
+      { ipAddress: "127.0.0.1", userAgent: "vitest" }
+    );
+    expect(JSON.stringify(result)).not.toMatch(/passwordHash|reset token|raw password/i);
   });
 
-  it("does not audit unknown public password recovery emails", async () => {
-    mocks.tx.tenant.findUnique.mockResolvedValue({
-      id: tenantId,
-      name: "Demo Tenant",
-      status: "ACTIVE"
-    });
-    mocks.tx.user.findUnique.mockResolvedValue(null);
-
+  it("returns the same wrapper result for an unknown public recovery identifier", async () => {
     const result = await requestPasswordRecoveryService({
       tenantSlug: "school-a",
       email: "unknown@example.test"
     });
 
     expect(result).toEqual({ requested: true });
-    expect(mocks.writeAuditLog).not.toHaveBeenCalled();
+    expect(mocks.requestPrincipalPasswordRecovery).toHaveBeenCalledWith(
+      { tenantSlug: "school-a", email: "unknown@example.test" },
+      {}
+    );
   });
 });

@@ -11,6 +11,7 @@ import {
 import { writeAuditLog } from "@/lib/audit/audit-log";
 import { CAMPUS_CORE_AUDIT_EVENTS } from "@/modules/campus-core/audit-events";
 import { ensureAttendanceNotificationTemplates } from "@/modules/notifications/services/notification-template.service";
+import { requestPrincipalPasswordRecovery } from "@/modules/campus-core/principal-password-recovery.service";
 import type {
   activateAcademicYearSchema,
   adminResetPasswordSchema,
@@ -868,62 +869,7 @@ export async function requestPasswordRecoveryService(
   input: z.infer<typeof forgotPasswordSchema>,
   options: PasswordRecoveryRequestOptions = {}
 ) {
-  const tenant = await db.tenant.findUnique({
-    where: { slug: input.tenantSlug },
-    select: { id: true, name: true, status: true }
-  });
-  if (!tenant || tenant.status !== "ACTIVE") return { requested: true };
-
-  const user = await db.user.findUnique({
-    where: {
-      tenantId_email: {
-        tenantId: tenant.id,
-        email: input.email
-      }
-    },
-    select: {
-      id: true,
-      tenantId: true,
-      email: true,
-      status: true,
-      userType: true,
-      branchAccesses: {
-        where: { isActive: true },
-        select: { branchId: true, isPrimary: true },
-        orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
-        take: 10
-      }
-    }
-  });
-
-  if (!user || user.status !== "ACTIVE") return { requested: true };
-
-  const activeBranchAccess = user.branchAccesses.find((access) => access.isPrimary) ?? user.branchAccesses[0] ?? null;
-  await writeAuditLog({
-    ctx: {
-      tenantId: user.tenantId,
-      tenantName: tenant.name,
-      userId: user.id,
-      userEmail: user.email,
-      userType: user.userType,
-      activeBranchId: activeBranchAccess?.branchId ?? null,
-      accessibleBranchIds: user.branchAccesses.map((access) => access.branchId),
-      activeAcademicYearId: null,
-      ipAddress: options.ipAddress,
-      userAgent: options.userAgent
-    },
-    action: CAMPUS_CORE_AUDIT_EVENTS.AUTH_PASSWORD_RECOVERY_REQUESTED,
-    entityType: "User",
-    entityId: user.id,
-    branchId: activeBranchAccess?.branchId ?? null,
-    metadata: {
-      recoveryMode: "administrator_assisted",
-      emailDeliveryConfigured: false,
-      publicResetEnabled: false
-    }
-  }).catch(() => null);
-
-  return { requested: true };
+  return requestPrincipalPasswordRecovery(input, options);
 }
 
 export async function createRoleService(ctx: TenantContext, input: z.infer<typeof createRoleSchema>) {

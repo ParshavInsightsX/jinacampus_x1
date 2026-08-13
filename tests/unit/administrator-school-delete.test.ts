@@ -155,6 +155,7 @@ const ctx: PlatformAdministratorContext = {
   sessionId: "platform-session-id",
   email: "operator@example.test",
   displayName: "Platform Operator",
+  canManagePrincipalRecovery: false,
   passwordChangeRequired: false
 };
 

@@ -8,7 +8,8 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   const parsed = forgotPasswordSchema.safeParse({
     tenantSlug: body?.tenantSlug ?? body?.schoolId,
-    email: body?.email
+    email: body?.email,
+    principalId: body?.principalId
   });
   if (!parsed.success) {
     return NextResponse.json({ ok: false, message: "Unable to process this request." }, { status: 400 });

@@ -8,6 +8,8 @@
   },
   "scripts": {
     "dev": "next dev",
+    "dev:gradebook:staging": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/gradebook-staging.ps1 -Command DevServer -Port 3000",
+    "qa:gradebook:staging:ready": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/gradebook-staging.ps1 -Command PilotLocalReady",
     "build": "next build",
     "postinstall": "prisma generate",
     "start": "next start",
@@ -22,6 +24,7 @@
     "brand:qr:generate": "node --import tsx scripts/generate-website-qr.ts",
     "demo:qa:reset": "tsx prisma/demo-qa-reset.ts",
     "platform-admin:provision": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/provision-platform-administrator.ts",
+    "platform-admin:principal-recovery-access": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/set-platform-principal-recovery-access.ts",
     "smoke:notifications:whatsapp": "tsx scripts/whatsapp-notification-db-smoke.ts",
     "test": "vitest run"
   },

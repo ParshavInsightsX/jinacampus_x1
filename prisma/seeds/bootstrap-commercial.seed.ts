@@ -241,6 +241,7 @@ async function upsertCommercialBootstrap(
     where: { tenantId_email: { tenantId: tenant.id, email: config.adminEmail } },
     create: {
       tenantId: tenant.id,
+      principalId: "PRINCIPAL-001",
       email: config.adminEmail,
       phone: config.adminPhone ?? undefined,
       firstName: "Admin",

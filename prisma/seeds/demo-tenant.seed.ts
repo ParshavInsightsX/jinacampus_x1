@@ -122,6 +122,7 @@ async function upsertDemoUsers(db: PrismaClient, tenantId: string, branchId: str
       where: { tenantId_email: { tenantId, email: demoUser.email } },
       create: {
         tenantId,
+        principalId: demoUser.roleCodes.some((roleCode) => roleCode === "PRINCIPAL") ? "PRINCIPAL-001" : undefined,
         email: demoUser.email,
         phone: assignablePhone ?? undefined,
         firstName: demoUser.firstName,
@@ -132,6 +133,7 @@ async function upsertDemoUsers(db: PrismaClient, tenantId: string, branchId: str
         activatedAt: new Date()
       },
       update: {
+        ...(demoUser.roleCodes.some((roleCode) => roleCode === "PRINCIPAL") ? { principalId: "PRINCIPAL-001" } : {}),
         firstName: demoUser.firstName,
         lastName: demoUser.lastName,
         displayName: demoUser.displayName,

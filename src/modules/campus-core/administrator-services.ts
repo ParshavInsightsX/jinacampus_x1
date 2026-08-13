@@ -278,7 +278,15 @@ export async function getSchoolByIdForAdministrator(
           status: { not: "DEACTIVATED" },
           roleAssignments: { some: { isActive: true, role: { code: "PRINCIPAL" } } }
         },
-        select: { id: true, email: true, displayName: true, firstName: true, lastName: true, status: true },
+        select: {
+          id: true,
+          principalId: true,
+          email: true,
+          displayName: true,
+          firstName: true,
+          lastName: true,
+          status: true
+        },
         orderBy: { firstName: "asc" },
         take: 10
       },
@@ -341,6 +349,7 @@ export async function createSchool(
       const principal = await tx.user.create({
         data: {
           tenantId: tenant.id,
+          principalId: "PRINCIPAL-001",
           email: input.principalEmail,
           firstName: input.principalFirstName,
           lastName: input.principalLastName,
@@ -371,6 +380,7 @@ export async function createSchool(
         metadata: {
           targetTenantId: tenant.id,
           schoolId: tenant.slug,
+          principalId: principal.principalId,
           principalEmail: principal.email,
           initialPasswordSet: true,
           mustChange: true

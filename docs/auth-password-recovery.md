@@ -1,8 +1,11 @@
 # Auth Password Recovery and Mandatory Password Change
 
-Date: 2026-07-30
+Date: 2026-08-13
 
-Status: administrator-assisted public recovery and central `mustChange` enforcement implemented.
+Status: Principal recovery queue, administrator-assisted school-user resets,
+and central `mustChange` enforcement are implemented. The additive recovery
+migration and authenticated security matrix passed in approved staging;
+production migration and live external delivery remain pending.
 
 ## Login Model
 
@@ -18,23 +21,45 @@ The public phone-OTP login and public OTP password-reset routes are not exposed.
 The login page links to `/forgot-password`. The public form accepts:
 
 - School ID
-- Account email
+- registered account email or Principal ID
 
 For any syntactically valid request, the public response remains generic and
 does not reveal whether the school, email, or user exists:
 
 ```text
-If this account is eligible for password recovery, instructions will be provided. Institution staff should contact their Principal/Admin for password reset.
+If this account is eligible for password recovery, the request will be reviewed by an authorised JinaCampus Administrator. Institution staff should contact their Principal/Admin for password reset.
 ```
 
-No email or OTP delivery is claimed because no approved delivery provider or
-reset-token flow exists. The route does not accept tenant IDs, user IDs, roles,
-permissions, passwords, or reset tokens from the client.
+No email or OTP delivery is claimed because no approved delivery provider
+exists. An eligible Principal request enters the separately authorized
+Administrator Portal queue. Other institution users continue to contact their
+Principal or school administrator. The route does not accept tenant IDs, user
+IDs, roles, permissions, passwords, or reset tokens from the client.
 
-When an active account can be resolved inside the submitted School ID, the
-server may write a safe `auth.password_recovery_requested` audit record. Unknown
-accounts return the same public shape without creating an account-specific
-record.
+When an active Principal can be resolved inside the submitted School ID, the
+server writes a safe request and audit record using HMAC identifier fingerprints.
+Unknown or ineligible accounts return the same public shape without creating an
+account-specific record. Identifier and source-address rate limits do not alter
+the public response.
+
+## Principal Recovery Queue
+
+Only an active JinaCampus platform administrator with the explicit
+`canManagePrincipalRecovery` capability can open
+`/administrator/principal-recovery` or decide a request. The capability is not
+granted automatically with ordinary Administrator Portal access.
+
+After documented identity and institution verification, that administrator can:
+
+- issue a 30-minute, single-use reset link whose raw token is never stored
+- issue a one-time temporary password whose hash is stored with `mustChange=true`
+- reject the request with safe review notes
+
+Both successful reset methods revoke active Principal sessions and registered
+passkeys. Because no delivery provider is approved, delivery is marked
+`MANUAL_DELIVERY_REQUIRED`; the Administrator Portal does not pretend a message
+was sent. See `docs/principal-password-recovery.md` for the deployment and QA
+gate.
 
 ## Administrator-Assisted Reset
 
@@ -109,6 +134,10 @@ persist the password.
 Relevant audit actions include:
 
 - `auth.password_recovery_requested`
+- `auth.principal_password_recovery_approved`
+- `auth.principal_password_recovery_rejected`
+- `auth.principal_password_recovery_expired`
+- `auth.principal_password_reset_completed`
 - `auth.login.password_success`
 - `auth.login.passkey_success`
 - `user.password_reset`
@@ -123,8 +152,7 @@ session tokens, WebAuthn challenges, OTPs, or reset secrets.
 ## Deferred
 
 - Email provider integration
-- Signed reset-token email flow
 - SMS recovery provider
-- Password reset request queue and operator inbox
+- Automated recovery delivery and provider-status tracking
 - Invite-based onboarding
 - Forced passkey enrollment

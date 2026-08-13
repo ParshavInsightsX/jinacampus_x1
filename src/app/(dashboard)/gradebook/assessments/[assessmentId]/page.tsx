@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { requireAuth } from "@/lib/auth/require-auth";
+import { AppError } from "@/lib/errors";
 import { PrerequisiteState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/modules/academia/components/academia-page-shell";
 import { GradebookMarksEditor } from "@/modules/gradebook/components/gradebook-marks-editor";
@@ -19,7 +21,15 @@ function studentName(student: {
 export default async function GradebookAssessmentPage({ params }: { params: PageParams }) {
   const ctx = await requireAuth();
   const { assessmentId } = await params;
-  const workspace = await getGradebookAssessmentWorkspace(ctx, assessmentId);
+  let workspace: Awaited<ReturnType<typeof getGradebookAssessmentWorkspace>>;
+  try {
+    workspace = await getGradebookAssessmentWorkspace(ctx, assessmentId);
+  } catch (error) {
+    if (error instanceof AppError && error.status === 404) {
+      notFound();
+    }
+    throw error;
+  }
 
   if (!workspace) {
     return (

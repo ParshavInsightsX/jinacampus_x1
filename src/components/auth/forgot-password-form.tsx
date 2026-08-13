@@ -35,7 +35,9 @@ function LoadingSpinner() {
 
 export function ForgotPasswordForm({ initialSchoolId }: ForgotPasswordFormProps) {
   const [schoolId, setSchoolId] = useState(initialSchoolId);
+  const [recoveryMethod, setRecoveryMethod] = useState<"EMAIL" | "PRINCIPAL_ID">("EMAIL");
   const [email, setEmail] = useState("");
+  const [principalId, setPrincipalId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -47,8 +49,10 @@ export function ForgotPasswordForm({ initialSchoolId }: ForgotPasswordFormProps)
 
     const normalizedSchoolId = normalizeSchoolCode(schoolId);
     const normalizedEmail = email.trim().toLowerCase();
+    const normalizedPrincipalId = principalId.trim().toUpperCase().replace(/[^A-Z0-9-]/g, "");
     setSchoolId(normalizedSchoolId);
     setEmail(normalizedEmail);
+    setPrincipalId(normalizedPrincipalId);
     setPending(true);
     setError(null);
     setNotice(null);
@@ -59,12 +63,13 @@ export function ForgotPasswordForm({ initialSchoolId }: ForgotPasswordFormProps)
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           tenantSlug: normalizedSchoolId,
-          email: normalizedEmail
+          email: recoveryMethod === "EMAIL" ? normalizedEmail : undefined,
+          principalId: recoveryMethod === "PRINCIPAL_ID" ? normalizedPrincipalId : undefined
         })
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setError("Check the School ID and email, then try again.");
+        setError("Check the entered details, then try again.");
         return;
       }
       setNotice(typeof result.message === "string" ? result.message : PASSWORD_RECOVERY_PUBLIC_MESSAGE);
@@ -105,22 +110,73 @@ export function ForgotPasswordForm({ initialSchoolId }: ForgotPasswordFormProps)
               required
             />
           </FormField>
-          <FormField id="recovery-email" label="Account email" required>
-            <input
-              id="recovery-email"
-              type="email"
-              className="auth-field-input w-full outline-none transition"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              inputMode="email"
-              autoComplete="username"
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck={false}
-              disabled={pending}
+          <fieldset className="space-y-3">
+            <legend className="text-sm font-semibold text-slate-800">Find Principal account by</legend>
+            <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-slate-50 p-1">
+              {([
+                ["EMAIL", "Registered email"],
+                ["PRINCIPAL_ID", "Principal ID"]
+              ] as const).map(([value, label]) => (
+                <label
+                  key={value}
+                  className={[
+                    "flex min-h-11 cursor-pointer items-center justify-center rounded-lg px-3 text-center text-sm font-semibold transition premium-focus",
+                    recoveryMethod === value ? "bg-white text-brand-700 shadow-sm" : "text-slate-600"
+                  ].join(" ")}
+                >
+                  <input
+                    type="radio"
+                    name="recoveryMethod"
+                    value={value}
+                    checked={recoveryMethod === value}
+                    onChange={() => setRecoveryMethod(value)}
+                    className="sr-only"
+                    disabled={pending}
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          {recoveryMethod === "EMAIL" ? (
+            <FormField id="recovery-email" label="Registered email" required>
+              <input
+                id="recovery-email"
+                type="email"
+                className="auth-field-input w-full outline-none transition"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                inputMode="email"
+                autoComplete="username"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                disabled={pending}
+                required
+              />
+            </FormField>
+          ) : (
+            <FormField
+              id="recovery-principal-id"
+              label="Principal ID"
               required
-            />
-          </FormField>
+              helpText="Use the Principal ID assigned in the Administrator Portal."
+            >
+              <input
+                id="recovery-principal-id"
+                className="auth-field-input w-full uppercase outline-none transition"
+                value={principalId}
+                onChange={(event) => setPrincipalId(event.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, ""))}
+                inputMode="text"
+                autoComplete="off"
+                autoCapitalize="characters"
+                autoCorrect="off"
+                spellCheck={false}
+                disabled={pending}
+                required
+              />
+            </FormField>
+          )}
           <button type="submit" disabled={pending} className="auth-action-button auth-action-primary premium-focus">
             {pending ? <><LoadingSpinner />Requesting help...</> : "Request password help"}
           </button>

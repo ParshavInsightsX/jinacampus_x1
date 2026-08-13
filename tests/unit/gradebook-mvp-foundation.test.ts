@@ -254,6 +254,19 @@ describe("GradeBook implementation-ready MVP foundation", () => {
     expect(ROLE_PERMISSION_MAP.STAFF).not.toContain("gradebook.view");
   });
 
+  it("guards every GradeBook route with dashboard permission and safe not-found handling", () => {
+    const navigationQueries = source("src/modules/gradebook/queries/mvp.queries.ts");
+    const layout = source("src/app/(dashboard)/gradebook/layout.tsx");
+    const assessmentPage = source("src/app/(dashboard)/gradebook/assessments/[assessmentId]/page.tsx");
+
+    expect(navigationQueries).toContain('permission: "gradebook.dashboard.view"');
+    expect(layout).toContain("error instanceof AppError");
+    expect(layout).toContain("error.status === 403 || error.status === 404");
+    expect(layout).toContain("notFound()");
+    expect(assessmentPage).toContain("error instanceof AppError && error.status === 404");
+    expect(assessmentPage).toContain("notFound()");
+  });
+
   it("keeps rollout additive, default-off, RLS-enabled, and private-storage-only", () => {
     const migration = source("prisma/migrations/20260811201500_expand_gradebook_phase_0_1/migration.sql");
     const schema = source("prisma/schema.prisma");

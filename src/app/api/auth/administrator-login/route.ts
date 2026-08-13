@@ -62,6 +62,7 @@ export async function POST(request: Request) {
         sessionId: session.id,
         email: administrator.email,
         displayName: administrator.displayName,
+        canManagePrincipalRecovery: administrator.canManagePrincipalRecovery,
         passwordChangeRequired: administrator.credential?.mustChange ?? true,
         ipAddress,
         userAgent

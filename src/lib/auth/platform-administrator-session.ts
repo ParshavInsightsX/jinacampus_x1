@@ -12,6 +12,7 @@ export type PlatformAdministratorContext = {
   sessionId: string;
   email: string;
   displayName: string | null;
+  canManagePrincipalRecovery: boolean;
   passwordChangeRequired: boolean;
   ipAddress?: string;
   userAgent?: string;
@@ -87,6 +88,7 @@ export async function getPlatformAdministratorContext(
     sessionId: session.id,
     email: session.administrator.email,
     displayName: session.administrator.displayName,
+    canManagePrincipalRecovery: session.administrator.canManagePrincipalRecovery,
     passwordChangeRequired: session.administrator.credential?.mustChange ?? true,
     ipAddress: headerStore.get("x-forwarded-for") ?? undefined,
     userAgent: headerStore.get("user-agent") ?? undefined

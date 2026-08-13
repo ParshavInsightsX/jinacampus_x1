@@ -96,6 +96,7 @@ export default async function AdministratorSchoolDetailPage({ params }: { params
               {school.users.length ? school.users.map((user) => (
                 <div key={user.id} className="rounded-2xl border border-slate-200 bg-white/75 p-4">
                   <p className="font-semibold text-slate-950">{user.displayName ?? [user.firstName, user.lastName].filter(Boolean).join(" ")}</p>
+                  <p className="mt-1 text-sm font-semibold text-brand-700">Principal ID: {user.principalId ?? "Not assigned"}</p>
                   <p className="mt-1 text-sm text-slate-500">{user.email}</p>
                   <p className="mt-1 text-sm text-slate-500">Status: {user.status}</p>
                 </div>

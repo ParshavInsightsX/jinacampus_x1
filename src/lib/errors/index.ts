@@ -103,6 +103,12 @@ export function getUserSafeErrorMessage(errorOrCode: unknown, fallback = DEFAULT
       return "Your account is not active. Please contact an administrator.";
     case "PASSWORD_CHANGE_REQUIRED":
       return "Change your temporary password before continuing.";
+    case "PRINCIPAL_RECOVERY_ADMIN_REQUIRED":
+      return "Your platform administrator account is not authorised to manage Principal recovery.";
+    case "PRINCIPAL_RECOVERY_REQUEST_ALREADY_REVIEWED":
+      return "This recovery request has already been reviewed.";
+    case "PRINCIPAL_RECOVERY_LINK_INVALID":
+      return "This password-reset link is invalid, expired, or has already been used.";
     case "SCHOOL_LOGIN_REQUIRED":
       return "Use the correct sign-in portal for this account.";
     case "FORBIDDEN":

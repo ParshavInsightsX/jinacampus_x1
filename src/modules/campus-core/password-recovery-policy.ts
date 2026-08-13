@@ -1,5 +1,5 @@
 export const PASSWORD_RECOVERY_PUBLIC_MESSAGE =
-  "If this account is eligible for password recovery, instructions will be provided. Institution staff should contact their Principal/Admin for password reset.";
+  "If this account is eligible for password recovery, the request will be reviewed by an authorised JinaCampus Administrator. Institution staff should contact their Principal/Admin for password reset.";
 
 export const PASSWORD_RECOVERY_HELP_TEXT =
-  "Enter your account email. If your account is eligible for password recovery, you will receive instructions or your institution administrator will help reset it.";
+  "Principals can request recovery using their registered email or Principal ID. Other institution users should contact their Principal/Admin.";

@@ -1140,6 +1140,24 @@ Acceptance criteria:
 - Biometric data, passwords, challenges, and credential internals are not exposed.
 - Administrator remains an operator-only role and Principal remains school-scoped.
 
+### Principal Password Recovery Governance
+
+- [x] Add tenant-local Principal IDs without changing user-based login.
+- [x] Add a non-enumerating School ID plus email/Principal-ID public request.
+- [x] Add hashed request fingerprints and identifier/source rate limits.
+- [x] Add an explicit platform-administrator recovery capability and protected grant/revoke command.
+- [x] Add Administrator Portal pending/history review with identity-verification acknowledgement.
+- [x] Add 30-minute, single-use, hash-only reset links.
+- [x] Add one-time temporary passwords with `mustChange=true`.
+- [x] Revoke Principal sessions and passkeys after reset.
+- [x] Audit request, approval, rejection, expiry, issuance, and completion without secrets.
+- [x] Add focused schema, service, RBAC, non-enumeration, and source-contract tests.
+- [x] Apply `20260812143000_add_principal_password_recovery` to the approved isolated staging database.
+- [x] Grant staging recovery authority only to the designated synthetic Platform Administrator and verify observer denial.
+- [x] Complete DB-backed staging Administrator Portal, reset-link, expiry, replay, session-revocation, and authorization browser QA.
+- [ ] Apply the migration and assign recovery authority in production only after a separate approved release and backup gate.
+- [ ] Configure an approved email/SMS provider before claiming automated delivery.
+
 ## Phase 10.9 - Institution Boundary and Academia Setup Repair
 
 Goal: make core academic configuration and student class readiness operational
@@ -1372,15 +1390,19 @@ Goal: introduce a tenant-safe assessment and marks ledger without duplicating Ac
 ### 11.2 Release Gates
 
 - [x] Apply `20260810213000_add_gradebook_foundation` to an approved non-production database with `prisma migrate deploy`.
-- [ ] Apply `20260811201500_expand_gradebook_phase_0_1` to an approved staging database with `prisma migrate deploy`.
+- [x] Apply `20260811201500_expand_gradebook_phase_0_1` to an approved staging database with `prisma migrate deploy`.
 - [ ] Run DB-backed Principal class-subject, assessment, marks, publish, reopen, cancel, and report browser QA.
 - [ ] Run DB-backed Principal configuration, examination readiness, schedule, assignment, import, result, correction, report-card, and publication QA.
 - [x] Run Teacher assigned-class/subject access and unassigned-class denial QA.
-- [ ] Run Office Staff, Staff, cross-branch, cross-year, and cross-tenant denial QA for the expanded workflows.
+- [x] Run Office Staff coordinator, Staff, cross-branch, cross-year, and cross-tenant authorization QA for the expanded pilot.
 - [ ] Verify existing CampusCore, Academia, student promotion, student attendance, StaffBoard, leave, calendar, and QR smoke flows.
-- [ ] Enable the expanded GradeBook only for one approved staging/pilot tenant after migration and storage verification.
+- [x] Enable the expanded GradeBook only for one approved synthetic staging pilot tenant after migration and storage-infrastructure verification.
 - [ ] Deploy the expanded GradeBook through the approved release process and complete post-deployment smoke/observability review.
-- [ ] Verify private marks-import storage, signed report-card downloads, and audit/outbox records.
+- [x] Verify reproducible private-bucket infrastructure, browser-role denial, staging target guards, and masked server-key configuration tooling.
+- [x] Configure the server-only Supabase Storage URL/key in the protected staging environment and run the synthetic upload/download/signed-expiry/deletion probe.
+- [x] Add a guarded localhost GradeBook launcher with staging-target, pilot-role, feature, assignment, Storage, and port preflight checks.
+- [ ] Implement and verify validation-report storage, import-file retention/expiry, cancelled/failed object cleanup, and audited deletion before accepting the application storage gate.
+- [ ] Verify DB-backed marks import validation/application and report-card generation/download across authorised, forbidden, and cross-scope identities.
 - [ ] Stabilize the expanded pilot and approve GradeBook for broad tenant enablement.
 - [x] Record the controlled-release gate matrix, migration safety audit, staging procedure, and recovery strategy in `docs/gradebook-controlled-release.md`.
 

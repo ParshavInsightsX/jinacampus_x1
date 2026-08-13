@@ -24,6 +24,23 @@ import {
 import { updateInstitutionLogoForAdministrator } from "@/modules/campus-core/administrator-branding.service";
 import type { CampusCoreFormActionState } from "@/modules/campus-core/actions";
 import { changeOwnPasswordSchema } from "@/modules/campus-core/schemas";
+import {
+  principalRecoveryApproveSchema,
+  principalRecoveryRejectSchema
+} from "@/modules/campus-core/principal-password-recovery.schemas";
+import {
+  approvePrincipalPasswordRecovery,
+  rejectPrincipalPasswordRecovery
+} from "@/modules/campus-core/principal-password-recovery.service";
+
+export type PrincipalRecoveryActionState = CampusCoreFormActionState & {
+  oneTimeCredential?: {
+    type: "RESET_LINK" | "TEMPORARY_PASSWORD";
+    value: string;
+    deliveryTarget: string | null;
+    expiresAt: string | null;
+  };
+};
 
 function s(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -254,5 +271,57 @@ export async function changePlatformAdministratorPasswordAction(
     return { ok: true, message: "Administrator password was updated successfully." };
   } catch (error) {
     return formError(error, "Unable to update the administrator password. Please try again.");
+  }
+}
+
+export async function approvePrincipalRecoveryAction(
+  _state: PrincipalRecoveryActionState,
+  formData: FormData
+): Promise<PrincipalRecoveryActionState> {
+  try {
+    const input = principalRecoveryApproveSchema.parse({
+      requestId: formData.get("requestId"),
+      resetMethod: formData.get("resetMethod"),
+      identityVerified: checked(formData, "identityVerified"),
+      reviewRemarks: formData.get("reviewRemarks")
+    });
+    const result = await approvePrincipalPasswordRecovery(
+      await getPlatformAdministratorContext(),
+      input
+    );
+    return {
+      ok: true,
+      message: result.credentialType === "RESET_LINK"
+        ? "Reset link approved. Deliver it only through a verified private channel."
+        : "Temporary password assigned. Deliver it privately; the Principal must change it after signing in.",
+      oneTimeCredential: {
+        type: result.credentialType,
+        value: result.oneTimeCredential,
+        deliveryTarget: result.notificationTargetMasked,
+        expiresAt: result.expiresAt?.toISOString() ?? null
+      }
+    };
+  } catch (error) {
+    return formError(error, "Unable to approve this Principal recovery request.");
+  }
+}
+
+export async function rejectPrincipalRecoveryAction(
+  _state: PrincipalRecoveryActionState,
+  formData: FormData
+): Promise<PrincipalRecoveryActionState> {
+  try {
+    const input = principalRecoveryRejectSchema.parse({
+      requestId: formData.get("requestId"),
+      reviewRemarks: formData.get("reviewRemarks")
+    });
+    await rejectPrincipalPasswordRecovery(
+      await getPlatformAdministratorContext(),
+      input
+    );
+    revalidatePath("/administrator/principal-recovery");
+    return { ok: true, message: "Principal recovery request rejected." };
+  } catch (error) {
+    return formError(error, "Unable to reject this Principal recovery request.");
   }
 }

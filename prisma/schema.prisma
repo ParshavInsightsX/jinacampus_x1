@@ -46,6 +46,30 @@ enum PlatformAdministratorStatus {
   DEACTIVATED
 }
 
+enum PrincipalPasswordResetRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+  EXPIRED
+}
+
+enum PrincipalPasswordResetMethod {
+  RESET_LINK
+  TEMPORARY_PASSWORD
+}
+
+enum PrincipalRecoveryIdentifierType {
+  EMAIL
+  PRINCIPAL_ID
+}
+
+enum PrincipalRecoveryNotificationStatus {
+  MANUAL_DELIVERY_REQUIRED
+  SENT
+  FAILED
+}
+
 enum UserType {
   OWNER
   STAFF
@@ -663,6 +687,8 @@ model Tenant {
   academicYears                       AcademicYear[]
   academicCalendarEntries             AcademicCalendarEntry[]
   users                               User[]
+  principalPasswordResetRequests      PrincipalPasswordResetRequest[]
+  principalRecoveryAttempts           PrincipalPasswordRecoveryAttempt[]
   roles                               Role[]
   rolePermissions                     RolePermission[]
   roleAssignments                     UserRoleAssignment[]
@@ -752,17 +778,19 @@ model Tenant {
 }
 
 model PlatformAdministrator {
-  id          String                      @id @default(uuid()) @db.Uuid
-  email       String                      @unique
-  displayName String?
-  status      PlatformAdministratorStatus @default(ACTIVE)
-  lastLoginAt DateTime?
-  createdAt   DateTime                    @default(now())
-  updatedAt   DateTime                    @updatedAt
+  id                         String                      @id @default(uuid()) @db.Uuid
+  email                      String                      @unique
+  displayName                String?
+  status                     PlatformAdministratorStatus @default(ACTIVE)
+  canManagePrincipalRecovery Boolean                     @default(false)
+  lastLoginAt                DateTime?
+  createdAt                  DateTime                    @default(now())
+  updatedAt                  DateTime                    @updatedAt
 
-  credential PlatformAdministratorCredential?
-  sessions   PlatformAdministratorSession[]
-  auditLogs  PlatformAuditLog[]               @relation("PlatformAuditActor")
+  credential               PlatformAdministratorCredential?
+  sessions                 PlatformAdministratorSession[]
+  auditLogs                PlatformAuditLog[]               @relation("PlatformAuditActor")
+  principalRecoveryReviews PrincipalPasswordResetRequest[]  @relation("PrincipalRecoveryReviewedBy")
 
   @@index([status])
   @@map("platform_administrators")
@@ -821,6 +849,60 @@ model PlatformAuditLog {
   @@map("platform_audit_logs")
 }
 
+model PrincipalPasswordResetRequest {
+  id                        String                              @id @default(uuid()) @db.Uuid
+  tenantId                  String                              @db.Uuid
+  institutionId             String                              @db.Uuid
+  principalUserId           String                              @db.Uuid
+  identifierType            PrincipalRecoveryIdentifierType
+  identifierHash            String
+  status                    PrincipalPasswordResetRequestStatus @default(PENDING)
+  resetMethod               PrincipalPasswordResetMethod?
+  reviewedByAdministratorId String?                             @db.Uuid
+  reviewedAt                DateTime?
+  identityVerifiedAt        DateTime?
+  reviewRemarks             String?
+  requestedIpAddress        String?
+  requestedUserAgent        String?
+  resetTokenHash            String?                             @unique
+  resetTokenExpiresAt       DateTime?
+  resetTokenUsedAt          DateTime?
+  temporaryPasswordIssuedAt DateTime?
+  notificationStatus        PrincipalRecoveryNotificationStatus @default(MANUAL_DELIVERY_REQUIRED)
+  notificationTargetMasked  String?
+  rejectedAt                DateTime?
+  completedAt               DateTime?
+  createdAt                 DateTime                            @default(now())
+  updatedAt                 DateTime                            @updatedAt
+
+  tenant                  Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  institution             Institution            @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  principalUser           User                   @relation(fields: [principalUserId], references: [id], onDelete: Cascade)
+  reviewedByAdministrator PlatformAdministrator? @relation("PrincipalRecoveryReviewedBy", fields: [reviewedByAdministratorId], references: [id], onDelete: SetNull, map: "principal_password_reset_requests_reviewedByAdministratorId_fke")
+
+  @@index([tenantId, status, createdAt])
+  @@index([institutionId, status, createdAt], map: "principal_password_reset_requests_institutionId_status_createdA")
+  @@index([principalUserId, status, createdAt], map: "principal_password_reset_requests_principalUserId_status_create")
+  @@index([reviewedByAdministratorId, reviewedAt], map: "principal_password_reset_requests_reviewedByAdministratorId_rev")
+  @@index([resetTokenExpiresAt])
+  @@map("principal_password_reset_requests")
+}
+
+model PrincipalPasswordRecoveryAttempt {
+  id             String   @id @default(uuid()) @db.Uuid
+  tenantId       String?  @db.Uuid
+  identifierHash String
+  ipHash         String?
+  createdAt      DateTime @default(now())
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([identifierHash, createdAt], map: "principal_password_recovery_attempts_identifierHash_createdAt_i")
+  @@index([ipHash, createdAt])
+  @@index([tenantId, createdAt])
+  @@map("principal_password_recovery_attempts")
+}
+
 model Institution {
   id            String            @id @default(uuid()) @db.Uuid
   tenantId      String            @db.Uuid
@@ -845,6 +927,7 @@ model Institution {
 
   tenant                             Tenant                               @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   branches                           Branch[]
+  principalPasswordResetRequests     PrincipalPasswordResetRequest[]
   academicYears                      AcademicYear[]
   academicCalendarEntries            AcademicCalendarEntry[]
   gradebookAssessmentSchemes         GradebookAssessmentScheme[]
@@ -1016,6 +1099,7 @@ model AcademicCalendarEntry {
 model User {
   id            String     @id @default(uuid()) @db.Uuid
   tenantId      String     @db.Uuid
+  principalId   String?
   email         String
   phone         String?
   firstName     String
@@ -1041,6 +1125,7 @@ model User {
   passkeyChallenges               PasskeyChallenge[]
   roleAssignments                 UserRoleAssignment[]
   branchAccesses                  UserBranchAccess[]
+  principalPasswordResetRequests  PrincipalPasswordResetRequest[]
   auditLogs                       AuditLog[]                       @relation("AuditActor")
   classSectionsAsTeacher          ClassSection[]                   @relation("ClassSectionTeacher")
   markedStudentAttendance         StudentAttendanceRecord[]        @relation("StudentAttendanceMarkedBy")
@@ -1066,6 +1151,7 @@ model User {
 
   @@unique([tenantId, email])
   @@unique([tenantId, phone])
+  @@unique([tenantId, principalId])
   @@index([tenantId, status])
   @@index([tenantId, userType])
   @@map("users")

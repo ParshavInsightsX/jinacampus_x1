@@ -47,6 +47,7 @@ const administratorContext: PlatformAdministratorContext = {
   sessionId: "platform-session-id",
   email: "administrator@example.test",
   displayName: "Platform Administrator",
+  canManagePrincipalRecovery: false,
   passwordChangeRequired: false
 };
 
