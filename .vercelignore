@@ -1,0 +1,11 @@
+# Never upload local secrets or environment overrides.
+.env
+.env.*
+!.env.example
+
+# Local-only QA, certificates, logs, and tool state.
+.tmp/
+.tmp-*
+certificates/
+*.log
+.vercel/
