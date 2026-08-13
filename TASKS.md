@@ -1155,7 +1155,7 @@ Acceptance criteria:
 - [x] Apply `20260812143000_add_principal_password_recovery` to the approved isolated staging database.
 - [x] Grant staging recovery authority only to the designated synthetic Platform Administrator and verify observer denial.
 - [x] Complete DB-backed staging Administrator Portal, reset-link, expiry, replay, session-revocation, and authorization browser QA.
-- [ ] Apply the migration and assign recovery authority in production only after a separate approved release and backup gate.
+- [x] Apply the migration and assign recovery authority in production only after a separate approved release and backup gate.
 - [ ] Configure an approved email/SMS provider before claiming automated delivery.
 
 ## Phase 10.9 - Institution Boundary and Academia Setup Repair

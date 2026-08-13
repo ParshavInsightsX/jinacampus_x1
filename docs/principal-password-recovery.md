@@ -2,8 +2,9 @@
 
 Date: 2026-08-13
 
-Status: source and approved staging release gates verified; production migration,
-production authority assignment, and live enablement remain pending.
+Status: source, staging, production migration, authority assignment, deployment,
+and public production smoke gates verified. Authenticated production UI smoke
+requires a protected administrator credential handoff and is not claimed here.
 
 ## Scope
 
@@ -114,10 +115,11 @@ this workflow.
 ## Deployment and QA Gate
 
 The migration `20260812143000_add_principal_password_recovery` is additive. It
-was applied on 2026-08-13 to the approved isolated staging database through the
-guarded migration process. The post-deploy status reports 22 migrations and an
-up-to-date schema. It has not been applied to production and must not be applied
-there without a separate approved release decision and backup verification.
+was first applied on 2026-08-13 to the approved isolated staging database. A
+separately approved production release then created a protected logical backup,
+verified that backup through an isolated PostgreSQL 17 restore rehearsal, and
+applied the same committed migration through the guarded Supabase session
+pooler. Production now reports 22 migrations and an up-to-date schema.
 
 The following DB-backed checks passed in staging:
 
@@ -135,6 +137,13 @@ The following DB-backed checks passed in staging:
 
 Detailed evidence is recorded in
 `docs/principal-password-recovery-staging-qa.md`.
+
+Production release evidence is recorded in
+`docs/principal-password-recovery-production-release.md`. The designated active
+Platform Administrator has explicit recovery authority, prior administrator
+sessions were revoked, and the authority change is audited. Automated email and
+SMS remain unavailable, so every delivery status remains
+`MANUAL_DELIVERY_REQUIRED`.
 
 Local source and public-route verification completed on 2026-08-13: Prisma
 format/validate/generate, TypeScript, the full automated suite, and the
