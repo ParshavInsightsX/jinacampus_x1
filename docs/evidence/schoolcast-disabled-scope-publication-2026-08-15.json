@@ -1,0 +1,56 @@
+{
+  "recordedAt": "2026-08-15T15:58:03.5591622+05:30",
+  "scope": "SCHOOLCAST_DISABLED_SOURCE_PUBLICATION_AND_PREVIEW_ONLY",
+  "responsibleOperator": "OpenAI Codex execution agent under explicit workspace-owner authorization",
+  "sourcePublication": {
+    "implementationCommit": "c18793636ad6b7eba8654b842c9f2423bfc6a950",
+    "branch": "release/schoolcast-disabled-20260815",
+    "remote": "origin",
+    "pushStatus": "PASS"
+  },
+  "previewDeployment": {
+    "deploymentId": "dpl_5mJkWWREYRgXQZ3xusWCycPjkVMK",
+    "target": "PREVIEW",
+    "state": "READY",
+    "publicLoginStatus": 200
+  },
+  "production": {
+    "deploymentPerformed": false,
+    "currentDeploymentId": "dpl_7FKUxK6Vqv1w4HGTfUrCQiqWyw6C",
+    "currentCommit": "fc0a9bde4a703c9f8760dc3ada2ba3db6173dfe0",
+    "unchanged": true,
+    "rollbackReference": "dpl_35YWLax3ZrNer7Q9BGiXrWoQPqZR"
+  },
+  "databaseMigration": {
+    "applied": false,
+    "authorized": false,
+    "migration": "20260814120000_add_schoolcast_mvp_foundation",
+    "blocker": "The production database does not contain the additive SchoolCast migration. The generated Prisma client expects new fields on existing shared models, so code promotion before the separately authorized migration could regress existing production routes."
+  },
+  "checks": {
+    "prismaFormat": "PASS",
+    "prismaValidate": "PASS",
+    "prismaGenerate": "PASS",
+    "typecheck": "PASS",
+    "tests": "124 files and 981 tests passed",
+    "build": "PASS",
+    "gitDiffCheck": "PASS",
+    "secretScan": "PASS_WITH_CONFIRMED_PLACEHOLDERS_ONLY",
+    "lintScript": "NOT_CONFIGURED"
+  },
+  "disabledScopeSmoke": {
+    "loginStatus": 200,
+    "workerEndpointStatus": 404,
+    "workerEndpointExpectedStatus": 404,
+    "result": "PASS"
+  },
+  "prohibitedActionsObserved": {
+    "productionMigration": false,
+    "productionDeployment": false,
+    "productionEnvironmentChange": false,
+    "workerActivation": false,
+    "providerActivation": false,
+    "featureEnablement": false,
+    "liveCommunicationDelivery": false
+  }
+}
