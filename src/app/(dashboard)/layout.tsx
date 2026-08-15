@@ -3,12 +3,14 @@ import { getMobileBottomNavigationItems, getVisibleNavigationGroups } from "@/co
 import { requireAuth } from "@/lib/auth/require-auth";
 import { getEffectivePermissions } from "@/lib/rbac/require-permission";
 import { isGradebookEnabled } from "@/modules/gradebook/feature";
+import { isSchoolCastEnabled } from "@/modules/schoolcast/feature";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const ctx = await requireAuth();
-  const [permissions, gradebookEnabled] = await Promise.all([
+  const [permissions, gradebookEnabled, schoolCastEnabled] = await Promise.all([
     getEffectivePermissions({ ctx, branchId: ctx.activeBranchId }),
-    isGradebookEnabled(ctx)
+    isGradebookEnabled(ctx),
+    isSchoolCastEnabled(ctx)
   ]);
   const navbarContext = {
     userEmail: ctx.userEmail,
@@ -24,11 +26,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
     academicYearName: ctx.activeAcademicYearName ?? null,
     roleLabels: ctx.roleLabels ?? []
   };
-  const navigationGroups = getVisibleNavigationGroups(permissions, { gradebookEnabled });
+  const navigationGroups = getVisibleNavigationGroups(permissions, { gradebookEnabled, schoolCastEnabled });
   const mobileBottomItems = getMobileBottomNavigationItems(
     permissions,
     ctx.roleCodes ?? [],
-    { gradebookEnabled }
+    { gradebookEnabled, schoolCastEnabled }
   );
 
   return (

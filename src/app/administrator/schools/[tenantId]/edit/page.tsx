@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { PermissionState } from "@/components/ui/empty-state";
 import { requireAdministratorContext } from "@/modules/campus-core/administrator-auth";
 import { getSchoolByIdForAdministrator } from "@/modules/campus-core/administrator-services";
+import { getSchoolCastDeploymentPolicy } from "@/modules/schoolcast/deployment-policy";
 import { AdministratorShell } from "@/modules/campus-core/components/administrator-shell";
 import {
   InstitutionLogoUploadForm,
@@ -17,6 +18,7 @@ function isNextNotFound(error: unknown) {
 
 export default async function EditAdministratorSchoolPage({ params }: { params: PageParams }) {
   const ctx = await requireAdministratorContext();
+  const schoolCastReleaseScope = getSchoolCastDeploymentPolicy().scope;
   const { tenantId } = await params;
 
   try {
@@ -32,7 +34,7 @@ export default async function EditAdministratorSchoolPage({ params }: { params: 
             Update school profile and branding here. Use the separate School ID form only when the login code must change.
           </p>
         </section>
-        <SchoolEditForm school={school} />
+        <SchoolEditForm school={school} schoolCastReleaseScope={schoolCastReleaseScope} />
         <section className="space-y-4" aria-labelledby="institution-logo-upload-title">
           <div>
             <h2 id="institution-logo-upload-title" className="text-xl font-semibold text-slate-950">Institution Logos</h2>

@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "environment": "STAGING",
+  "runId": "REPLACE-REHEARSAL-RUN",
+  "commitSha": "0000000",
+  "migrationHead": "REPLACE-MIGRATION-HEAD",
+  "inventoryDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+  "executedAt": "2026-08-14T00:00:00.000Z",
+  "load": {
+    "status": "NOT_RUN", "recipients": 0, "durationSeconds": 0, "workerReplicas": 0,
+    "maxConcurrency": 0, "queueP95Seconds": 0, "duplicateDeliveries": 0, "workerErrors": 0
+  },
+  "hostFailover": {
+    "status": "NOT_RUN", "survivingWorkerContinued": false, "recoverySeconds": 0,
+    "lostJobs": 0, "duplicateDeliveries": 0
+  },
+  "alerts": {
+    "status": "NOT_RUN", "primaryDelivered": false, "backupDelivered": false,
+    "externalMonitorDetectedHostA": false, "externalMonitorDetectedHostB": false,
+    "maximumDetectionSeconds": 0, "maximumAcknowledgementSeconds": 0
+  },
+  "deadLetter": {
+    "status": "NOT_RUN", "created": false, "reviewed": false, "replayed": false,
+    "resolved": false, "unauthorizedReplays": 0, "crossTenantMutations": 0
+  },
+  "restartRecovery": {
+    "status": "NOT_RUN", "automaticRestart": false, "recoverySeconds": 0,
+    "leaseRecoveryVerified": false, "duplicateDeliveries": 0
+  },
+  "database": {
+    "status": "NOT_RUN", "approvedConnectionLimit": 1, "observedPeakConnections": 0,
+    "poolTimeouts": 0, "databaseErrors": 0, "sustainedLoadStable": false
+  },
+  "malwareScanning": {
+    "status": "NOT_RUN", "cleanFilePromoted": false, "malwareRejected": false,
+    "outageFailedClosed": false, "signatureAgeHours": 0
+  },
+  "logRetention": {
+    "status": "NOT_RUN", "retentionDays": 0,
+    "offHostRecoveryPassed": false, "unauthorizedAccessDenied": false
+  },
+  "backupRecovery": {
+    "status": "NOT_RUN", "backupAvailable": false, "pointInTimeRecoveryAvailable": false,
+    "restoreRehearsalPassed": false, "measuredRpoMinutes": 0, "measuredRtoMinutes": 0
+  },
+  "providers": {
+    "email": { "status": "BLOCKED", "controlledRecipientPilotPassed": false },
+    "whatsapp": { "status": "BLOCKED", "controlledRecipientPilotPassed": false }
+  },
+  "approvals": {
+    "operations": { "status": "NOT_RUN" },
+    "securityPrivacy": { "status": "NOT_RUN" },
+    "technical": { "status": "NOT_RUN" },
+    "businessProduct": { "status": "NOT_RUN" }
+  }
+}

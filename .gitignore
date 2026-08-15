@@ -20,3 +20,11 @@ tsconfig.tsbuildinfo
 # Local HTTPS development certificates
 certificates/
 .vercel/
+# Generated SchoolCast self-hosted operations configuration
+infra/schoolcast-self-hosted/worker.env.local
+infra/schoolcast-self-hosted/ops.env.local
+infra/schoolcast-self-hosted/host.env.local
+infra/schoolcast-self-hosted/host-inventory.local.json
+infra/schoolcast-self-hosted/rehearsal-evidence.local.json
+infra/schoolcast-self-hosted/production-readiness-evidence.local.json
+infra/schoolcast-self-hosted/generated/

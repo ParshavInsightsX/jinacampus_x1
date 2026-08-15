@@ -40,6 +40,7 @@ const mocks = vi.hoisted(() => {
     branch: { findFirst: vi.fn() },
     classSection: { findFirst: vi.fn() },
     enrollment: { findMany: vi.fn() },
+    tenantSettings: { findUnique: vi.fn() },
     studentAttendanceRecord: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), updateMany: vi.fn() }
   };
   const db = {
@@ -126,6 +127,7 @@ function resetMocks() {
   mocks.tx.attendanceSetting.findFirst.mockReset();
   mocks.tx.branch.findFirst.mockReset();
   mocks.tx.enrollment.findMany.mockReset();
+  mocks.tx.tenantSettings.findUnique.mockReset();
   mocks.tx.studentAttendanceRecord.findFirst.mockReset();
   mocks.tx.studentAttendanceRecord.findMany.mockReset();
   mocks.tx.studentAttendanceRecord.create.mockReset();
@@ -138,6 +140,7 @@ function resetMocks() {
   mocks.writeAuditLog.mockReset();
   mocks.writeAuditLog.mockResolvedValue({ id: "audit-id" });
   mocks.tx.academicCalendarEntry.findFirst.mockResolvedValue(null);
+  mocks.tx.tenantSettings.findUnique.mockResolvedValue({ schoolCastEnabled: false, schoolCastAutomationEnabled: false });
   mocks.tx.branch.findFirst.mockResolvedValue({ id: branchId, timezone: "Asia/Kolkata" });
   mocks.tx.attendanceSetting.findFirst.mockResolvedValue({
     studentAutoLockEnabled: true,

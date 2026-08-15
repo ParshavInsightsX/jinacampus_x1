@@ -189,6 +189,40 @@ describe("CampusCore RBAC", () => {
     expect(mocks.tx.tenantSettings.upsert).not.toHaveBeenCalled();
   });
 
+  it("keeps CampusCore settings compatible before optional module migrations", async () => {
+    const input = {
+      brandName: "JinaCampus",
+      timezone: "Asia/Kolkata",
+      locale: "en-IN",
+      dateFormat: "dd/MM/yyyy",
+      currency: "INR",
+      allowMultipleActiveAcademicYears: false
+    };
+    const settings = {
+      id: "settings-id",
+      tenantId: ctx.tenantId,
+      ...input,
+      brandByline: null,
+      primaryColor: null,
+      logoUrl: null,
+      createdById: ctx.userId,
+      updatedById: ctx.userId,
+      createdAt: new Date("2026-08-15T00:00:00.000Z"),
+      updatedAt: new Date("2026-08-15T00:00:00.000Z")
+    };
+    mocks.tx.tenantSettings.findUnique.mockResolvedValue(settings);
+    mocks.tx.tenantSettings.upsert.mockResolvedValue(settings);
+
+    await expect(updateTenantSettingsService(ctx, input)).resolves.toEqual(settings);
+
+    const readArgs = mocks.tx.tenantSettings.findUnique.mock.calls[0]?.[0];
+    const writeArgs = mocks.tx.tenantSettings.upsert.mock.calls[0]?.[0];
+    expect(readArgs.select).toEqual(expect.objectContaining({ id: true, timezone: true }));
+    expect(writeArgs.select).toEqual(expect.objectContaining({ id: true, timezone: true }));
+    expect(readArgs.select).not.toHaveProperty("schoolCastEnabled");
+    expect(writeArgs.select).not.toHaveProperty("schoolCastEnabled");
+  });
+
   it("requires settings manage before reading tenant or attendance settings", async () => {
     mocks.requirePermission.mockRejectedValue(new Error("FORBIDDEN_PERMISSION:campuscore.settings.manage"));
 

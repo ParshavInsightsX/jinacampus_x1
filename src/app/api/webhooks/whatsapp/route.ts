@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const body = await request.text();
   const signature = request.headers.get("x-hub-signature-256");
-  if (!verifyWhatsAppWebhookSignature(body, signature, process.env.WHATSAPP_APP_SECRET)) {
+  if (!verifyWhatsAppWebhookSignature(body, signature, process.env.SCHOOLCAST_META_WEBHOOK_SECRET ?? process.env.WHATSAPP_APP_SECRET)) {
     return NextResponse.json({ success: false, error: "Webhook signature verification failed." }, { status: 401 });
   }
 

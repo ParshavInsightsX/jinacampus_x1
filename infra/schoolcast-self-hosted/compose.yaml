@@ -1,0 +1,133 @@
+name: jinacampus-schoolcast-ops
+
+x-schoolcast-worker: &schoolcast-worker
+  image: jinacampus-schoolcast-worker:${SCHOOLCAST_WORKER_IMAGE_TAG:-local}
+  build:
+    context: ../..
+    dockerfile: Dockerfile.schoolcast-worker
+  env_file:
+    - path: ${SCHOOLCAST_WORKER_ENV_FILE:-./worker.env.local}
+      required: true
+  environment:
+    NODE_ENV: production
+    SCHOOLCAST_WORKER_ENABLED: "true"
+    SCHOOLCAST_WORKER_RUN_MODE: CONTINUOUS
+    SCHOOLCAST_WORKER_HEALTH_PORT: "9464"
+  restart: unless-stopped
+  stop_grace_period: 60s
+  read_only: true
+  tmpfs:
+    - /tmp:size=64m,mode=1777
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  expose:
+    - "9464"
+  networks:
+    - worker-egress
+    - observability
+  logging:
+    driver: local
+    options:
+      max-size: 10m
+      max-file: "5"
+      compress: "true"
+
+services:
+  worker-a:
+    <<: *schoolcast-worker
+
+  worker-b:
+    <<: *schoolcast-worker
+
+  alertmanager:
+    image: prom/alertmanager:v0.33.1
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    volumes:
+      - ${SCHOOLCAST_ALERTMANAGER_CONFIG_FILE:-./alertmanager/alertmanager.blocked.yml}:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager-data:/alertmanager
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "127.0.0.1:${SCHOOLCAST_ALERTMANAGER_PORT:-9093}:9093"
+    networks:
+      - observability
+      - worker-egress
+
+  prometheus:
+    image: prom/prometheus:v3.5.5
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+      - --web.enable-lifecycle
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/schoolcast.rules.yml:/etc/prometheus/schoolcast.rules.yml:ro
+      - prometheus-data:/prometheus
+    depends_on:
+      worker-a:
+        condition: service_healthy
+      worker-b:
+        condition: service_healthy
+      alertmanager:
+        condition: service_started
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "127.0.0.1:${SCHOOLCAST_PROMETHEUS_PORT:-9090}:9090"
+    networks:
+      - observability
+
+  grafana:
+    image: grafana/grafana:13.1.0
+    environment:
+      GF_SECURITY_ADMIN_USER: ${SCHOOLCAST_GRAFANA_ADMIN_USER:-schoolcast-ops}
+      GF_SECURITY_ADMIN_PASSWORD: ${SCHOOLCAST_GRAFANA_ADMIN_PASSWORD:?Set SCHOOLCAST_GRAFANA_ADMIN_PASSWORD outside Git}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_SECURITY_COOKIE_SECURE: ${SCHOOLCAST_GRAFANA_COOKIE_SECURE:-false}
+      GF_SERVER_ROOT_URL: ${SCHOOLCAST_GRAFANA_ROOT_URL:-http://localhost:3300}
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+      - alertmanager
+    restart: unless-stopped
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "127.0.0.1:${SCHOOLCAST_GRAFANA_PORT:-3300}:3000"
+    networks:
+      - observability
+
+networks:
+  worker-egress:
+    driver: bridge
+  observability:
+    driver: bridge
+    internal: true
+
+volumes:
+  alertmanager-data:
+  prometheus-data:
+  grafana-data:

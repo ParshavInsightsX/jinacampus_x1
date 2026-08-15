@@ -28,6 +28,7 @@ describe("navigation polish", () => {
       "CampusCore",
       "Academia",
       "GradeBook",
+      "SchoolCast",
       "StaffBoard Lite"
     ]);
   });
@@ -210,7 +211,7 @@ describe("navigation polish", () => {
       "Scan QR"
     ]);
     expect(MOBILE_NAVIGATION_SHORTCUTS.map((item) => item.href)).not.toEqual(
-      expect.arrayContaining(["/feedesk", "/schoolcast"])
+      expect.arrayContaining(["/feedesk"])
     );
   });
 
@@ -328,7 +329,7 @@ describe("navigation polish", () => {
       "src/modules/dashboard/components/dashboard-state.ts"
     ].map(readProjectFile).join("\n");
 
-    expect(combinedSource).not.toMatch(/FeeDesk|SchoolCast|InsightBoard|payroll|biometric/i);
+    expect(combinedSource).not.toMatch(/FeeDesk|InsightBoard|payroll|biometric/i);
     expect(combinedSource).not.toMatch(/tokenHash|rawToken/i);
   });
 });

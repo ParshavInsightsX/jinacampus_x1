@@ -1,0 +1,15 @@
+{
+  "name": "SchoolCast worker HTTP failures",
+  "alertTypes": [
+    {
+      "type": "custom_alert"
+    }
+  ],
+  "customAlert": {
+    "queryJsonString": "{\"event\":\"incomingRequest\",\"rollups\":{\"failures\":{\"measure\":\"count\",\"aggregation\":\"sum\"}},\"filter\":\"requestPath eq '/api/cron/schoolcast' and httpStatus ge 500\",\"granularity\":{\"minutes\":5}}",
+    "triggerType": "threshold",
+    "triggerOperator": "gte",
+    "triggerThreshold": 1
+  },
+  "autosubscribeOwnersInKnock": true
+}

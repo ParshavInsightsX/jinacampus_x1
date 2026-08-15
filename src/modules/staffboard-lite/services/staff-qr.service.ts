@@ -17,6 +17,7 @@ import {
   calculateWorkingMinutes,
   resolveStaffAttendanceCalculationSettings
 } from "@/modules/staffboard-lite/utils/attendance-calculator";
+import { enqueueStaffAttendanceSchoolCastEvent } from "./staff-attendance-schoolcast-event";
 import { conflict, ensureActiveBranch, validationError } from "./shared";
 
 const STAFF_ATTENDANCE_QR_PAYLOAD_TYPE = "STAFF_ATTENDANCE_QR";
@@ -628,6 +629,8 @@ export async function scanStaffAttendanceQr(
         }
       }
     }, tx);
+
+    await enqueueStaffAttendanceSchoolCastEvent(tx, after, qrToken.purpose);
 
     return {
       kind: "success" as const,

@@ -86,12 +86,13 @@ describe("JinaCampus brand and UI redesign", () => {
     expect(navbar).toContain("<BrandLogo");
     expect(dashboardLayout).not.toContain("DesktopShell");
     expect(dashboardLayout).toContain("getMobileBottomNavigationItems(");
-    expect(dashboardLayout).toContain("{ gradebookEnabled }");
+    expect(dashboardLayout).toContain("{ gradebookEnabled, schoolCastEnabled }");
     expect(mobile).toContain("items: readonly MobileBottomNavItem[]");
     expect(mobile).toContain('aria-label="Mobile primary navigation"');
     expect(navigation).toContain("PermissionCode");
     expect(navigation).toContain('title: "GradeBook"');
-    expect(navigation).not.toMatch(/FeeDesk|SchoolCast|InsightBoard/);
+    expect(navigation).toContain('title: "SchoolCast"');
+    expect(navigation).not.toMatch(/FeeDesk|InsightBoard/);
   });
 
   it("uses the new PWA identity without exposing authentication internals", () => {

@@ -1,0 +1,16 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: release-blocked
+  group_by: [alertname, severity]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+receivers:
+  - name: release-blocked
+
+# This receiver deliberately delivers nowhere. Production activation is blocked
+# until scripts/render-schoolcast-alertmanager-config.ts creates a private local
+# configuration with two distinct approved HTTPS destinations and the alert drill passes.

@@ -13,6 +13,7 @@ import {
 } from "@/modules/academia/schemas";
 import { queueStudentAttendanceWhatsAppNotifications } from "@/modules/notifications/services/attendance-whatsapp-notification.service";
 import { processNotificationOutbox } from "@/modules/notifications/services/notification-outbox.service";
+import { enqueueSchoolCastDomainEvent, SCHOOLCAST_SOURCE_EVENTS } from "@/modules/schoolcast/services/domain-event.service";
 import { conflict, validationError } from "./shared";
 
 type SubmittedAttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "HALF_DAY" | "ON_LEAVE" | "EXCUSED";
@@ -21,6 +22,41 @@ type AttendanceLockClient = Prisma.TransactionClient;
 const DEFAULT_STUDENT_AUTO_LOCK_TIME = "15:00";
 const DEFAULT_ATTENDANCE_TIME_ZONE = "Asia/Kolkata";
 const cutoffTimePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
+async function enqueueStudentAttendanceSchoolCastEvent(
+  tx: Prisma.TransactionClient,
+  record: {
+    id: string;
+    tenantId: string;
+    branchId: string;
+    academicYearId: string;
+    classSectionId: string;
+    studentId: string;
+    status: string;
+    attendanceDate: Date;
+    updatedAt: Date;
+  },
+  action: "SUBMITTED" | "UPDATED" | "CORRECTED"
+) {
+  return enqueueSchoolCastDomainEvent(tx, {
+    tenantId: record.tenantId,
+    branchId: record.branchId,
+    academicYearId: record.academicYearId,
+    sourceModule: "ACADEMIA",
+    sourceEventId: record.id + ":" + record.updatedAt.toISOString() + ":" + action,
+    eventType: SCHOOLCAST_SOURCE_EVENTS.STUDENT_ATTENDANCE_RECORDED,
+    sourceEntityType: "StudentAttendanceRecord",
+    sourceEntityId: record.id,
+    payload: {
+      action,
+      attendanceRecordId: record.id,
+      classSectionId: record.classSectionId,
+      studentId: record.studentId,
+      status: record.status,
+      attendanceDate: toDateOnlyString(record.attendanceDate),
+      recordVersion: record.updatedAt.toISOString()
+    }
+  });
+}
 
 export type SubmitDailyStudentAttendanceResult = {
   classSectionId: string;
@@ -454,6 +490,7 @@ export async function correctStudentAttendance(
         lockedAt: after.lockedAt?.toISOString() ?? null
       }
     }, tx);
+    await enqueueStudentAttendanceSchoolCastEvent(tx, after, "CORRECTED");
 
     return {
       attendanceRecordId: after.id,
@@ -674,6 +711,7 @@ export async function submitDailyStudentAttendance(
               remarksChanged: existingRecord.remarks !== after.remarks
             }
           }, tx);
+          await enqueueStudentAttendanceSchoolCastEvent(tx, after, "UPDATED");
           result.attendanceRecordIds.push(after.id);
           continue;
         }
@@ -697,6 +735,7 @@ export async function submitDailyStudentAttendance(
             newStatus: after.status
           }
         }, tx);
+        await enqueueStudentAttendanceSchoolCastEvent(tx, after, "SUBMITTED");
       }
 
       return result;

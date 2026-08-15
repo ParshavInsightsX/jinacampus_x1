@@ -12,6 +12,7 @@ import {
   calculateWorkingMinutes,
   resolveStaffAttendanceCalculationSettings
 } from "@/modules/staffboard-lite/utils/attendance-calculator";
+import { enqueueStaffAttendanceSchoolCastEvent } from "./staff-attendance-schoolcast-event";
 import { requireBranchPermission, validationError } from "./shared";
 
 export type CorrectStaffAttendanceResult = {
@@ -158,6 +159,8 @@ export async function correctStaffAttendance(
         }
       }
     }, tx);
+
+    await enqueueStaffAttendanceSchoolCastEvent(tx, after, "CORRECTED");
 
     return {
       attendanceRecordId: after.id,

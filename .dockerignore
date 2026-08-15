@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+.git
+.github
+.next
+.tmp
+coverage
+docs
+node_modules
+tests
+*.log
+({tag

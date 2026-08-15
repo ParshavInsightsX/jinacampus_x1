@@ -31,6 +31,7 @@ import {
   formatLeaveDate,
   todayForTimeZone
 } from "@/modules/staffboard-lite/utils/staff-leave-calculator";
+import { enqueueStaffLeaveSchoolCastEvent } from "./staff-leave-schoolcast-event";
 import { requireBranchPermission, validationError } from "./shared";
 
 type DbClient = typeof db | Prisma.TransactionClient;
@@ -321,6 +322,25 @@ function applicationSnapshot<T extends ApplicationSnapshot>(application: T) {
   };
 }
 
+async function enqueueLeaveSchoolCastEvent(
+  tx: Prisma.TransactionClient,
+  ctx: TenantContext,
+  application: ApplicationSnapshot,
+  actionId: string,
+  action: string
+) {
+  return enqueueStaffLeaveSchoolCastEvent(tx, {
+    tenantId: ctx.tenantId,
+    branchId: application.branchId,
+    applicationId: application.id,
+    actionId,
+    action,
+    staffId: application.staffId,
+    status: application.status,
+    startDate: application.startDate,
+    endDate: application.endDate
+  });
+}
 export async function submitStaffLeaveApplication(ctx: TenantContext, input: unknown) {
   const data = createStaffLeaveApplicationSchema.parse(input);
   const staff = await requireSelfStaffProfile(ctx, "staffboard.leave.self_apply");
@@ -375,6 +395,7 @@ export async function submitStaffLeaveApplication(ctx: TenantContext, input: unk
       branchId: staff.branchId,
       after: applicationSnapshot(application)
     }, tx);
+    await enqueueLeaveSchoolCastEvent(tx, ctx, application, action.id, "SUBMITTED");
     return { application, actionId: action.id };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
@@ -454,6 +475,7 @@ export async function updateStaffLeaveApplication(ctx: TenantContext, input: unk
       before: applicationSnapshot(before),
       after: applicationSnapshot(after)
     }, tx);
+    await enqueueLeaveSchoolCastEvent(tx, ctx, after, action.id, actionType);
     return { application: after, actionId: action.id };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
@@ -673,6 +695,7 @@ export async function reviewStaffLeaveApplication(ctx: TenantContext, input: unk
       after: applicationSnapshot(after),
       metadata: { decision: data.decision, hasRemarks: Boolean(data.remarks) }
     }, tx);
+    await enqueueLeaveSchoolCastEvent(tx, ctx, after, action.id, actionType);
     return { application: after, actionId: action.id };
   }, {
     isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -732,6 +755,7 @@ export async function withdrawStaffLeaveApplication(ctx: TenantContext, input: u
       after: applicationSnapshot(after),
       metadata: { hasRemarks: Boolean(data.remarks) }
     }, tx);
+    await enqueueLeaveSchoolCastEvent(tx, ctx, after, action.id, "WITHDRAWN");
     return { application: after, actionId: action.id };
   });
   await queueLeaveWhatsAppUpdate(ctx, result.application.id, result.actionId);
@@ -815,6 +839,7 @@ export async function cancelApprovedStaffLeave(ctx: TenantContext, input: unknow
       after: applicationSnapshot(after),
       metadata: { attendanceRecordsReset: records.length, hasRemarks: true }
     }, tx);
+    await enqueueLeaveSchoolCastEvent(tx, ctx, after, action.id, "CANCELLED");
     return { application: after, actionId: action.id };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   await queueLeaveWhatsAppUpdate(ctx, result.application.id, result.actionId);

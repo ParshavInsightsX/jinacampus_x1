@@ -4,6 +4,12 @@ import {
   NOTIFICATION_PERMISSIONS,
   type PermissionCode
 } from "@/lib/rbac/permissions";
+import {
+  SCHOOLCAST_OFFICE_PERMISSIONS,
+  SCHOOLCAST_PRINCIPAL_PERMISSIONS,
+  SCHOOLCAST_STAFF_PERMISSIONS,
+  SCHOOLCAST_TEACHER_PERMISSIONS
+} from "@/modules/schoolcast/permissions";
 
 export const OPERATIONAL_ROLE_CODES = [
   "ADMINISTRATOR",
@@ -110,6 +116,7 @@ const principalPermissions = [
   ...NOTIFICATION_PERMISSIONS,
   ...ACADEMIA_PERMISSIONS,
   ...GRADEBOOK_PERMISSIONS,
+  ...SCHOOLCAST_PRINCIPAL_PERMISSIONS,
   "staffboard.staff.view",
   "staffboard.staff.create",
   "staffboard.staff.update",
@@ -166,7 +173,8 @@ const teacherPermissions = [
   "staffboard.attendance.self_scan",
   "staffboard.attendance.self_view",
   "staffboard.leave.self_apply",
-  "staffboard.leave.self_view"
+  "staffboard.leave.self_view",
+  ...SCHOOLCAST_TEACHER_PERMISSIONS
 ] as const satisfies readonly PermissionCode[];
 
 export const ROLE_PERMISSION_MAP: Record<KnownRoleCode, readonly PermissionCode[]> = {
@@ -186,7 +194,8 @@ export const ROLE_PERMISSION_MAP: Record<KnownRoleCode, readonly PermissionCode[
     "staffboard.leave.self_apply",
     "staffboard.leave.self_view",
     "staffboard.leave.view",
-    "staffboard.leave.approve"
+    "staffboard.leave.approve",
+    ...SCHOOLCAST_OFFICE_PERMISSIONS
   ],
   TEACHER: teacherPermissions,
   STAFF: [
@@ -194,7 +203,8 @@ export const ROLE_PERMISSION_MAP: Record<KnownRoleCode, readonly PermissionCode[
     "staffboard.attendance.self_scan",
     "staffboard.attendance.self_view",
     "staffboard.leave.self_apply",
-    "staffboard.leave.self_view"
+    "staffboard.leave.self_view",
+    ...SCHOOLCAST_STAFF_PERMISSIONS
   ],
   TENANT_OWNER: principalPermissions,
   SUPER_ADMIN: principalPermissions,

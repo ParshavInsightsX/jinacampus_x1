@@ -59,7 +59,9 @@ describe("Base MVP UI/UX modernization", () => {
       ])
     );
     expect(shell).toContain("GradeBook");
-    expect(shell).not.toMatch(/FeeDesk|SchoolCast|payroll|biometric/i);
+    expect(shell).toContain("SchoolCast");
+    expect(shell).toContain("schoolCastEnabled");
+    expect(shell).not.toMatch(/FeeDesk|payroll|biometric/i);
   });
 
   it("keeps auth screens premium, accessible, and password-safe", () => {

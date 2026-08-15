@@ -23,6 +23,7 @@ const dockIconToneByModule: Record<DesktopDockNavItem["moduleKey"], string> = {
   "campus-core": "bg-white text-ink",
   academia: "bg-sky-50 text-sky-700",
   gradebook: "bg-violet-50 text-violet-700",
+  schoolcast: "bg-cyan-50 text-cyan-700",
   staffboard: "bg-emerald-50 text-emerald-700"
 };
 

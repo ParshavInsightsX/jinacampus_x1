@@ -41,6 +41,17 @@ type SchoolFormRecord = {
     gradebookPublicationEnabled: boolean;
     gradebookAnalyticsEnabled: boolean;
     gradebookPortalResultsEnabled: boolean;
+    schoolCastEnabled: boolean;
+    schoolCastInAppEnabled: boolean;
+    schoolCastNoticesEnabled: boolean;
+    schoolCastHomeworkEnabled: boolean;
+    schoolCastApprovalsEnabled: boolean;
+    schoolCastEmailEnabled: boolean;
+    schoolCastWhatsAppEnabled: boolean;
+    schoolCastAutomationEnabled: boolean;
+    schoolCastAnalyticsEnabled: boolean;
+    schoolCastDeliveryMode: "DRY_RUN" | "TEST" | "LIVE";
+    schoolCastTeacherDirectPublish: boolean;
   } | null;
   institutions: Array<{
     id: string;
@@ -63,6 +74,18 @@ const gradebookFeatureOptions = [
   ["gradebookPublicationEnabled", "Publication", "Controlled result/report-card recipient publication."],
   ["gradebookAnalyticsEnabled", "Analytics", "Approved-result operational summaries and history."],
   ["gradebookPortalResultsEnabled", "Portal results", "Published student/guardian result access when portals are approved."]
+] as const satisfies ReadonlyArray<readonly [keyof NonNullable<SchoolFormRecord["tenantSettings"]>, string, string]>;
+
+const schoolCastFeatureOptions = [
+  ["schoolCastInAppEnabled", "In-application notifications", "Authenticated inbox, read state, and acknowledgements."],
+  ["schoolCastNoticesEnabled", "Notices and broadcasts", "Governed notices, circulars, emergency messages, and broadcasts."],
+  ["schoolCastHomeworkEnabled", "Homework and classwork", "Teacher-assignment-scoped daily work communication."],
+  ["schoolCastApprovalsEnabled", "Approval workflow", "Version-pinned review before publication."],
+  ["schoolCastEmailEnabled", "Email", "Provider-gated email delivery with consent and preference checks."],
+  ["schoolCastWhatsAppEnabled", "WhatsApp", "Official provider delivery with consent and approved templates."],
+  ["schoolCastAutomationEnabled", "Source automations", "Event-driven attendance, calendar, leave, GradeBook, and FeeDesk communications."],
+  ["schoolCastAnalyticsEnabled", "Analytics", "Scoped delivery, read, acknowledgement, and failure summaries."],
+  ["schoolCastTeacherDirectPublish", "Teacher direct publish", "Permit assigned teachers to publish homework without approval when policy allows."]
 ] as const satisfies ReadonlyArray<readonly [keyof NonNullable<SchoolFormRecord["tenantSettings"]>, string, string]>;
 
 function fieldError(state: CampusCoreFormActionState, name: string) {
@@ -164,9 +187,24 @@ export function CreateSchoolForm() {
   );
 }
 
-export function SchoolEditForm({ school }: { school: SchoolFormRecord }) {
+export function SchoolEditForm({
+  school,
+  schoolCastReleaseScope
+}: {
+  school: SchoolFormRecord;
+  schoolCastReleaseScope: "DISABLED" | "IN_APP_CORE" | "FULL";
+}) {
   const [state, formAction, pending] = useActionState(updateSchoolAction, initialState);
   const institution = school.institutions[0] ?? null;
+  const inAppCoreOptions = new Set<string>([
+    "schoolCastInAppEnabled",
+    "schoolCastNoticesEnabled",
+    "schoolCastApprovalsEnabled",
+    "schoolCastAnalyticsEnabled"
+  ]);
+  const visibleSchoolCastOptions = schoolCastReleaseScope === "FULL"
+    ? schoolCastFeatureOptions
+    : schoolCastFeatureOptions.filter(([name]) => inAppCoreOptions.has(name));
 
   return (
     <form action={formAction} className="premium-card space-y-6 p-5">
@@ -233,6 +271,63 @@ export function SchoolEditForm({ school }: { school: SchoolFormRecord }) {
             </label>
           ))}
         </div>
+        {schoolCastReleaseScope !== "DISABLED" ? (
+          <div className="mt-5 border-t border-campus-border pt-5">
+            <input type="hidden" name="schoolCastEnabled" value="off" />
+            <label className="flex min-h-11 items-start gap-3 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                name="schoolCastEnabled"
+                defaultChecked={school.tenantSettings?.schoolCastEnabled ?? false}
+                className="mt-1 size-5 rounded border-slate-300 text-brand-600 focus:ring-brand-200"
+              />
+              <span>
+                <span className="block font-semibold text-ink">Enable SchoolCast pilot</span>
+                <span className="mt-1 block leading-5 text-slate-500">
+                  Enables only the capabilities approved for this server deployment; permissions still control every action.
+                </span>
+              </span>
+            </label>
+            <div className="mt-4 grid gap-2 md:grid-cols-2">
+              {visibleSchoolCastOptions.map(([name, label, help]) => (
+                <label key={name} className="flex min-h-11 items-start gap-3 rounded-lg border border-campus-border bg-white p-3 text-sm text-slate-700">
+                  <input type="hidden" name={name} value="off" />
+                  <input
+                    type="checkbox"
+                    name={name}
+                    defaultChecked={Boolean(school.tenantSettings?.[name])}
+                    className="mt-1 size-5 rounded border-slate-300 text-brand-600 focus:ring-brand-200"
+                  />
+                  <span>
+                    <span className="block font-semibold text-ink">{label}</span>
+                    <span className="mt-1 block leading-5 text-slate-500">{help}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+            {schoolCastReleaseScope === "FULL" ? (
+              <FormField
+                id="schoolcast-delivery-mode"
+                label="SchoolCast delivery mode"
+                helpText="Keep DRY_RUN until provider, consent, template, worker, and webhook release gates pass."
+                error={fieldError(state, "schoolCastDeliveryMode")}
+              >
+                <select
+                  id="schoolcast-delivery-mode"
+                  name="schoolCastDeliveryMode"
+                  defaultValue={school.tenantSettings?.schoolCastDeliveryMode ?? "DRY_RUN"}
+                  className={inputClassName}
+                >
+                  <option value="DRY_RUN">Dry run</option>
+                  <option value="TEST">Provider test</option>
+                  <option value="LIVE">Live (readiness-gated)</option>
+                </select>
+              </FormField>
+            ) : (
+              <input type="hidden" name="schoolCastDeliveryMode" value="DRY_RUN" />
+            )}
+          </div>
+        ) : null}
       </section>
       <FieldErrorMessage id="school-edit-form-error" message={fieldError(state, "form")} />
       <FormActions pending={pending} label="Save School" pendingLabel="Saving..." backHref={`/administrator/schools/${school.id}`} />

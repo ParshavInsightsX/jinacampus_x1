@@ -275,6 +275,65 @@ export function getUserSafeErrorMessage(errorOrCode: unknown, fallback = DEFAULT
       return "Reopen this published assessment before cancelling it.";
     case "GRADEBOOK_ASSESSMENT_CANCELLED":
       return "This assessment has been cancelled and cannot be changed.";
+    case "SCHOOLCAST_NOT_ENABLED":
+      return "SchoolCast is not enabled for this school.";
+    case "SCHOOLCAST_FEATURE_NOT_ENABLED":
+      return "This SchoolCast capability is not enabled for this school.";
+    case "SCHOOLCAST_SCOPE_NOT_FOUND":
+    case "SCHOOLCAST_SCOPE_NOT_READY":
+      return "Your SchoolCast branch or academic-year context is not available.";
+    case "SCHOOLCAST_COMMUNICATION_NOT_FOUND":
+    case "SCHOOLCAST_HOMEWORK_NOT_FOUND":
+    case "SCHOOLCAST_NOTIFICATION_NOT_FOUND":
+    case "SCHOOLCAST_APPROVAL_NOT_FOUND":
+    case "SCHOOLCAST_TEMPLATE_NOT_FOUND":
+      return "This SchoolCast record was not found or is no longer accessible.";
+    case "SCHOOLCAST_UNSAFE_CONTENT":
+      return "The communication contains unsupported or unsafe content.";
+    case "SCHOOLCAST_AUDIENCE_EMPTY":
+      return "No eligible recipients were found for the selected audience.";
+    case "SCHOOLCAST_NO_CHANNEL_SELECTED":
+    case "SCHOOLCAST_NO_READY_CHANNEL":
+      return "Select at least one enabled communication channel.";
+    case "SCHOOLCAST_SELF_APPROVAL_FORBIDDEN":
+      return "A different authorised user must approve this communication.";
+    case "SCHOOLCAST_SCHEDULE_MUST_BE_FUTURE":
+      return "Choose a future publication time.";
+    case "SCHOOLCAST_SCHEDULE_NOT_DUE":
+      return "This communication is scheduled for a later time.";
+    case "SCHOOLCAST_PUBLICATION_IN_PROGRESS":
+    case "SCHOOLCAST_PUBLICATION_NOT_CLAIMED":
+      return "This communication is already being processed. Refresh before trying again.";
+    case "SCHOOLCAST_ATTACHMENTS_NOT_SAFE":
+      return "Publication is blocked until every attachment passes the configured security scan.";
+    case "SCHOOLCAST_ATTACHMENT_TARGET_LOCKED":
+      return "Attachments can be changed only while the communication is a draft.";
+    case "SCHOOLCAST_ATTACHMENT_FILE_REQUIRED":
+      return "Choose an attachment to upload.";
+    case "SCHOOLCAST_ATTACHMENT_TOO_LARGE":
+      return "This attachment exceeds the configured size limit.";
+    case "SCHOOLCAST_ATTACHMENT_TYPE_NOT_ALLOWED":
+      return "Use an approved PDF, image, or office-document file.";
+    case "SCHOOLCAST_ATTACHMENT_UPLOAD_FAILED":
+    case "SCHOOLCAST_ATTACHMENT_DOWNLOAD_FAILED":
+    case "SCHOOLCAST_ATTACHMENT_DELETE_FAILED":
+      return "The private attachment operation could not be completed. Please try again.";
+    case "SCHOOLCAST_LIVE_PROVIDER_NOT_READY":
+      return "Live delivery cannot be enabled until every selected provider passes readiness checks.";
+    case "SCHOOLCAST_PROVIDER_SCOPE_NOT_FOUND":
+    case "SCHOOLCAST_PROVIDER_NOT_FOUND":
+      return "The provider configuration was not found in this authorised school scope.";
+    case "SCHOOLCAST_CONTACT_ENCRYPTION_UNAVAILABLE":
+      return "External delivery is unavailable until server-side contact encryption is configured.";
+    case "SCHOOLCAST_EMAIL_CONTACT_REQUIRED":
+    case "SCHOOLCAST_WHATSAPP_CONTACT_REQUIRED":
+    case "SCHOOLCAST_RECIPIENT_ADDRESS_UNAVAILABLE":
+      return "One or more recipients do not have an eligible communication address.";
+    case "SCHOOLCAST_INVALID_STATUS":
+    case "SCHOOLCAST_HOMEWORK_NOT_EDITABLE":
+    case "SCHOOLCAST_HOMEWORK_NOT_CANCELLABLE":
+    case "SCHOOLCAST_HOMEWORK_RESEND_NOT_ALLOWED":
+      return "This SchoolCast record cannot perform that action in its current state.";
     case "STAFF_QR_EXPIRED":
       return "This QR code has expired. Please scan a fresh QR code.";
     case "INVALID_STAFF_QR":

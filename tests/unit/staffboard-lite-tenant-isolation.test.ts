@@ -16,7 +16,8 @@ const mocks = vi.hoisted(() => {
     branch: { findFirst: vi.fn() },
     staffAttendanceQrToken: { create: vi.fn(), findFirst: vi.fn(), findMany: vi.fn(), update: vi.fn() },
     staffAttendanceRecord: { create: vi.fn(), findFirst: vi.fn(), update: vi.fn() },
-    staffProfile: { findFirst: vi.fn(), update: vi.fn() }
+    staffProfile: { findFirst: vi.fn(), update: vi.fn() },
+    tenantSettings: { findUnique: vi.fn() }
   };
   const db = {
     ...tx,
@@ -106,6 +107,8 @@ function attendanceRecord(overrides: Record<string, unknown> = {}) {
     leaveApplicationId: null,
     calendarEntryId: null,
     correctionReason: null,
+    createdAt: new Date("2026-05-05T02:30:00.000Z"),
+    updatedAt: new Date("2026-05-05T02:30:00.000Z"),
     branch: { id: branchId, timezone: "Asia/Kolkata", status: "ACTIVE" },
     ...overrides
   };
@@ -124,6 +127,7 @@ function resetMocks() {
   mocks.tx.staffAttendanceRecord.update.mockReset();
   mocks.tx.staffProfile.findFirst.mockReset();
   mocks.tx.staffProfile.update.mockReset();
+  mocks.tx.tenantSettings.findUnique.mockReset();
   mocks.db.$transaction.mockReset();
   mocks.db.$transaction.mockImplementation((callback: (client: typeof mocks.tx) => unknown) => callback(mocks.tx));
   mocks.requirePermission.mockReset();
@@ -131,6 +135,7 @@ function resetMocks() {
   mocks.writeAuditLog.mockReset();
   mocks.writeAuditLog.mockResolvedValue({ id: "audit-id" });
   mocks.tx.academicCalendarEntry.findFirst.mockResolvedValue(null);
+  mocks.tx.tenantSettings.findUnique.mockResolvedValue({ schoolCastEnabled: false, schoolCastAutomationEnabled: false });
   mocks.tx.staffAttendanceQrToken.findMany.mockResolvedValue([]);
   mocks.tx.branch.findFirst.mockResolvedValue({ id: branchId });
   mocks.tx.attendanceSetting.findFirst.mockResolvedValue({
@@ -244,6 +249,8 @@ describe("StaffBoard Lite tenant isolation", () => {
     mocks.tx.staffAttendanceRecord.findFirst.mockResolvedValue(null);
     mocks.tx.staffAttendanceRecord.create.mockImplementation(({ data }) => ({
       id: attendanceRecordId,
+      createdAt: new Date(),
+      updatedAt: new Date(),
       ...data
     }));
 

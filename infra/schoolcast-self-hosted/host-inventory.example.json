@@ -1,0 +1,87 @@
+{
+  "version": 1,
+  "environment": "STAGING",
+  "database": {
+    "provider": "REPLACE-DATABASE-PROVIDER",
+    "region": "REPLACE-DATABASE-REGION",
+    "projectRef": "replaceproject",
+    "approvedConnectionLimit": 12,
+    "approvalRef": "REPLACE-DATABASE-APPROVAL"
+  },
+  "hosts": [
+    {
+      "replicaId": "worker-a",
+      "provider": "REPLACE-PROVIDER-A",
+      "accountRef": "REPLACE-ACCOUNT-A",
+      "region": "REPLACE-REGION-A",
+      "availabilityZone": "REPLACE-ZONE-A",
+      "failureDomain": "REPLACE-FAILURE-A",
+      "powerDomain": "REPLACE-POWER-A",
+      "networkDomain": "REPLACE-NETWORK-A",
+      "sshAlias": "REPLACE-SSH-ALIAS-A",
+      "privateMetricsAddress": "10.20.0.11",
+      "externalHeartbeatCheckRef": "REPLACE-HEARTBEAT-A",
+      "approvalRef": "REPLACE-HOST-APPROVAL-A",
+      "resources": { "architecture": "arm64", "vCpu": 1, "memoryMb": 6144, "diskGb": 30 }
+    },
+    {
+      "replicaId": "worker-b",
+      "provider": "REPLACE-PROVIDER-B",
+      "accountRef": "REPLACE-ACCOUNT-B",
+      "region": "REPLACE-REGION-B",
+      "availabilityZone": "REPLACE-ZONE-B",
+      "failureDomain": "REPLACE-FAILURE-B",
+      "powerDomain": "REPLACE-POWER-B",
+      "networkDomain": "REPLACE-NETWORK-B",
+      "sshAlias": "REPLACE-SSH-ALIAS-B",
+      "privateMetricsAddress": "10.30.0.11",
+      "externalHeartbeatCheckRef": "REPLACE-HEARTBEAT-B",
+      "approvalRef": "REPLACE-HOST-APPROVAL-B",
+      "resources": { "architecture": "amd64", "vCpu": 1, "memoryMb": 6144, "diskGb": 30 }
+    }
+  ],
+  "independence": {
+    "sharedAvailabilityZone": false,
+    "sharedFailureDomain": false,
+    "sharedPowerDomain": false,
+    "sharedNetworkDomain": false,
+    "evidenceRef": "REPLACE-INDEPENDENCE-EVIDENCE"
+  },
+  "monitoring": {
+    "externalProvider": "REPLACE-EXTERNAL-MONITOR",
+    "externalFailureDomain": "REPLACE-MONITOR-DOMAIN",
+    "primaryDestinationRef": "REPLACE-PRIMARY-ALERT",
+    "backupDestinationRef": "REPLACE-BACKUP-ALERT",
+    "primaryOwnerRef": "REPLACE-PRIMARY-OWNER",
+    "backupOwnerRef": "REPLACE-BACKUP-OWNER",
+    "approvalRef": "REPLACE-ALERT-APPROVAL"
+  },
+  "malwareScanning": {
+    "mode": "CLAMAV",
+    "failClosed": true,
+    "quarantinePrivate": true,
+    "replicas": [
+      {
+        "replicaId": "worker-a",
+        "failureDomain": "REPLACE-FAILURE-A",
+        "privateEndpointRef": "REPLACE-SCANNER-A",
+        "signatureUpdateIntervalHours": 3
+      },
+      {
+        "replicaId": "worker-b",
+        "failureDomain": "REPLACE-FAILURE-B",
+        "privateEndpointRef": "REPLACE-SCANNER-B",
+        "signatureUpdateIntervalHours": 3
+      }
+    ],
+    "approvalRef": "REPLACE-SCANNER-APPROVAL"
+  },
+  "logs": {
+    "retentionDays": 30,
+    "encryptedAtRest": true,
+    "offHostCopy": true,
+    "destinationFailureDomain": "REPLACE-LOG-DOMAIN",
+    "accessApprovalRef": "REPLACE-LOG-ACCESS-APPROVAL",
+    "recoveryEvidenceRef": "REPLACE-LOG-RECOVERY-EVIDENCE"
+  }
+}

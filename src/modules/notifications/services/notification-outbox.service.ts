@@ -45,7 +45,7 @@ type QueuedNotificationRecord = {
   tenantId: string;
   branchId: string | null;
   templateKey: string;
-  recipientPhone: string;
+  recipientPhone: string | null;
   payloadJson: Prisma.JsonValue;
 };
 
@@ -345,6 +345,17 @@ export async function processNotificationOutbox(input: unknown, deps: ProcessOut
         tenantId: sending.tenantId,
         provider: "DRY_RUN",
         failureReason: "WHATSAPP_TEMPLATE_NOT_CONFIGURED"
+      });
+      result.failed += 1;
+      continue;
+    }
+
+    if (!sending.recipientPhone) {
+      await deps.markFailed({
+        id: sending.id,
+        tenantId: sending.tenantId,
+        provider: "DRY_RUN",
+        failureReason: "WHATSAPP_RECIPIENT_PHONE_MISSING"
       });
       result.failed += 1;
       continue;

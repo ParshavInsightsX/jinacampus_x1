@@ -34,6 +34,24 @@ import type {
   updateUserSchema
 } from "@/modules/campus-core/schemas";
 
+const campusCoreTenantSettingsSelect = {
+  id: true,
+  tenantId: true,
+  brandName: true,
+  brandByline: true,
+  primaryColor: true,
+  logoUrl: true,
+  timezone: true,
+  locale: true,
+  dateFormat: true,
+  currency: true,
+  allowMultipleActiveAcademicYears: true,
+  createdById: true,
+  updatedById: true,
+  createdAt: true,
+  updatedAt: true
+} as const;
+
 function unique<T>(values: T[]) {
   return Array.from(new Set(values));
 }
@@ -346,7 +364,10 @@ export async function activateAcademicYearService(ctx: TenantContext, input: z.i
     if (!target) throw new Error("ACADEMIC_YEAR_NOT_FOUND");
     await requireAccessibleInstitution(tx, ctx, target.institutionId);
 
-    const settings = await tx.tenantSettings.findUnique({ where: { tenantId: ctx.tenantId } });
+    const settings = await tx.tenantSettings.findUnique({
+      where: { tenantId: ctx.tenantId },
+      select: { allowMultipleActiveAcademicYears: true }
+    });
     if (!settings?.allowMultipleActiveAcademicYears) {
       await tx.academicYear.updateMany({
         where: { tenantId: ctx.tenantId, institutionId: target.institutionId, id: { not: target.id } },
@@ -892,11 +913,15 @@ export async function createRoleService(ctx: TenantContext, input: z.infer<typeo
 export async function updateTenantSettingsService(ctx: TenantContext, input: z.infer<typeof updateTenantSettingsSchema>) {
   await requirePermission({ ctx, permission: "campuscore.settings.manage" });
   return db.$transaction(async (tx) => {
-    const before = await tx.tenantSettings.findUnique({ where: { tenantId: ctx.tenantId } });
+    const before = await tx.tenantSettings.findUnique({
+      where: { tenantId: ctx.tenantId },
+      select: campusCoreTenantSettingsSelect
+    });
     const after = await tx.tenantSettings.upsert({
       where: { tenantId: ctx.tenantId },
       create: { tenantId: ctx.tenantId, ...input, createdById: ctx.userId },
-      update: { ...input, updatedById: ctx.userId }
+      update: { ...input, updatedById: ctx.userId },
+      select: campusCoreTenantSettingsSelect
     });
     await writeAuditLog({ ctx, action: CAMPUS_CORE_AUDIT_EVENTS.SETTINGS_UPDATED, entityType: "TenantSettings", entityId: after.id, before, after }, tx);
     return after;

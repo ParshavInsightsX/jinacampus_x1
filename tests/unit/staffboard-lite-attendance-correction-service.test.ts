@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => {
   const tx = {
     attendanceSetting: { findFirst: vi.fn() },
     auditLog: { create: vi.fn() },
+    tenantSettings: { findUnique: vi.fn() },
     staffAttendanceRecord: { findFirst: vi.fn(), update: vi.fn(), delete: vi.fn() }
   };
   const db = {
@@ -86,6 +87,7 @@ function resetMocks() {
   mocks.requirePermission.mockResolvedValue(true);
   mocks.writeAuditLog.mockReset();
   mocks.writeAuditLog.mockResolvedValue({ id: "audit-id" });
+  mocks.tx.tenantSettings.findUnique.mockResolvedValue({ schoolCastEnabled: false, schoolCastAutomationEnabled: false });
   mocks.tx.attendanceSetting.findFirst.mockResolvedValue({
     staffLateAfterTime: "08:00",
     staffHalfDayBeforeMinutes: 240,

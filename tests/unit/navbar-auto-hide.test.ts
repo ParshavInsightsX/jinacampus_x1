@@ -142,9 +142,9 @@ describe("intelligent auto-hide navbar", () => {
 
     expect(serialized).toContain("Dashboard");
     expect(serialized).not.toMatch(/permissions|tenantId|branchId|userId/);
-    expect(layout).toContain("getVisibleNavigationGroups(permissions, { gradebookEnabled })");
+    expect(layout).toContain("getVisibleNavigationGroups(permissions, { gradebookEnabled, schoolCastEnabled })");
     expect(layout).toContain("getMobileBottomNavigationItems(");
-    expect(layout).toContain("{ gradebookEnabled }");
+    expect(layout).toContain("{ gradebookEnabled, schoolCastEnabled }");
     expect(layout).not.toMatch(/<AppChrome[\s\S]{0,240}permissions=/);
   });
 

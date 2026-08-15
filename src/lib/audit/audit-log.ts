@@ -9,6 +9,7 @@ type AuditInput = {
   action: string;
   entityType: string;
   entityId?: string | null;
+  actorUserId?: string | null;
   branchId?: string | null;
   academicYearId?: string | null;
   before?: unknown;
@@ -27,7 +28,7 @@ export async function writeAuditLog(input: AuditInput, client: DbClient = db) {
       tenantId: input.ctx.tenantId,
       branchId: input.branchId ?? null,
       academicYearId: input.academicYearId ?? null,
-      actorUserId: input.ctx.userId,
+      actorUserId: input.actorUserId === undefined ? input.ctx.userId : input.actorUserId,
       action: input.action,
       entityType: input.entityType,
       entityId: input.entityId ?? null,

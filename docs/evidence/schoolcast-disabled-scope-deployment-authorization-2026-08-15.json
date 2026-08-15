@@ -1,0 +1,42 @@
+{
+    "version":  1,
+    "requestId":  "SC-AUTH-DEPLOY-20260815",
+    "recordedAtUtc":  "2026-08-15T10:11:11Z",
+    "status":  "AUTHORIZED_EXECUTION_BLOCKED_BY_SEPARATE_MIGRATION_GATE",
+    "authorizationSource":  "Explicit restricted production deployment approval in the current operator session",
+    "authorizedActions":  [
+                              "review_and_stage_approved_release_files",
+                              "create_explicit_release_commit",
+                              "push_authorized_release_branch",
+                              "deploy_reviewed_code_with_schoolcast_disabled",
+                              "restricted_post_deployment_smoke_testing"
+                          ],
+    "prohibitedActions":  [
+                              "production_database_migration_without_separate_authorization",
+                              "production_environment_or_operational_setting_changes",
+                              "schoolcast_worker_or_scheduler_activation",
+                              "email_or_whatsapp_provider_activation",
+                              "schoolcast_feature_flag_enablement",
+                              "live_communication_delivery"
+                          ],
+    "requiredRuntimeState":  {
+                                 "schoolCastReleaseScope":  "DISABLED",
+                                 "schoolCastWorkerEnabled":  false
+                             },
+    "technicalPreflight":  {
+                               "productionMigrationPresent":  false,
+                               "generatedClientRequiresPendingSchema":  true,
+                               "productionDeploymentSafeBeforeMigration":  false,
+                               "reason":  "Existing production tables are extended by the pending SchoolCast migration; generated Prisma clients can reference those fields in existing workflows."
+                           },
+    "productionActionsAtRecord":  {
+                                      "databaseMigrationApplied":  false,
+                                      "sourceCommitCreated":  false,
+                                      "codePushed":  false,
+                                      "applicationDeployed":  false,
+                                      "productionEnvironmentModified":  false,
+                                      "backgroundWorkerActivated":  false,
+                                      "externalProviderEnabled":  false,
+                                      "featureFlagChanged":  false
+                                  }
+}
