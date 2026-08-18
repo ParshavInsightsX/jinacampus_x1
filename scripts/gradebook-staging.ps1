@@ -432,7 +432,7 @@ switch ($Command) {
     $env:WEBAUTHN_RP_ID = "localhost"
     Push-Location $root
     try {
-      $devArguments = @("run", "dev", "--", "--hostname", "127.0.0.1", "--port", $Port.ToString())
+      $devArguments = @("run", "dev:raw", "--", "--hostname", "127.0.0.1", "--port", $Port.ToString())
       if ($UseWebpack) {
         $devArguments += "--webpack"
       }

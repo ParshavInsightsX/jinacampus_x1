@@ -92,7 +92,7 @@ describe("intelligent auto-hide navbar", () => {
     const navbar = source("src/components/app-shell/app-navbar.tsx");
     const revealZone = source("src/components/app-shell/top-edge-reveal-zone.tsx");
 
-    expect(navbar).toContain("mobileNavigationOpen || accountMenuOpen || contextMenuOpen || focusWithin || pointerWithin");
+    expect(navbar).toContain("mobileNavigationOpen || accountMenuOpen || contextMenuOpen || notificationMenuOpen || focusWithin || pointerWithin");
     expect(navbar).toContain("onFocusCapture");
     expect(navbar).toContain("onPointerEnter");
     expect(revealZone).toContain("data-navbar-reveal-zone");
@@ -142,9 +142,9 @@ describe("intelligent auto-hide navbar", () => {
 
     expect(serialized).toContain("Dashboard");
     expect(serialized).not.toMatch(/permissions|tenantId|branchId|userId/);
-    expect(layout).toContain("getVisibleNavigationGroups(permissions, { gradebookEnabled, schoolCastEnabled })");
+    expect(layout).toContain("getVisibleNavigationGroups(permissions, { gradebookEnabled })");
     expect(layout).toContain("getMobileBottomNavigationItems(");
-    expect(layout).toContain("{ gradebookEnabled, schoolCastEnabled }");
+    expect(layout).toContain("{ gradebookEnabled }");
     expect(layout).not.toMatch(/<AppChrome[\s\S]{0,240}permissions=/);
   });
 

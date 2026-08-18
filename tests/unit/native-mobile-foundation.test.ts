@@ -259,6 +259,6 @@ describe("native mobile foundation utilities", () => {
     expect(source).toContain("PasswordField");
     expect(source).toContain("ActionTile");
     expect(source).toContain("accessibilityLabel={toggleLabel}");
-    expect(source).not.toMatch(/FeeDesk|GradeBook|SchoolCast|passwordHash|tokenHash|rawToken/i);
+    expect(source).not.toMatch(/FeeDesk|GradeBook|passwordHash|tokenHash|rawToken/i);
   });
 });

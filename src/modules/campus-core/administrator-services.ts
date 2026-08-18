@@ -16,11 +16,7 @@ import type {
   updateSchoolSchema
 } from "@/modules/campus-core/administrator-schemas";
 import { PLATFORM_ADMINISTRATOR_AUDIT_EVENTS } from "@/modules/campus-core/platform-administrator-audit-events";
-import {
-  assertSchoolCastFeatureRequestDeployed,
-  constrainSchoolCastFeatureSettings,
-  getSchoolCastDeploymentPolicy
-} from "@/modules/schoolcast/deployment-policy";
+import { ensureTenantSettingsRow } from "@/modules/campus-core/services/tenant-settings-compat";
 import type { changeOwnPasswordSchema } from "@/modules/campus-core/schemas";
 import {
   SCHOOL_ID_ERROR_MESSAGES,
@@ -234,7 +230,6 @@ export async function getSchoolByIdForAdministrator(
   _ctx: PlatformAdministratorContext,
   tenantId: string
 ) {
-  const deploymentPolicy = getSchoolCastDeploymentPolicy();
   const school = await db.tenant.findUnique({
     where: { id: tenantId },
     select: {
@@ -260,19 +255,6 @@ export async function getSchoolByIdForAdministrator(
           gradebookPublicationEnabled: true,
           gradebookAnalyticsEnabled: true,
           gradebookPortalResultsEnabled: true,
-          ...(deploymentPolicy.workspace ? {
-            schoolCastEnabled: true,
-            schoolCastInAppEnabled: true,
-            schoolCastNoticesEnabled: true,
-            schoolCastHomeworkEnabled: true,
-            schoolCastApprovalsEnabled: true,
-            schoolCastEmailEnabled: true,
-            schoolCastWhatsAppEnabled: true,
-            schoolCastAutomationEnabled: true,
-            schoolCastAnalyticsEnabled: true,
-            schoolCastDeliveryMode: true,
-            schoolCastTeacherDirectPublish: true
-          } : {})
         }
       },
       institutions: {
@@ -314,48 +296,8 @@ export async function getSchoolByIdForAdministrator(
   });
   if (!school) return null;
   const { _count, ...schoolDetails } = school;
-  const settings = schoolDetails.tenantSettings as (typeof schoolDetails.tenantSettings & Partial<{
-    schoolCastEnabled: boolean;
-    schoolCastInAppEnabled: boolean;
-    schoolCastNoticesEnabled: boolean;
-    schoolCastHomeworkEnabled: boolean;
-    schoolCastApprovalsEnabled: boolean;
-    schoolCastEmailEnabled: boolean;
-    schoolCastWhatsAppEnabled: boolean;
-    schoolCastAutomationEnabled: boolean;
-    schoolCastAnalyticsEnabled: boolean;
-    schoolCastDeliveryMode: "DRY_RUN" | "TEST" | "LIVE";
-    schoolCastTeacherDirectPublish: boolean;
-  }>) | null;
-  const schoolCast = constrainSchoolCastFeatureSettings({
-    enabled: settings?.schoolCastEnabled ?? false,
-    inApp: settings?.schoolCastInAppEnabled ?? false,
-    notices: settings?.schoolCastNoticesEnabled ?? false,
-    homework: settings?.schoolCastHomeworkEnabled ?? false,
-    approvals: settings?.schoolCastApprovalsEnabled ?? false,
-    email: settings?.schoolCastEmailEnabled ?? false,
-    whatsApp: settings?.schoolCastWhatsAppEnabled ?? false,
-    automation: settings?.schoolCastAutomationEnabled ?? false,
-    analytics: settings?.schoolCastAnalyticsEnabled ?? false,
-    deliveryMode: settings?.schoolCastDeliveryMode ?? "DRY_RUN",
-    teacherDirectPublish: settings?.schoolCastTeacherDirectPublish ?? false
-  }, deploymentPolicy);
   return {
     ...schoolDetails,
-    tenantSettings: settings ? {
-      ...settings,
-      schoolCastEnabled: schoolCast.enabled,
-      schoolCastInAppEnabled: schoolCast.inApp,
-      schoolCastNoticesEnabled: schoolCast.notices,
-      schoolCastHomeworkEnabled: schoolCast.homework,
-      schoolCastApprovalsEnabled: schoolCast.approvals,
-      schoolCastEmailEnabled: schoolCast.email,
-      schoolCastWhatsAppEnabled: schoolCast.whatsApp,
-      schoolCastAutomationEnabled: schoolCast.automation,
-      schoolCastAnalyticsEnabled: schoolCast.analytics,
-      schoolCastDeliveryMode: schoolCast.deliveryMode,
-      schoolCastTeacherDirectPublish: schoolCast.teacherDirectPublish
-    } : null,
     dependencySummary: toSchoolDependencySummary(_count)
   };
 }
@@ -376,9 +318,9 @@ export async function createSchool(
         status: input.status
       }
     });
-    await tx.tenantSettings.create({
-      data: { tenantId: tenant.id, brandName: input.institutionDisplayName ?? input.name },
-      select: { id: true }
+    await ensureTenantSettingsRow(tx, {
+      tenantId: tenant.id,
+      brandName: input.institutionDisplayName ?? input.name
     });
     const institution = await tx.institution.create({
       data: {
@@ -470,23 +412,6 @@ export async function updateSchool(
   ctx: PlatformAdministratorContext,
   input: z.infer<typeof updateSchoolSchema>
 ) {
-  const deploymentPolicy = getSchoolCastDeploymentPolicy();
-  const requestedSchoolCast = {
-    enabled: input.schoolCastEnabled,
-    inApp: input.schoolCastInAppEnabled,
-    notices: input.schoolCastNoticesEnabled,
-    homework: input.schoolCastHomeworkEnabled,
-    approvals: input.schoolCastApprovalsEnabled,
-    email: input.schoolCastEmailEnabled,
-    whatsApp: input.schoolCastWhatsAppEnabled,
-    automation: input.schoolCastAutomationEnabled,
-    analytics: input.schoolCastAnalyticsEnabled,
-    deliveryMode: input.schoolCastDeliveryMode,
-    teacherDirectPublish: input.schoolCastTeacherDirectPublish
-  };
-  const hasSchoolCastInput = Object.values(requestedSchoolCast).some((value) => value !== undefined);
-  if (hasSchoolCastInput) assertSchoolCastFeatureRequestDeployed(requestedSchoolCast);
-
   return db.$transaction(async (tx) => {
     const gradebookSettingsData = {
       gradebookEnabled: input.gradebookEnabled,
@@ -515,64 +440,11 @@ export async function updateSchool(
             gradebookPublicationEnabled: true,
             gradebookAnalyticsEnabled: true,
             gradebookPortalResultsEnabled: true,
-            ...(deploymentPolicy.workspace ? {
-              schoolCastEnabled: true,
-              schoolCastInAppEnabled: true,
-              schoolCastNoticesEnabled: true,
-              schoolCastHomeworkEnabled: true,
-              schoolCastApprovalsEnabled: true,
-              schoolCastEmailEnabled: true,
-              schoolCastWhatsAppEnabled: true,
-              schoolCastAutomationEnabled: true,
-              schoolCastAnalyticsEnabled: true,
-              schoolCastDeliveryMode: true,
-              schoolCastTeacherDirectPublish: true
-            } : {})
           }
         }
       }
     });
     if (!before) throw notFound("SCHOOL_NOT_FOUND");
-
-    const currentSettings = before.tenantSettings as (typeof before.tenantSettings & Partial<{
-      schoolCastEnabled: boolean;
-      schoolCastInAppEnabled: boolean;
-      schoolCastNoticesEnabled: boolean;
-      schoolCastHomeworkEnabled: boolean;
-      schoolCastApprovalsEnabled: boolean;
-      schoolCastEmailEnabled: boolean;
-      schoolCastWhatsAppEnabled: boolean;
-      schoolCastAutomationEnabled: boolean;
-      schoolCastAnalyticsEnabled: boolean;
-      schoolCastDeliveryMode: "DRY_RUN" | "TEST" | "LIVE";
-      schoolCastTeacherDirectPublish: boolean;
-    }>) | null;
-    const schoolCast = hasSchoolCastInput ? constrainSchoolCastFeatureSettings({
-      enabled: requestedSchoolCast.enabled ?? currentSettings?.schoolCastEnabled ?? false,
-      inApp: requestedSchoolCast.inApp ?? currentSettings?.schoolCastInAppEnabled ?? false,
-      notices: requestedSchoolCast.notices ?? currentSettings?.schoolCastNoticesEnabled ?? false,
-      homework: requestedSchoolCast.homework ?? currentSettings?.schoolCastHomeworkEnabled ?? false,
-      approvals: requestedSchoolCast.approvals ?? currentSettings?.schoolCastApprovalsEnabled ?? false,
-      email: requestedSchoolCast.email ?? currentSettings?.schoolCastEmailEnabled ?? false,
-      whatsApp: requestedSchoolCast.whatsApp ?? currentSettings?.schoolCastWhatsAppEnabled ?? false,
-      automation: requestedSchoolCast.automation ?? currentSettings?.schoolCastAutomationEnabled ?? false,
-      analytics: requestedSchoolCast.analytics ?? currentSettings?.schoolCastAnalyticsEnabled ?? false,
-      deliveryMode: requestedSchoolCast.deliveryMode ?? currentSettings?.schoolCastDeliveryMode ?? "DRY_RUN",
-      teacherDirectPublish: requestedSchoolCast.teacherDirectPublish ?? currentSettings?.schoolCastTeacherDirectPublish ?? false
-    }, deploymentPolicy) : null;
-    const schoolCastSettingsData = schoolCast ? {
-      schoolCastEnabled: schoolCast.enabled,
-      schoolCastInAppEnabled: schoolCast.inApp,
-      schoolCastNoticesEnabled: schoolCast.notices,
-      schoolCastHomeworkEnabled: schoolCast.homework,
-      schoolCastApprovalsEnabled: schoolCast.approvals,
-      schoolCastEmailEnabled: schoolCast.email,
-      schoolCastWhatsAppEnabled: schoolCast.whatsApp,
-      schoolCastAutomationEnabled: schoolCast.automation,
-      schoolCastAnalyticsEnabled: schoolCast.analytics,
-      schoolCastDeliveryMode: schoolCast.deliveryMode,
-      schoolCastTeacherDirectPublish: schoolCast.teacherDirectPublish
-    } : null;
 
     const after = await tx.tenant.update({
       where: { id: input.tenantId },
@@ -597,36 +469,10 @@ export async function updateSchool(
       }
     }
     if (Object.values(gradebookSettingsData).some((value) => value !== undefined)) {
-      await tx.tenantSettings.upsert({
+      await ensureTenantSettingsRow(tx, { tenantId: input.tenantId });
+      await tx.tenantSettings.update({
         where: { tenantId: input.tenantId },
-        create: { tenantId: input.tenantId, ...gradebookSettingsData },
-        update: gradebookSettingsData,
-        select: { id: true }
-      });
-    }
-    if (schoolCastSettingsData) {
-      if (schoolCastSettingsData.schoolCastDeliveryMode === "LIVE") {
-        const requiredChannels = [
-          ...(schoolCastSettingsData.schoolCastEmailEnabled ? ["EMAIL" as const] : []),
-          ...(schoolCastSettingsData.schoolCastWhatsAppEnabled ? ["WHATSAPP" as const] : [])
-        ];
-        const readyProviders = requiredChannels.length === 0 ? 0 : await tx.schoolCastProviderConfiguration.count({
-          where: {
-            tenantId: input.tenantId,
-            mode: "LIVE",
-            status: "READY",
-            isDefault: true,
-            channel: { in: requiredChannels }
-          }
-        });
-        if (readyProviders < requiredChannels.length) {
-          throw new AppError("SCHOOLCAST_LIVE_PROVIDER_NOT_READY", "SCHOOLCAST_LIVE_PROVIDER_NOT_READY", 409);
-        }
-      }
-      await tx.tenantSettings.upsert({
-        where: { tenantId: input.tenantId },
-        create: { tenantId: input.tenantId, ...schoolCastSettingsData },
-        update: schoolCastSettingsData,
+        data: gradebookSettingsData,
         select: { id: true }
       });
     }
@@ -642,7 +488,6 @@ export async function updateSchool(
         status: before.status,
         supportEmail: before.supportEmail,
         gradebook: before.tenantSettings,
-        schoolCast: before.tenantSettings
       },
       after: {
         id: after.id,
@@ -651,7 +496,6 @@ export async function updateSchool(
         status: after.status,
         supportEmail: after.supportEmail,
         gradebook: { ...before.tenantSettings, ...gradebookSettingsData },
-        schoolCast: { ...before.tenantSettings, ...(schoolCastSettingsData ?? {}) }
       }
     }, tx);
     return after;

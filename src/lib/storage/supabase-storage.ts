@@ -15,7 +15,6 @@ let bucketReady: Promise<void> | null = null;
 let staffLeaveBucketReady: Promise<void> | null = null;
 let institutionLogosBucketReady: Promise<void> | null = null;
 let gradebookBucketReady: Promise<void> | null = null;
-let schoolCastBucketReady: Promise<void> | null = null;
 
 function getStorageClient() {
   storageClient ??= createClient(env.SUPABASE_URL!, env.SUPABASE_SERVICE_ROLE_KEY!, {
@@ -205,55 +204,4 @@ export async function ensureGradebookStorageBucket() {
   });
 
   return gradebookBucketReady;
-}
-const SCHOOLCAST_MIME_TYPES = [
-  "application/pdf",
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-] as const;
-
-export function getSchoolCastStorageClient() {
-  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new AppError("SCHOOLCAST_STORAGE_UNAVAILABLE", "SCHOOLCAST_STORAGE_UNAVAILABLE", 503);
-  }
-
-  return {
-    client: getStorageClient(),
-    bucket: env.SCHOOLCAST_STORAGE_BUCKET,
-    maxBytes: env.SCHOOLCAST_ATTACHMENT_MAX_BYTES,
-    signedUrlTtlSeconds: env.SCHOOLCAST_SIGNED_URL_TTL_SECONDS,
-    allowedMimeTypes: SCHOOLCAST_MIME_TYPES
-  };
-}
-
-export async function ensureSchoolCastStorageBucket() {
-  if (schoolCastBucketReady) return schoolCastBucketReady;
-
-  schoolCastBucketReady = (async () => {
-    const { client, bucket, maxBytes, allowedMimeTypes } = getSchoolCastStorageClient();
-    const { data, error } = await client.storage.getBucket(bucket);
-    if (!error && data) {
-      if (data.public) {
-        throw new AppError("SCHOOLCAST_STORAGE_BUCKET_MUST_BE_PRIVATE", "SCHOOLCAST_STORAGE_BUCKET_MUST_BE_PRIVATE", 503);
-      }
-      return;
-    }
-
-    const { error: createError } = await client.storage.createBucket(bucket, {
-      public: false,
-      fileSizeLimit: maxBytes,
-      allowedMimeTypes: [...allowedMimeTypes]
-    });
-    if (createError && !/already exists/i.test(createError.message)) {
-      throw new AppError("SCHOOLCAST_STORAGE_UNAVAILABLE", "SCHOOLCAST_STORAGE_UNAVAILABLE", 503);
-    }
-  })().catch((error) => {
-    schoolCastBucketReady = null;
-    throw error;
-  });
-
-  return schoolCastBucketReady;
 }

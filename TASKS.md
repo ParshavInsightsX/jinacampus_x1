@@ -745,7 +745,7 @@ Acceptance criteria:
 
 ## Phase 9 — Base Application Polish & Usability Hardening
 
-Strategic decision: before starting the next product MVP module such as FeeDesk, GradeBook, or SchoolCast, JinaCampus must complete this base polish phase.
+Strategic decision: before starting the next product MVP module such as FeeDesk or GradeBook, JinaCampus must complete this base polish phase.
 
 Reason: the current MVP foundation is technically strong, but the product experience must become smoother, easier to use, mobile-friendly, demo-ready, and production-ready before adding new business modules.
 
@@ -770,7 +770,7 @@ Global Phase 9 acceptance criteria:
 - Audit logging is not bypassed for critical mutations.
 - No token hash or raw QR token is exposed.
 - Existing tests and build pass.
-- No FeeDesk, GradeBook, SchoolCast, native mobile app, camera scanner, payroll, biometric attendance, exports, or charts are added unless explicitly requested.
+- No FeeDesk, GradeBook, native mobile app, camera scanner, payroll, biometric attendance, exports, or charts are added unless explicitly requested.
 
 ### 9.1 Core Edit Flows
 Goal: add practical edit/update UI flows for core records.
@@ -787,7 +787,7 @@ Scope:
 
 Out of scope:
 
-- FeeDesk, GradeBook, SchoolCast, payroll, leave management, native mobile app, and new backend modules.
+- FeeDesk, GradeBook, payroll, leave management, native mobile app, and new backend modules.
 - Any update path that weakens tenant isolation, RBAC, or audit behavior.
 
 Acceptance criteria:
@@ -1050,13 +1050,13 @@ Acceptance criteria:
 
 - Smoke checklist is completed and documented.
 - All checks pass or blockers are recorded with exact error text.
-- FeeDesk, GradeBook, and SchoolCast remain unstarted until this phase is complete.
+- FeeDesk and GradeBook remain unstarted until this phase is complete.
 
 Checks to run: Standard Phase 9 checks.
 
 ## Phase 10.7 — WhatsApp Attendance Notification Foundation
 
-Goal: add a lightweight SchoolCast Lite notification foundation for attendance-only WhatsApp notifications without starting the full SchoolCast module.
+Goal: add a lightweight, attendance-only WhatsApp notification foundation without introducing a general communication module.
 
 Scope:
 
@@ -1070,7 +1070,6 @@ Scope:
 
 Out of scope:
 
-- Full SchoolCast.
 - Marketing broadcasts.
 - Fee reminders.
 - Result announcements.
@@ -1094,7 +1093,7 @@ Acceptance criteria:
 - Admin/principal have notification governance permissions.
 - Teacher/staff do not gain notification governance permissions.
 - Payloads do not include password hashes, token hashes, QR tokens, tenant IDs, actor IDs, remarks, medical details, or provider secrets.
-- Full SchoolCast remains deferred.
+- General-purpose communication and broadcasting remain outside this foundation.
 
 Checks to run: `npx prisma format`, `npx prisma validate`, `npx prisma generate`, `npm run typecheck`, `npm test`, `npm run build`, `git diff --check`, and `npm pkg get scripts.lint`; run DB migration/seed smoke when PostgreSQL is reachable.
 
@@ -1368,6 +1367,37 @@ Acceptance criteria:
 - Result publication is an explicit audited attestation until the approved GradeBook module provides a machine-verifiable result state.
 - New admissions and imports remain separate from promotion.
 
+## Phase 10.16 - Provider-Independent In-App Notifications
+
+Goal: provide an authenticated, tenant-safe JinaCampus notification inbox without depending on SchoolCast or an external communication provider.
+
+Implementation:
+
+- [x] Add additive notification content, recipient, audience, template, preference, setting, and outbox models.
+- [x] Preserve and backfill existing Staff Leave in-app notification records.
+- [x] Add fail-safe core, scheduling, acknowledgement, realtime, and browser-push feature controls.
+- [x] Add self-service and governance permissions with Principal management and Teacher/Staff/Office Staff self-only defaults.
+- [x] Add bell polling, unread count, centre/history, search, filters, detail, read/unread, mark-all, archive, dismiss, and acknowledgement UX.
+- [x] Add user preference and permission-gated institution policy/template/report management.
+- [x] Add strict Zod inputs, same-origin mutations, safe internal links, sanitized content/errors, and server-derived scope.
+- [x] Add idempotent outbox processing, bounded recipient fan-out, retries, terminal failures, expiry reconciliation, and audit events.
+- [x] Integrate Staff Leave lifecycle events through the shared transactional outbox.
+- [x] Add focused validation, RBAC, lifecycle, migration, polling, and integration tests.
+- [x] Document active capabilities, security controls, operations, and deferred external delivery.
+- [ ] Apply 20260818210000_add_in_app_notification_core to an approved non-production database.
+- [ ] Run authenticated Principal/Teacher/Staff/Office Staff and cross-scope browser QA.
+- [ ] Complete the separately approved production migration and deployment process.
+
+Acceptance criteria:
+
+- Client input cannot select tenant, branch, academic year, actor, role, publication status, or delivery status.
+- Users can read or mutate only their own recipient state.
+- Broad publication requires server-side governance permission, role scope, and all relevant branch access.
+- Required-acknowledgement notifications cannot be archived or dismissed before acknowledgement.
+- Duplicate producer events do not create duplicate notifications or recipient records.
+- External communication providers remain independent and are never reported as active by this module.
+- Feature disablement fails closed without deleting historical notification records.
+
 ## Phase 11 - GradeBook MVP
 
 Goal: introduce a tenant-safe assessment and marks ledger without duplicating Academia data or disrupting existing school workflows.
@@ -1423,16 +1453,10 @@ Goal: introduce a tenant-safe assessment and marks ledger without duplicating Ac
 
 - Parent/student account portals and `/portal/results` until account roles and portal policy are approved.
 - Transcripts, hall tickets, and board-specific statutory report-card layouts.
-- GradeBook notification delivery through SchoolCast.
+- GradeBook notification delivery through an external communication module.
 - Subject teacher workload/timetable automation outside examination assignment.
 - GradeBook-driven promotion eligibility and automatic lifecycle mutation.
 - Broad production rollout before staging migration, role-matrix QA, storage QA, load testing, and pilot stabilization.
-
-### 11.5 SchoolCast Gate
-
-- [x] Record the explicit product-owner decision to begin Full SchoolCast as a separately gated module while GradeBook remains disabled in production.
-- [x] Define SchoolCast ownership boundaries, consent/delivery policy, feature flags, migration, and rollout gates.
-- [ ] Keep GradeBook and SchoolCast production enablement independent; neither module may bypass its remaining release gates.
 
 Acceptance criteria:
 
@@ -1442,64 +1466,6 @@ Acceptance criteria:
 - Teachers never gain broad class access through navigation alone.
 - Published result history remains traceable and cannot be silently overwritten.
 - Rollback disables the flag and reverts application code while retaining additive GradeBook tables until a separately approved data-retention decision.
-
-## Phase 12 - Full SchoolCast MVP
-
-Goal: add governed, tenant-safe institutional communication through in-application notifications, email, and WhatsApp without changing source-module ownership.
-
-### 12.1 Local Application Foundation
-
-- [x] Add an additive SchoolCast schema, delivery enums, indexes, uniqueness constraints, tenant/branch/year scope, and default-off feature flags.
-- [x] Generalize the existing notification outbox and in-app notification foundation without destructive replacement.
-- [x] Add SchoolCast permissions and least-privilege Principal, Teacher, Office Staff, and Staff defaults.
-- [x] Add communication versions, audience rules, approval records, recipient snapshots, channel eligibility, templates, providers, consent, attachments, delivery events, acknowledgements, and domain-event intake records.
-- [x] Add notices, broadcasts, approvals, delivery, templates, settings, analytics, calendar projection, notifications inbox, and responsive navigation routes.
-- [x] Add Everyday Homework and Classwork creation, assigned-class/subject enforcement, approval/direct-publish policy, attachments, cancellation, resend, and delivery history.
-- [x] Add private Supabase Storage integration with file signature/size validation, private-bucket assertion, scan status, tenant-safe paths, and short-lived signed downloads.
-- [x] Add DRY_RUN, Resend email, and Meta Cloud WhatsApp adapters using server-only environment references.
-- [x] Add leased/idempotent outbox processing, scheduled publication recovery, bounded retry, signed WhatsApp webhook mapping, and safe provider errors.
-- [x] Add Administrator Portal pilot controls and block LIVE mode until required provider configurations are ready.
-- [x] Add focused feature-gate, schema, RBAC, content-safety, attachment, migration, worker, webhook, and secret-output tests.
-- [x] Document architecture, routes, security, environment, rollback, and release gates in `docs/schoolcast-mvp.md`.
-
-### 12.2 Controlled Release Gates
-
-- [x] Review and approve the additive migration against an exact production-schema staging baseline; take backup and rehearse recovery first.
-- [x] Configure a private `schoolcast-private` staging bucket reproducibly and certify malware scanning, retention, deletion, and signed-download expiry.
-- [x] Enable only the approved synthetic staging tenant in IN_APP/DRY_RUN mode; keep every production tenant disabled.
-- [x] Run Principal, Teacher, Office Staff, Staff, forbidden-role, cross-tenant, cross-branch, cross-year, and unassigned-teacher browser/API QA.
-- [x] Run author/review/approve/schedule/publish/cancel, inbox/read/acknowledge, Homework/Classwork, attachment, and delivery-operation QA.
-- [x] Certify bounded synthetic IN_APP/DRY_RUN delivery concurrency, retries, stale-lease recovery, idempotent replay, feature-disable behavior, and tenant-safe claims in staging.
-- [x] Certify staging scanner unavailable/quarantine/retry/recovery behavior and private-storage cleanup.
-- [x] Add the dedicated durable SchoolCast worker entrypoint, bounded concurrency, scanner health, queue health, terminal failure ledgers, and permission-scoped audited requeue controls.
-- [x] Implement duplicate-safe transactional producers for student/staff attendance, staff leave, calendar, and GradeBook publication; explicitly exclude unavailable FeeDesk.
-- [x] Run DB-backed end-to-end cutover certification for every implemented source producer with automation enabled only for the synthetic staging pilot.
-- [x] Add and validate a disabled-by-default, zero-license-cost two-worker Compose baseline with private health/Prometheus metrics, alert rules, Grafana OSS provisioning, bounded logs, target guards, and non-delivering default alert routing.
-- [x] Add a staging-only one-replica-per-host profile with strict host inventory, private monitoring target rendering, unique external heartbeats, per-host preflight, dual Alertmanager clustering, private scanner replicas, and fail-closed rehearsal evidence validation.
-- [ ] Provision that topology on two independent hosts and certify approved peak volume, queue depth, secure log retention, two alert destinations, dead-letter operations, provider rate limits, host loss, alert loss, and failure recovery.
-- [ ] Provision and certify an approved hosted production malware scanner with private access, monitoring, alerting, quarantine operations, and incident procedures.
-- [ ] Complete source-event contract and failure-isolation QA separately for attendance, GradeBook, staff leave, calendar, and FeeDesk when the source module is available.
-- [ ] Complete approved sender, template, consent, webhook, billing, rate-limit, legal/privacy, and real-recipient pilot gates before enabling live email or WhatsApp.
-- [ ] Record production backup/PITR and restore-rehearsal evidence, then approve the migration and non-destructive rollback procedure.
-  - [x] Pass a guarded synthetic-staging logical-backup and isolated-restore mechanics rehearsal with measured, secret-free evidence.
-  - [ ] Approve and certify continuous production recovery, independent database and Storage copies, and production-representative RPO/RTO evidence.
-- [x] Add a strict, secret-free production evidence dossier validator for provider, consent, billing, webhook, pilot, recovery, and named approval gates; it never authorizes production actions automatically.
-- [ ] Run full regression, build, migration, security-output, and production rollback/feature-disable checks before any deployment.
-- [ ] Obtain institutional operational sign-off and expand only through tenant-level flags.
-
-### 12.3 Release Boundary
-
-- External providers remain DRY_RUN/TEST until separately approved.
-- Unsupported source automations do not fabricate or mutate source records.
-- Malware scanning must mark an attachment safe before publication.
-- Platform Administrators manage rollout/provider readiness only; tenant communication access remains permission scoped.
-- Rollback disables SchoolCast/channel/automation flags and stops new claims while retaining immutable history for reconciliation.
-- [x] Add server-controlled `DISABLED`, `IN_APP_CORE`, and `FULL` deployment scopes; production defaults to `DISABLED`.
-- [x] Fail closed and hide premium/incomplete capabilities in the candidate `IN_APP_CORE` scope.
-- [x] Record every excluded capability in the product and technical deferred backlog.
-- [x] Explicitly configure Vercel Production fail-closed controls: `SCHOOLCAST_RELEASE_SCOPE=DISABLED` and `SCHOOLCAST_WORKER_ENABLED=false`.
-- [ ] Verify production backup/PITR or an approved equivalent restore architecture before any SchoolCast production migration.
-- [ ] Obtain separate approvals for production migration, code deployment, `IN_APP_CORE` scope activation, and pilot-tenant enablement.
 
 ## Final Delivery Checklist
 

@@ -14,9 +14,16 @@ type AppChromeProps = {
   branding: AppShellBranding;
   navigationGroups: readonly NavGroup[];
   mobileBottomItems: readonly MobileBottomNavItem[];
+  notificationsEnabled: boolean;
 };
 
-export function AppChrome({ context, branding, navigationGroups, mobileBottomItems }: AppChromeProps) {
+export function AppChrome({
+  context,
+  branding,
+  navigationGroups,
+  mobileBottomItems,
+  notificationsEnabled
+}: AppChromeProps) {
   const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
 
   return (
@@ -27,6 +34,7 @@ export function AppChrome({ context, branding, navigationGroups, mobileBottomIte
         navigationGroups={navigationGroups}
         mobileNavigationOpen={mobileNavigationOpen}
         onMobileNavigationOpenChange={setMobileNavigationOpen}
+        notificationsEnabled={notificationsEnabled}
       />
       <DesktopNavigationDock groups={navigationGroups} />
       <MobileBottomNav

@@ -16,7 +16,7 @@ Build the initial production-ready foundation for:
 2. Academia
 3. StaffBoard Lite
 
-The goal is to deliver a strong modular monolith foundation that can later support GradeBook, FeeDesk, SchoolCast, InsightBoard, CampusFleet, BookNest, AssetRoom, full StaffBoard HR, and mobile apps.
+The goal is to deliver a strong modular monolith foundation that can later support GradeBook, FeeDesk, InsightBoard, CampusFleet, BookNest, AssetRoom, full StaffBoard HR, and mobile apps.
 
 ## 3. Non-Goals for First Development
 Do not build the following in this phase:
@@ -24,7 +24,7 @@ Do not build the following in this phase:
 - Fee collection
 - Receipts
 - Advanced exam scheduling, report-card generation, transcripts, and grading-scale automation beyond the approved GradeBook MVP
-- Full SchoolCast communication module, except the approved disabled-by-default attendance notification foundation
+- General-purpose communication and broadcasting modules beyond the approved disabled-by-default attendance notification foundation
 - Advanced dashboards
 - Payroll
 - Payroll-linked leave settlement (staff leave applications and basic balances are approved separately)
@@ -35,7 +35,7 @@ Do not build the following in this phase:
 - Native mobile apps
 
 ## 3.1 Strategic Decision — Base Application Polish Before New Modules
-Before starting the next product MVP module such as FeeDesk, GradeBook, or SchoolCast, JinaCampus will complete a Base Application Polish & Usability Hardening phase.
+Before starting the next product MVP module such as FeeDesk or GradeBook, JinaCampus will complete a Base Application Polish & Usability Hardening phase.
 
 Reason: the current MVP foundation is technically strong, but a school SaaS must feel smooth, reliable, mobile-friendly, and demo-ready before expanding into additional business modules.
 
@@ -55,13 +55,12 @@ Reason: the current MVP foundation is technically strong, but a school SaaS must
 
 - FeeDesk
 - GradeBook
-- SchoolCast
 - Native mobile app
 - Payroll
 - Biometric attendance
 - Exports/charts unless explicitly requested
 
-Phase 9 and the approved Base MVP stabilization gates are complete enough for the explicitly approved GradeBook MVP described in section 6.4. FeeDesk remains a separate future module. Full SchoolCast is approved as a separately feature-gated module in section 6.5 and must remain disabled until its release gates pass.
+Phase 9 and the approved Base MVP stabilization gates are complete enough for the explicitly approved GradeBook MVP described in section 6.4. FeeDesk and any future communication module remain separate roadmap work.
 
 ### Phase 9 User Experience Goals
 
@@ -392,48 +391,6 @@ GradeBook owns versioned assessment configuration, examinations, scoped marks en
 - Migration, authenticated role-matrix QA, regression checks, and pilot stabilization pass before broad enablement.
 - Parent/student portals, transcripts, hall tickets, board-specific statutory layouts, GradeBook notifications, and automated promotion eligibility remain deferred.
 
-## 6.5 Full SchoolCast MVP
-
-SchoolCast owns governed institutional communication through in-application notifications, email, and WhatsApp. It provides notices, circulars, broadcasts, approvals, scheduling, recipient snapshots, consent and preferences, delivery tracking, acknowledgements, private attachments, and the dedicated Everyday Homework and Classwork workflow.
-
-### Required Features
-
-1. Platform-controlled, tenant-specific feature enablement with every flag disabled by default.
-2. In-application inbox, read state, acknowledgement, and safe deep links.
-3. Versioned notices, circulars, broadcasts, and emergency communications.
-4. Server-resolved audiences with immutable recipient and channel-eligibility snapshots.
-5. Approval, rejection, return, scheduling, publication, cancellation, and audit history.
-6. Everyday Homework and Classwork for exact assigned class-section and subject scope.
-7. Recipient preferences and purpose/channel consent without public account enumeration.
-8. Private attachments with signature validation, malware-scan gating, tenant-safe object paths, and short-lived signed access.
-9. Email and WhatsApp provider abstractions using server-only secret references and approved provider templates.
-10. DRY_RUN-first delivery, deterministic idempotency, leased workers, bounded retries, and duplicate-safe webhook reconciliation.
-11. Delivery, failure, read, acknowledgement, provider health, and analytics views using masked operational metadata.
-12. Domain-event integration contracts for attendance, GradeBook, FeeDesk, leave, and calendar sources without provider calls inside source transactions.
-
-### Integration Boundaries
-
-- CampusCore owns tenants, institutions, branches, academic years, users, roles, settings, time zones, branding, and audit infrastructure.
-- Academia owns classes, sections, subjects, teacher assignments, students, guardians, enrollments, and contact-source records.
-- Attendance, GradeBook, FeeDesk, staff leave, and institutional calendar records remain owned by their source modules.
-- SchoolCast stores immutable communication, audience, eligibility, attachment, outbox, delivery, consent, and acknowledgement evidence. It does not mutate marks, fees, attendance, leave, identities, or enrollments.
-- Source modules commit their business record and domain outbox event first. SchoolCast consumes approved contracts asynchronously and never calls an external provider from a source-module transaction.
-- Platform Administrators control pilot flags and provider readiness but do not receive routine tenant communication access.
-
-### SchoolCast Acceptance Criteria
-
-- SchoolCast routes and navigation remain unavailable while `TenantSettings.schoolCastEnabled` is false.
-- School users cannot enable SchoolCast, expose provider secrets, or switch a provider to live mode.
-- Every query, mutation, file operation, worker claim, webhook mapping, and audit record is tenant-scoped; branch and academic-year scope are enforced when applicable.
-- Teachers can create Homework/Classwork only for active assigned class-section and subject scope.
-- Communication content, audience rules, channel plans, recipient eligibility, and delivery payloads are versioned or snapshotted before publication.
-- Consent withdrawal, channel preferences, unavailable contacts, disabled channels, and provider readiness produce explicit exclusions rather than unsafe fallback delivery.
-- In-application delivery is created transactionally; external delivery is queued and processed asynchronously.
-- Attachment publication is blocked until every current attachment is marked safe by the approved scanner.
-- Email and WhatsApp remain DRY_RUN or TEST until provider credentials, sender identity, templates, consent, legal review, billing, webhooks, and pilot QA are approved.
-- Retry and webhook handling are idempotent and do not expose raw contacts, provider secrets, payload tokens, or internal errors.
-- Additive migration, private-storage setup, authenticated role/scope QA, worker/load certification, provider contract tests, and rollback rehearsal pass before production enablement.
-
 ## 7. Data Model Requirements
 
 Required Prisma models:
@@ -487,21 +444,6 @@ Required Prisma models:
 - `GradebookResultPublication` and `GradebookStudentResultPublication`
 - `GradebookJob` and `GradebookDomainEventOutbox`
 
-### SchoolCast
-
-- `SchoolCastCommunication` and `SchoolCastCommunicationVersion`
-- `SchoolCastAudienceRule`, `SchoolCastRecipientSnapshot`, and `SchoolCastRecipientChannelEligibility`
-- `SchoolCastChannelPlan`
-- `SchoolCastApproval` and `SchoolCastApprovalAction`
-- `SchoolCastTemplateVersion`
-- `SchoolCastProviderConfiguration`
-- `SchoolCastConsentRecord` and generalized `CommunicationPreference`
-- `SchoolCastAttachment`
-- `SchoolCastHomeworkItem` and `SchoolCastHomeworkVersion`
-- `SchoolCastAcknowledgement` and generalized `InAppNotification`
-- generalized `NotificationOutbox`
-- `SchoolCastDeliveryAttempt` and `SchoolCastDeliveryEvent`
-- `SchoolCastDomainEvent`
 ### StaffBoard Lite
 
 - `StaffProfile`
@@ -524,7 +466,7 @@ Required Prisma models:
 - `NotificationDeliveryLog`
 - `WhatsAppIntegrationSetting`
 
-The original attendance notification foundation remains backward compatible and is generalized by the separately feature-gated Full SchoolCast module.
+The attendance notification foundation remains an independent, backward-compatible capability limited to approved attendance messages.
 
 ## 8. Permission Requirements
 
@@ -569,17 +511,6 @@ The original attendance notification foundation remains backward compatible and 
 - `gradebook.publish`
 - `gradebook.report`
 
-### SchoolCast Permissions
-
-- `schoolcast.dashboard.view`
-- `schoolcast.communication.*` for create/edit/submit/review/approve/publish/schedule/cancel/history actions
-- `schoolcast.audience.*` for preview and server-resolved targeting
-- `schoolcast.homework.*` for assigned Homework/Classwork workflows
-- `schoolcast.inbox.*`, `schoolcast.preference.*`, and `schoolcast.consent.*` for recipient access
-- `schoolcast.attachment.*` for private media and documents
-- `schoolcast.template.*`, `schoolcast.provider.*`, and `schoolcast.settings.*` for governed configuration
-- `schoolcast.outbox.*` and `schoolcast.delivery.*` for authorised operations
-- `schoolcast.automation.*`, `schoolcast.analytics.*`, and `schoolcast.audit.*` for controlled integrations and reporting
 ### StaffBoard Lite Permissions
 
 - `staffboard.staff.view`
@@ -634,20 +565,6 @@ The original attendance notification foundation remains backward compatible and 
 - `/academia/attendance`
 - `/academia/attendance/reports`
 
-### SchoolCast Routes
-
-- `/schoolcast`
-- `/schoolcast/communications`
-- `/schoolcast/notices`
-- `/schoolcast/broadcasts`
-- `/schoolcast/approvals`
-- `/schoolcast/homework`
-- `/schoolcast/delivery`
-- `/schoolcast/templates`
-- `/schoolcast/calendar`
-- `/schoolcast/analytics`
-- `/schoolcast/settings`
-- `/notifications`
 ### StaffBoard Lite Routes
 
 - `/staffboard/staff`
@@ -757,3 +674,10 @@ A feature is done only when:
 6. Tests are added or clearly proposed.
 7. Lint/typecheck/build are run if available.
 8. Known limitations are documented.
+## 14. Provider-Independent In-App Notifications
+
+JinaCampus includes an authenticated notification inbox backed by PostgreSQL. It provides user-specific unread state, history, filters, acknowledgement, preferences, versioned templates, institution policy, scheduling, expiry, idempotent outbox processing, and audit evidence.
+
+The notification core is independent from SchoolCast and from external WhatsApp, email, SMS, browser-push, or native-push providers. The browser never supplies tenant or actor authority. Recipient resolution, role scope, branch scope, feature controls, and lifecycle mutations are enforced server-side. Polling is the release baseline; realtime and push remain disabled until separately approved.
+
+See docs/in-app-notification-system.md for the implemented contract and release gates.

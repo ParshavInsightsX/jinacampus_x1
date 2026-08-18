@@ -38,6 +38,7 @@
   ],
   "exclude": [
     "node_modules",
-    "apps/mobile"
+    "apps/mobile",
+    "temp_meta_data"
   ]
 }

@@ -178,6 +178,6 @@ describe("dashboard UI", () => {
     ].map(readProjectFile).join("\n");
 
     expect(combinedSource).not.toMatch(/tokenHash|rawToken/i);
-    expect(combinedSource).not.toMatch(/FeeDesk|GradeBook|SchoolCast|payroll|biometric/i);
+    expect(combinedSource).not.toMatch(/FeeDesk|GradeBook|payroll|biometric/i);
   });
 });

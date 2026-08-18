@@ -93,7 +93,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         <div>
           <h2 className="text-lg font-semibold text-slate-950">WhatsApp notification status</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Attendance notifications are limited to the approved SchoolCast Lite foundation.
+            Attendance notifications use the approved tenant-scoped notification foundation.
           </p>
         </div>
         <div className="grid gap-3 md:grid-cols-3">

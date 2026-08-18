@@ -9,6 +9,7 @@ import { useAutoHideNavbar } from "@/hooks/use-auto-hide-navbar";
 import { BrandLogo } from "@/components/brand/brand-logo";
 import { InstitutionLogo } from "@/components/brand/institution-logo";
 import { PwaInstallProvider } from "@/components/pwa/pwa-install-control";
+import { NotificationBell } from "./notification-bell";
 
 import type { AppShellBranding } from "./branding";
 import { InstitutionBrand } from "./institution-brand";
@@ -27,6 +28,7 @@ type AppNavbarProps = {
   navigationGroups: readonly NavGroup[];
   mobileNavigationOpen: boolean;
   onMobileNavigationOpenChange: (isOpen: boolean) => void;
+  notificationsEnabled: boolean;
   forceVisible?: boolean;
 };
 
@@ -40,18 +42,20 @@ export function AppNavbar({
   navigationGroups,
   mobileNavigationOpen,
   onMobileNavigationOpenChange,
+  notificationsEnabled,
   forceVisible = false
 }: AppNavbarProps) {
   const pathname = usePathname();
   const mobileTriggerRef = useRef<HTMLButtonElement>(null);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [contextMenuOpen, setContextMenuOpen] = useState(false);
+  const [notificationMenuOpen, setNotificationMenuOpen] = useState(false);
   const [focusWithin, setFocusWithin] = useState(false);
   const [pointerWithin, setPointerWithin] = useState(false);
   const routeContext = getNavbarRouteContext(pathname);
   const autoHideEnabled = isNavbarAutoHideEnabled(pathname);
   const visibilityLocked =
-    forceVisible || mobileNavigationOpen || accountMenuOpen || contextMenuOpen || focusWithin || pointerWithin;
+    forceVisible || mobileNavigationOpen || accountMenuOpen || contextMenuOpen || notificationMenuOpen || focusWithin || pointerWithin;
   const { isVisible, isNearTop, scrollDirection, reveal } = useAutoHideNavbar({
     enabled: autoHideEnabled,
     locked: visibilityLocked
@@ -95,6 +99,7 @@ export function AppNavbar({
             aria-label="Workspace and account controls"
             data-desktop-command-cluster="true"
           >
+            {notificationsEnabled ? <NotificationBell onOpenChange={setNotificationMenuOpen} /> : null}
             <NavbarContextMenu context={context} branding={branding} onOpenChange={setContextMenuOpen} />
             <NavbarUserMenu context={context} branding={branding} onOpenChange={setAccountMenuOpen} />
           </div>
@@ -117,6 +122,7 @@ export function AppNavbar({
             </p>
             <NavbarPageContext routeContext={routeContext} variant="mobile" />
           </div>
+          {notificationsEnabled ? <NotificationBell compact onOpenChange={setNotificationMenuOpen} /> : null}
           <NavbarUserMenu compact context={context} branding={branding} onOpenChange={setAccountMenuOpen} />
         </div>
       </header>

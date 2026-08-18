@@ -77,7 +77,7 @@ export async function getMyStaffLeaveWorkspace(ctx: TenantContext, input: unknow
   const params = listStaffLeaveApplicationsSchema.parse(input);
   const staff = await selfStaff(ctx);
   const year = params.year ?? new Date().getUTCFullYear();
-  const [applications, leaveTypes, balances, notifications] = await Promise.all([
+  const [applications, leaveTypes, balances] = await Promise.all([
     db.staffLeaveApplication.findMany({
       where: {
         tenantId: ctx.tenantId,
@@ -108,12 +108,6 @@ export async function getMyStaffLeaveWorkspace(ctx: TenantContext, input: unknow
     db.staffLeaveBalance.findMany({
       where: { tenantId: ctx.tenantId, branchId: staff.branchId, staffId: staff.id, year },
       select: { leaveTypeId: true, allocatedDays: true, adjustedDays: true, usedDays: true }
-    }),
-    db.inAppNotification.findMany({
-      where: { tenantId: ctx.tenantId, userId: ctx.userId, type: { startsWith: "STAFF_LEAVE_" } },
-      select: { id: true, title: true, message: true, actionUrl: true, readAt: true, createdAt: true },
-      orderBy: { createdAt: "desc" },
-      take: 8
     })
   ]);
 
@@ -123,7 +117,6 @@ export async function getMyStaffLeaveWorkspace(ctx: TenantContext, input: unknow
     year,
     applications,
     leaveTypes,
-    notifications,
     balances: leaveTypes.map((leaveType) => {
       const balance = balanceByType.get(leaveType.id);
       const allocated = balance?.allocatedDays ?? leaveType.annualLimit;

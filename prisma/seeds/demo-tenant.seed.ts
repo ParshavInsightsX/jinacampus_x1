@@ -66,6 +66,11 @@ function guardianEmail(admissionNumber: string) {
   return `guardian-${admissionNumber.toLowerCase()}@demo.jinacampus.test`;
 }
 
+function demoPrincipalId(user: (typeof DEMO_USERS)[number]) {
+  if (!user.roleCodes.some((roleCode) => roleCode === "PRINCIPAL")) return undefined;
+  return user.key === "admin" ? "DEMO-PRINCIPAL-ADMIN" : "DEMO-PRINCIPAL-001";
+}
+
 async function upsertDemoUsers(db: PrismaClient, tenantId: string, branchId: string) {
   const users = new Map<DemoUserKey, { id: string }>();
   const roles = await db.role.findMany({
@@ -81,10 +86,16 @@ async function upsertDemoUsers(db: PrismaClient, tenantId: string, branchId: str
       select: { id: true }
     });
     if (!existingConfiguredAdmin) {
-      const legacyAdmin = await db.user.findUnique({
-        where: { tenantId_email: { tenantId, email: "admin@demo.jinacampus.test" } },
-        select: { id: true }
+      const seededAdminProfile = await db.staffProfile.findUnique({
+        where: { tenantId_employeeCode: { tenantId, employeeCode: "JD-ADM-001" } },
+        select: { userId: true }
       });
+      const legacyAdmin = seededAdminProfile?.userId
+        ? { id: seededAdminProfile.userId }
+        : await db.user.findUnique({
+            where: { tenantId_email: { tenantId, email: "admin@demo.jinacampus.test" } },
+            select: { id: true }
+          });
       if (legacyAdmin) {
         await db.user.update({
           where: { id: legacyAdmin.id },
@@ -122,7 +133,7 @@ async function upsertDemoUsers(db: PrismaClient, tenantId: string, branchId: str
       where: { tenantId_email: { tenantId, email: demoUser.email } },
       create: {
         tenantId,
-        principalId: demoUser.roleCodes.some((roleCode) => roleCode === "PRINCIPAL") ? "PRINCIPAL-001" : undefined,
+        principalId: demoPrincipalId(demoUser),
         email: demoUser.email,
         phone: assignablePhone ?? undefined,
         firstName: demoUser.firstName,
@@ -133,7 +144,7 @@ async function upsertDemoUsers(db: PrismaClient, tenantId: string, branchId: str
         activatedAt: new Date()
       },
       update: {
-        ...(demoUser.roleCodes.some((roleCode) => roleCode === "PRINCIPAL") ? { principalId: "PRINCIPAL-001" } : {}),
+        ...(demoPrincipalId(demoUser) ? { principalId: demoPrincipalId(demoUser) } : {}),
         firstName: demoUser.firstName,
         lastName: demoUser.lastName,
         displayName: demoUser.displayName,

@@ -3,10 +3,6 @@ import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { NOTIFICATION_AUDIT_EVENTS } from "@/modules/notifications/audit-events";
 import {
-  findSchoolCastDeliveryAttempt,
-  recordSchoolCastDeliveryStatus
-} from "@/modules/schoolcast/services/delivery-webhook.service";
-import {
   whatsAppWebhookClientPayloadSchema,
   whatsAppWebhookStatusSchema
 } from "@/modules/notifications/schemas";
@@ -30,13 +26,11 @@ type WebhookDeps = {
     tenantId: string;
     outboxId: string;
     provider: "META_CLOUD" | "BSP" | "DRY_RUN";
-    schoolCastAttemptId?: string | null;
   } | null>;
   recordStatus(input: WhatsAppWebhookStatusUpdate & {
     tenantId: string;
     outboxId: string;
     provider: "META_CLOUD" | "BSP" | "DRY_RUN";
-    schoolCastAttemptId?: string | null;
   }): Promise<void>;
 };
 
@@ -63,28 +57,9 @@ const defaultDeps: WebhookDeps = {
       },
       orderBy: { createdAt: "desc" }
     });
-    if (legacy) return legacy;
-    const schoolCast = await findSchoolCastDeliveryAttempt(input.providerMessageId);
-    return schoolCast ? {
-      tenantId: schoolCast.tenantId,
-      outboxId: schoolCast.outboxId,
-      provider: "META_CLOUD" as const,
-      schoolCastAttemptId: schoolCast.id
-    } : null;
+    return legacy;
   },
   async recordStatus(input) {
-    if (input.schoolCastAttemptId) {
-      await recordSchoolCastDeliveryStatus({
-        attemptId: input.schoolCastAttemptId,
-        tenantId: input.tenantId,
-        outboxId: input.outboxId,
-        providerMessageId: input.providerMessageId,
-        status: input.status,
-        errorCode: input.errorCode,
-        errorMessage: input.errorMessage
-      });
-      return;
-    }
     await db.$transaction(async (tx) => {
       await tx.notificationDeliveryLog.create({
         data: {
@@ -192,7 +167,6 @@ export async function handleWhatsAppWebhookStatus(
     tenantId: target.tenantId,
     outboxId: target.outboxId,
     provider: target.provider,
-    schoolCastAttemptId: target.schoolCastAttemptId,
     providerMessageId: data.providerMessageId,
     status: data.status,
     rawStatusJson: data.rawStatusJson,

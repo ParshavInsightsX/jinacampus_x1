@@ -135,7 +135,6 @@ function resetMocks() {
   mocks.writeAuditLog.mockReset();
   mocks.writeAuditLog.mockResolvedValue({ id: "audit-id" });
   mocks.tx.academicCalendarEntry.findFirst.mockResolvedValue(null);
-  mocks.tx.tenantSettings.findUnique.mockResolvedValue({ schoolCastEnabled: false, schoolCastAutomationEnabled: false });
   mocks.tx.staffAttendanceQrToken.findMany.mockResolvedValue([]);
   mocks.tx.branch.findFirst.mockResolvedValue({ id: branchId });
   mocks.tx.attendanceSetting.findFirst.mockResolvedValue({

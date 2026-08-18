@@ -1,4 +1,12 @@
-import { Prisma, type StaffLeaveApplicationStatus, type StaffType } from "@prisma/client";
+import {
+  InAppNotificationAudienceType,
+  InAppNotificationCategory,
+  InAppNotificationPriority,
+  InAppNotificationSourceModule,
+  Prisma,
+  type StaffLeaveApplicationStatus,
+  type StaffType
+} from "@prisma/client";
 import { writeAuditLog } from "@/lib/audit/audit-log";
 import { db } from "@/lib/db";
 import { AppError, forbidden, getSafeErrorCode, notFound } from "@/lib/errors";
@@ -7,6 +15,10 @@ import { hasPrincipalRole } from "@/lib/rbac/roles";
 import type { TenantContext } from "@/lib/tenant/context";
 import { listCalendarDateKeysForRange } from "@/modules/campus-core/calendar/calendar-policy";
 import { staffCalendarAudience } from "@/modules/campus-core/calendar/calendar-utils";
+import {
+  processInAppNotificationOutbox,
+  queueInAppNotificationEvent
+} from "@/modules/notifications/services/in-app-notification.service";
 import { queueNotificationOutboxItem } from "@/modules/notifications/services/notification-outbox.service";
 import {
   buildStaffLeaveStatusTemplatePayload,
@@ -31,7 +43,6 @@ import {
   formatLeaveDate,
   todayForTimeZone
 } from "@/modules/staffboard-lite/utils/staff-leave-calculator";
-import { enqueueStaffLeaveSchoolCastEvent } from "./staff-leave-schoolcast-event";
 import { requireBranchPermission, validationError } from "./shared";
 
 type DbClient = typeof db | Prisma.TransactionClient;
@@ -220,31 +231,38 @@ async function approverUserIds(client: DbClient, tenantId: string, branchId: str
   return [...userIds];
 }
 
-async function createInAppNotifications(
+async function queueLeaveInAppNotifications(
   client: Prisma.TransactionClient,
+  ctx: TenantContext,
   input: {
-    tenantId: string;
     branchId: string;
     userIds: readonly string[];
     type: string;
     title: string;
     message: string;
     applicationId: string;
+    actionId: string;
   }
 ) {
   const userIds = [...new Set(input.userIds.filter(Boolean))];
   if (!userIds.length) return;
-  await client.inAppNotification.createMany({
-    data: userIds.map((userId) => ({
-      tenantId: input.tenantId,
-      branchId: input.branchId,
-      userId,
-      type: input.type,
-      title: input.title,
-      message: input.message,
-      actionUrl: `/staffboard/leave/${input.applicationId}`
-    }))
-  });
+
+  const scopedContext: TenantContext = { ...ctx, activeBranchId: input.branchId };
+  await queueInAppNotificationEvent(scopedContext, {
+    eventId: input.actionId,
+    eventType: input.type.toLowerCase(),
+    sourceModule: InAppNotificationSourceModule.STAFFBOARD,
+    sourceEntityType: "StaffLeaveApplication",
+    sourceEntityId: input.applicationId,
+    category: InAppNotificationCategory.LEAVE,
+    priority: InAppNotificationPriority.NORMAL,
+    title: input.title,
+    bodyPreview: input.message,
+    audience: { type: InAppNotificationAudienceType.USERS, userIds },
+    deepLink: `/staffboard/leave/${input.applicationId}`,
+    safeMetadata: { applicationId: input.applicationId, actionId: input.actionId },
+    idempotencyKey: `staff-leave:${input.actionId}:in-app`
+  }, client);
 }
 
 async function queueLeaveWhatsAppUpdate(ctx: TenantContext, applicationId: string, actionId: string) {
@@ -322,25 +340,6 @@ function applicationSnapshot<T extends ApplicationSnapshot>(application: T) {
   };
 }
 
-async function enqueueLeaveSchoolCastEvent(
-  tx: Prisma.TransactionClient,
-  ctx: TenantContext,
-  application: ApplicationSnapshot,
-  actionId: string,
-  action: string
-) {
-  return enqueueStaffLeaveSchoolCastEvent(tx, {
-    tenantId: ctx.tenantId,
-    branchId: application.branchId,
-    applicationId: application.id,
-    actionId,
-    action,
-    staffId: application.staffId,
-    status: application.status,
-    startDate: application.startDate,
-    endDate: application.endDate
-  });
-}
 export async function submitStaffLeaveApplication(ctx: TenantContext, input: unknown) {
   const data = createStaffLeaveApplicationSchema.parse(input);
   const staff = await requireSelfStaffProfile(ctx, "staffboard.leave.self_apply");
@@ -378,13 +377,13 @@ export async function submitStaffLeaveApplication(ctx: TenantContext, input: unk
       }
     });
     const approvers = await approverUserIds(tx, ctx.tenantId, staff.branchId, validated.setting.approvalMode);
-    await createInAppNotifications(tx, {
-      tenantId: ctx.tenantId,
+    await queueLeaveInAppNotifications(tx, ctx, {
       branchId: staff.branchId,
       userIds: [ctx.userId, ...approvers],
       type: "STAFF_LEAVE_SUBMITTED",
       title: "Leave application submitted",
       message: `${staffName(application.staff)} submitted ${validated.totalDays} day(s) of ${validated.leaveType.name}.`,
+      actionId: action.id,
       applicationId: application.id
     });
     await writeAuditLog({
@@ -395,11 +394,15 @@ export async function submitStaffLeaveApplication(ctx: TenantContext, input: unk
       branchId: staff.branchId,
       after: applicationSnapshot(application)
     }, tx);
-    await enqueueLeaveSchoolCastEvent(tx, ctx, application, action.id, "SUBMITTED");
     return { application, actionId: action.id };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
   await queueLeaveWhatsAppUpdate(ctx, result.application.id, result.actionId);
+  try {
+    await processInAppNotificationOutbox({ tenantId: ctx.tenantId, limit: 20 });
+  } catch {
+    // The durable outbox remains available for the scheduled retry worker.
+  }
   return applicationSnapshot(result.application);
 }
 
@@ -455,13 +458,13 @@ export async function updateStaffLeaveApplication(ctx: TenantContext, input: unk
       }
     });
     const approvers = await approverUserIds(tx, ctx.tenantId, staff.branchId, validated.setting.approvalMode);
-    await createInAppNotifications(tx, {
-      tenantId: ctx.tenantId,
+    await queueLeaveInAppNotifications(tx, ctx, {
       branchId: staff.branchId,
       userIds: [ctx.userId, ...approvers],
       type: actionType === "MODIFIED" ? "STAFF_LEAVE_MODIFIED" : "STAFF_LEAVE_CLARIFIED",
       title: actionType === "MODIFIED" ? "Leave application updated" : "Leave clarification submitted",
       message: `${staffName(after.staff)} updated the ${validated.leaveType.name} application.`,
+      actionId: action.id,
       applicationId: after.id
     });
     await writeAuditLog({
@@ -475,11 +478,15 @@ export async function updateStaffLeaveApplication(ctx: TenantContext, input: unk
       before: applicationSnapshot(before),
       after: applicationSnapshot(after)
     }, tx);
-    await enqueueLeaveSchoolCastEvent(tx, ctx, after, action.id, actionType);
     return { application: after, actionId: action.id };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
   await queueLeaveWhatsAppUpdate(ctx, result.application.id, result.actionId);
+  try {
+    await processInAppNotificationOutbox({ tenantId: ctx.tenantId, limit: 20 });
+  } catch {
+    // The durable outbox remains available for the scheduled retry worker.
+  }
   return applicationSnapshot(result.application);
 }
 
@@ -670,13 +677,13 @@ export async function reviewStaffLeaveApplication(ctx: TenantContext, input: unk
       }
     });
     if (after.staff.userId) {
-      await createInAppNotifications(tx, {
-        tenantId: ctx.tenantId,
+      await queueLeaveInAppNotifications(tx, ctx, {
         branchId: after.branchId,
         userIds: [after.staff.userId],
         type: `STAFF_LEAVE_${actionType}`,
         title: nextStatus === "CLARIFICATION_REQUIRED" ? "Leave clarification requested" : `Leave application ${nextStatus.toLowerCase()}`,
         message: `${after.leaveType.name} leave for ${formatLeaveDate(after.startDate)} to ${formatLeaveDate(after.endDate)} is ${nextStatus.toLowerCase().replaceAll("_", " ")}.`,
+      actionId: action.id,
         applicationId: after.id
       });
     }
@@ -695,7 +702,6 @@ export async function reviewStaffLeaveApplication(ctx: TenantContext, input: unk
       after: applicationSnapshot(after),
       metadata: { decision: data.decision, hasRemarks: Boolean(data.remarks) }
     }, tx);
-    await enqueueLeaveSchoolCastEvent(tx, ctx, after, action.id, actionType);
     return { application: after, actionId: action.id };
   }, {
     isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -704,6 +710,11 @@ export async function reviewStaffLeaveApplication(ctx: TenantContext, input: unk
   });
 
   await queueLeaveWhatsAppUpdate(ctx, result.application.id, result.actionId);
+  try {
+    await processInAppNotificationOutbox({ tenantId: ctx.tenantId, limit: 20 });
+  } catch {
+    // The durable outbox remains available for the scheduled retry worker.
+  }
   return applicationSnapshot(result.application);
 }
 
@@ -736,13 +747,13 @@ export async function withdrawStaffLeaveApplication(ctx: TenantContext, input: u
         remarks: data.remarks
       }
     });
-    await createInAppNotifications(tx, {
-      tenantId: ctx.tenantId,
+    await queueLeaveInAppNotifications(tx, ctx, {
       branchId: after.branchId,
       userIds: [ctx.userId],
       type: "STAFF_LEAVE_WITHDRAWN",
       title: "Leave application withdrawn",
       message: `${after.leaveType.name} leave was withdrawn.`,
+      actionId: action.id,
       applicationId: after.id
     });
     await writeAuditLog({
@@ -755,10 +766,14 @@ export async function withdrawStaffLeaveApplication(ctx: TenantContext, input: u
       after: applicationSnapshot(after),
       metadata: { hasRemarks: Boolean(data.remarks) }
     }, tx);
-    await enqueueLeaveSchoolCastEvent(tx, ctx, after, action.id, "WITHDRAWN");
     return { application: after, actionId: action.id };
   });
   await queueLeaveWhatsAppUpdate(ctx, result.application.id, result.actionId);
+  try {
+    await processInAppNotificationOutbox({ tenantId: ctx.tenantId, limit: 20 });
+  } catch {
+    // The durable outbox remains available for the scheduled retry worker.
+  }
   return applicationSnapshot(result.application);
 }
 
@@ -819,13 +834,13 @@ export async function cancelApprovedStaffLeave(ctx: TenantContext, input: unknow
       }
     });
     if (after.staff.userId) {
-      await createInAppNotifications(tx, {
-        tenantId: ctx.tenantId,
+      await queueLeaveInAppNotifications(tx, ctx, {
         branchId: after.branchId,
         userIds: [after.staff.userId],
         type: "STAFF_LEAVE_CANCELLED",
         title: "Approved leave cancelled",
         message: `${after.leaveType.name} leave was cancelled by an approver.`,
+      actionId: action.id,
         applicationId: after.id
       });
     }
@@ -839,10 +854,14 @@ export async function cancelApprovedStaffLeave(ctx: TenantContext, input: unknow
       after: applicationSnapshot(after),
       metadata: { attendanceRecordsReset: records.length, hasRemarks: true }
     }, tx);
-    await enqueueLeaveSchoolCastEvent(tx, ctx, after, action.id, "CANCELLED");
     return { application: after, actionId: action.id };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   await queueLeaveWhatsAppUpdate(ctx, result.application.id, result.actionId);
+  try {
+    await processInAppNotificationOutbox({ tenantId: ctx.tenantId, limit: 20 });
+  } catch {
+    // The durable outbox remains available for the scheduled retry worker.
+  }
   return applicationSnapshot(result.application);
 }
 

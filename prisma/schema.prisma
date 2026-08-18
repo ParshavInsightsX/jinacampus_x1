@@ -95,7 +95,6 @@ enum PermissionModule {
   FEEDESK
   STAFFBOARD
   NOTIFICATIONS
-  SCHOOLCAST
   INSIGHTBOARD
   CAMPUSFLEET
   BOOKNEST
@@ -105,12 +104,14 @@ enum PermissionModule {
 
 enum RoleScope {
   TENANT
+  INSTITUTION
   BRANCH
   ACADEMIC_YEAR
 }
 
 enum RoleAssignmentScope {
   TENANT
+  INSTITUTION
   BRANCH
   ACADEMIC_YEAR
 }
@@ -624,15 +625,85 @@ enum StaffQrTokenStatus {
   EXPIRED
 }
 
-enum CommunicationPreferenceOwnerType {
+enum InAppNotificationSourceModule {
+  CAMPUS_CORE
+  ACADEMIA
+  ATTENDANCE
+  GRADEBOOK
+  STAFFBOARD
+  CALENDAR
+  SYSTEM
+}
+
+enum InAppNotificationCategory {
+  ACCOUNT
+  ACADEMIC
+  ATTENDANCE
+  GRADEBOOK
+  LEAVE
+  CALENDAR
+  SECURITY
+  SYSTEM
+}
+
+enum InAppNotificationPriority {
+  LOW
+  NORMAL
+  HIGH
+  CRITICAL
+}
+
+enum InAppNotificationStatus {
+  PENDING
+  SCHEDULED
+  PUBLISHED
+  CANCELLED
+  EXPIRED
+  FAILED
+}
+
+enum InAppNotificationRecipientStatus {
+  PENDING
+  DELIVERED_IN_APP
+  FAILED
+  CANCELLED
+  EXPIRED
+}
+
+enum InAppNotificationAudienceType {
   USER
+  USERS
+  ROLE
+  TENANT
+  INSTITUTION
+  BRANCH
+}
+
+enum InAppNotificationTemplateStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum InAppNotificationDigestMode {
+  IMMEDIATE
+  DAILY
+  WEEKLY
+}
+
+enum InAppNotificationOutboxStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum CommunicationPreferenceOwnerType {
   GUARDIAN
   STAFF
 }
 
 enum NotificationChannel {
-  IN_APP
-  EMAIL
   WHATSAPP
 }
 
@@ -641,8 +712,6 @@ enum NotificationTemplateCategory {
 }
 
 enum NotificationRecipientType {
-  USER
-  STUDENT
   GUARDIAN
   STAFF
 }
@@ -650,20 +719,15 @@ enum NotificationRecipientType {
 enum NotificationOutboxStatus {
   QUEUED
   SENDING
-  RETRYING
   SENT
   FAILED
-  UNDELIVERABLE
-  EXPIRED
   CANCELLED
 }
 
 enum NotificationDeliveryStatus {
-  SUBMITTED
   SENT
   DELIVERED
   READ
-  BOUNCED
   FAILED
 }
 
@@ -677,159 +741,6 @@ enum StudentAttendanceNotificationMode {
   DISABLED
   EXCEPTION_ONLY
   ALL_STATUSES
-}
-
-enum SchoolCastCommunicationType {
-  NOTICE
-  CIRCULAR
-  BROADCAST
-  EMERGENCY
-  AUTOMATION
-  HOMEWORK
-  CLASSWORK
-}
-
-enum SchoolCastCommunicationStatus {
-  DRAFT
-  PENDING_APPROVAL
-  APPROVED
-  REJECTED
-  SCHEDULED
-  PUBLISHING
-  PUBLISHED
-  PARTIALLY_DELIVERED
-  EXPIRED
-  CANCELLED
-  ARCHIVED
-  FAILED
-}
-
-enum SchoolCastPriority {
-  NORMAL
-  HIGH
-  EMERGENCY
-}
-
-enum SchoolCastAudienceRuleType {
-  ALL_USERS
-  ROLE
-  BRANCH
-  CLASS_SECTION
-  STUDENT
-  STAFF
-  CUSTOM
-}
-
-enum SchoolCastAudienceMode {
-  INCLUDE
-  EXCLUDE
-}
-
-enum SchoolCastRecipientType {
-  USER
-  STUDENT
-  GUARDIAN
-  STAFF
-}
-
-enum SchoolCastChannelPlanStatus {
-  DRAFT
-  READY
-  BLOCKED
-  DISABLED
-}
-
-enum SchoolCastApprovalStatus {
-  PENDING
-  APPROVED
-  REJECTED
-  RETURNED
-  CANCELLED
-  INVALIDATED
-}
-
-enum SchoolCastApprovalActionType {
-  SUBMITTED
-  APPROVED
-  REJECTED
-  RETURNED
-  CANCELLED
-  INVALIDATED
-}
-
-enum SchoolCastProviderStatus {
-  DRAFT
-  TESTING
-  READY
-  SUSPENDED
-  DISABLED
-}
-
-enum SchoolCastDeliveryMode {
-  DRY_RUN
-  TEST
-  LIVE
-}
-
-enum SchoolCastConsentStatus {
-  PENDING
-  GRANTED
-  WITHDRAWN
-  EXPIRED
-  REVOKED
-  NOT_REQUIRED_BY_POLICY
-}
-
-enum SchoolCastAttachmentScanStatus {
-  PENDING
-  SAFE
-  REJECTED
-  FAILED
-}
-
-enum SchoolCastHomeworkStatus {
-  DRAFT
-  PENDING_APPROVAL
-  APPROVED
-  PUBLISHED
-  UPDATED
-  CANCELLED
-  ARCHIVED
-}
-
-enum SchoolCastWorkType {
-  HOMEWORK
-  CLASSWORK
-}
-
-enum SchoolCastDeliveryAttemptStatus {
-  STARTED
-  DRY_RUN
-  SUBMITTED
-  SENT
-  DELIVERED
-  READ
-  RETRYABLE_FAILURE
-  PERMANENT_FAILURE
-  CANCELLED
-}
-
-enum SchoolCastDeliveryEventStatus {
-  SUBMITTED
-  SENT
-  DELIVERED
-  READ
-  BOUNCED
-  FAILED
-  COMPLAINED
-}
-
-enum SchoolCastDomainEventStatus {
-  PENDING
-  PROCESSING
-  PROCESSED
-  FAILED
-  IGNORED
 }
 
 model Tenant {
@@ -907,6 +818,12 @@ model Tenant {
   staffLeaveActions                   StaffLeaveApplicationAction[]
   staffLeaveDocuments                 StaffLeaveDocument[]
   inAppNotifications                  InAppNotification[]
+  inAppNotificationRecipients         InAppNotificationRecipient[]
+  inAppNotificationAudienceRules      InAppNotificationAudienceRule[]
+  inAppNotificationTemplates          InAppNotificationTemplate[]
+  inAppNotificationPreferences        InAppNotificationPreference[]
+  inAppNotificationSettings           InAppNotificationSetting[]
+  inAppNotificationOutboxItems        InAppNotificationOutbox[]
   communicationPreferences            CommunicationPreference[]
   notificationTemplates               NotificationTemplate[]
   notificationOutboxItems             NotificationOutbox[]
@@ -935,25 +852,6 @@ model Tenant {
   GradebookReportCard                 GradebookReportCard[]
   GradebookResultPublication          GradebookResultPublication[]
   GradebookStudentResultPublication   GradebookStudentResultPublication[]
-
-  schoolCastCommunications         SchoolCastCommunication[]
-  schoolCastCommunicationVersions  SchoolCastCommunicationVersion[]
-  schoolCastAudienceRules          SchoolCastAudienceRule[]
-  schoolCastRecipientSnapshots     SchoolCastRecipientSnapshot[]
-  schoolCastChannelEligibility     SchoolCastRecipientChannelEligibility[]
-  schoolCastChannelPlans           SchoolCastChannelPlan[]
-  schoolCastApprovals              SchoolCastApproval[]
-  schoolCastApprovalActions        SchoolCastApprovalAction[]
-  schoolCastTemplateVersions       SchoolCastTemplateVersion[]
-  schoolCastProviderConfigurations SchoolCastProviderConfiguration[]
-  schoolCastConsentRecords         SchoolCastConsentRecord[]
-  schoolCastAttachments            SchoolCastAttachment[]
-  schoolCastHomeworkItems          SchoolCastHomeworkItem[]
-  schoolCastHomeworkVersions       SchoolCastHomeworkVersion[]
-  schoolCastAcknowledgements       SchoolCastAcknowledgement[]
-  schoolCastDeliveryAttempts       SchoolCastDeliveryAttempt[]
-  schoolCastDeliveryEvents         SchoolCastDeliveryEvent[]
-  schoolCastDomainEvents           SchoolCastDomainEvent[]
 
   @@index([status])
   @@map("tenants")
@@ -1119,10 +1017,10 @@ model Institution {
   gradebookExams                     GradebookExam[]
   GradebookCoScholasticSchemeVersion GradebookCoScholasticSchemeVersion[]
   GradebookReportCardTemplate        GradebookReportCardTemplate[]
-
-  schoolCastCommunications         SchoolCastCommunication[]
-  schoolCastProviderConfigurations SchoolCastProviderConfiguration[]
-  schoolCastHomeworkItems          SchoolCastHomeworkItem[]
+  inAppNotifications                 InAppNotification[]
+  inAppNotificationAudienceRules     InAppNotificationAudienceRule[]
+  inAppNotificationTemplates         InAppNotificationTemplate[]
+  inAppNotificationSettings          InAppNotificationSetting[]
 
   @@unique([tenantId, code])
   @@index([tenantId, status])
@@ -1187,6 +1085,8 @@ model Branch {
   staffLeaveActions               StaffLeaveApplicationAction[]
   staffLeaveDocuments             StaffLeaveDocument[]
   inAppNotifications              InAppNotification[]
+  inAppNotificationAudienceRules  InAppNotificationAudienceRule[]
+  inAppNotificationSettings       InAppNotificationSetting[]
   communicationPreferences        CommunicationPreference[]
   notificationTemplates           NotificationTemplate[]
   notificationOutboxItems         NotificationOutbox[]
@@ -1195,11 +1095,6 @@ model Branch {
   GradebookResultRun              GradebookResultRun[]
   GradebookReportCardTemplate     GradebookReportCardTemplate[]
   GradebookReportCard             GradebookReportCard[]
-
-  schoolCastCommunications         SchoolCastCommunication[]
-  schoolCastProviderConfigurations SchoolCastProviderConfiguration[]
-  schoolCastHomeworkItems          SchoolCastHomeworkItem[]
-  schoolCastDomainEvents           SchoolCastDomainEvent[]
 
   @@unique([tenantId, code])
   @@index([tenantId, institutionId])
@@ -1244,15 +1139,13 @@ model AcademicYear {
   staffAttendanceRecords              StaffAttendanceRecord[]
   academicCalendarEntries             AcademicCalendarEntry[]
   notificationOutboxItems             NotificationOutbox[]
+  inAppNotifications                  InAppNotification[]
+  inAppNotificationAudienceRules      InAppNotificationAudienceRule[]
   GradebookExamClassSection           GradebookExamClassSection[]
   GradebookMarkEntryBatch             GradebookMarkEntryBatch[]
   GradebookResultRun                  GradebookResultRun[]
   GradebookCoScholasticSchemeVersion  GradebookCoScholasticSchemeVersion[]
   GradebookReportCard                 GradebookReportCard[]
-
-  schoolCastCommunications SchoolCastCommunication[]
-  schoolCastHomeworkItems  SchoolCastHomeworkItem[]
-  schoolCastDomainEvents   SchoolCastDomainEvent[]
 
   @@unique([tenantId, institutionId, name])
   @@index([tenantId, institutionId, status])
@@ -1312,55 +1205,42 @@ model User {
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
-  tenant                          Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  passwordCredential              PasswordCredential?
-  sessions                        Session[]
-  loginOtps                       LoginOtp[]
-  passkeyCredentials              PasskeyCredential[]
-  passkeyChallenges               PasskeyChallenge[]
-  roleAssignments                 UserRoleAssignment[]
-  branchAccesses                  UserBranchAccess[]
-  principalPasswordResetRequests  PrincipalPasswordResetRequest[]
-  auditLogs                       AuditLog[]                       @relation("AuditActor")
-  classSectionsAsTeacher          ClassSection[]                   @relation("ClassSectionTeacher")
-  markedStudentAttendance         StudentAttendanceRecord[]        @relation("StudentAttendanceMarkedBy")
-  correctedStudentAttendance      StudentAttendanceRecord[]        @relation("StudentAttendanceCorrectedBy")
-  staffProfile                    StaffProfile?                    @relation("StaffProfileUser")
-  markedStaffAttendance           StaffAttendanceRecord[]          @relation("StaffAttendanceMarkedBy")
-  updatedStaffAttendance          StaffAttendanceRecord[]          @relation("StaffAttendanceUpdatedBy")
-  createdStaffQrTokens            StaffAttendanceQrToken[]         @relation("StaffAttendanceQrTokenCreatedBy")
-  deactivatedStaffQrTokens        StaffAttendanceQrToken[]         @relation("StaffAttendanceQrTokenDeactivatedBy")
-  staffLeaveApproverScopes        StaffLeaveApprover[]             @relation("StaffLeaveApproverUser")
-  actionedStaffLeave              StaffLeaveApplication[]          @relation("StaffLeaveApplicationActionedBy")
-  staffLeaveActions               StaffLeaveApplicationAction[]    @relation("StaffLeaveActionActor")
-  inAppNotifications              InAppNotification[]
-  createdPromotionBatches         StudentPromotionBatch[]          @relation("StudentPromotionCreatedBy")
-  reversedPromotionBatches        StudentPromotionBatch[]          @relation("StudentPromotionReversedBy")
-  reversedPromotionItems          StudentPromotionItem[]           @relation("StudentPromotionItemReversedBy")
-  classSectionSubjectsTaught      ClassSectionSubject[]            @relation("ClassSectionSubjectTeacher")
-  createdGradebookAssessments     GradebookAssessment[]            @relation("GradebookAssessmentCreatedBy")
-  publishedGradebookAssessments   GradebookAssessment[]            @relation("GradebookAssessmentPublishedBy")
-  cancelledGradebookAssessments   GradebookAssessment[]            @relation("GradebookAssessmentCancelledBy")
-  enteredGradebookMarks           GradebookMark[]                  @relation("GradebookMarkEnteredBy")
-  gradebookTeacherMarkAssignments GradebookTeacherMarkAssignment[] @relation("GradebookTeacherMarkAssignmentTeacher")
-
-  createdSchoolCastCommunications   SchoolCastCommunication[]         @relation("SchoolCastCommunicationCreatedBy")
-  updatedSchoolCastCommunications   SchoolCastCommunication[]         @relation("SchoolCastCommunicationUpdatedBy")
-  createdSchoolCastVersions         SchoolCastCommunicationVersion[]  @relation("SchoolCastCommunicationVersionCreatedBy")
-  schoolCastRecipientSnapshots      SchoolCastRecipientSnapshot[]
-  submittedSchoolCastApprovals      SchoolCastApproval[]              @relation("SchoolCastApprovalSubmittedBy")
-  schoolCastApprovalActions         SchoolCastApprovalAction[]        @relation("SchoolCastApprovalActionActor")
-  createdSchoolCastTemplates        SchoolCastTemplateVersion[]       @relation("SchoolCastTemplateVersionCreatedBy")
-  createdSchoolCastProviders        SchoolCastProviderConfiguration[] @relation("SchoolCastProviderCreatedBy")
-  updatedSchoolCastProviders        SchoolCastProviderConfiguration[] @relation("SchoolCastProviderUpdatedBy")
-  uploadedSchoolCastAttachments     SchoolCastAttachment[]            @relation("SchoolCastAttachmentUploadedBy")
-  deletedSchoolCastAttachments      SchoolCastAttachment[]            @relation("SchoolCastAttachmentDeletedBy")
-  schoolCastHomeworkAssignments     SchoolCastHomeworkItem[]          @relation("SchoolCastHomeworkTeacher")
-  createdSchoolCastHomeworkVersions SchoolCastHomeworkVersion[]       @relation("SchoolCastHomeworkVersionCreatedBy")
-  schoolCastAcknowledgements        SchoolCastAcknowledgement[]
-
-  studentPortalProfile  Student?  @relation("StudentPortalUser")
-  guardianPortalProfile Guardian? @relation("GuardianPortalUser")
+  tenant                            Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  passwordCredential                PasswordCredential?
+  sessions                          Session[]
+  loginOtps                         LoginOtp[]
+  passkeyCredentials                PasskeyCredential[]
+  passkeyChallenges                 PasskeyChallenge[]
+  roleAssignments                   UserRoleAssignment[]
+  branchAccesses                    UserBranchAccess[]
+  principalPasswordResetRequests    PrincipalPasswordResetRequest[]
+  auditLogs                         AuditLog[]                       @relation("AuditActor")
+  classSectionsAsTeacher            ClassSection[]                   @relation("ClassSectionTeacher")
+  markedStudentAttendance           StudentAttendanceRecord[]        @relation("StudentAttendanceMarkedBy")
+  correctedStudentAttendance        StudentAttendanceRecord[]        @relation("StudentAttendanceCorrectedBy")
+  staffProfile                      StaffProfile?                    @relation("StaffProfileUser")
+  markedStaffAttendance             StaffAttendanceRecord[]          @relation("StaffAttendanceMarkedBy")
+  updatedStaffAttendance            StaffAttendanceRecord[]          @relation("StaffAttendanceUpdatedBy")
+  createdStaffQrTokens              StaffAttendanceQrToken[]         @relation("StaffAttendanceQrTokenCreatedBy")
+  deactivatedStaffQrTokens          StaffAttendanceQrToken[]         @relation("StaffAttendanceQrTokenDeactivatedBy")
+  staffLeaveApproverScopes          StaffLeaveApprover[]             @relation("StaffLeaveApproverUser")
+  actionedStaffLeave                StaffLeaveApplication[]          @relation("StaffLeaveApplicationActionedBy")
+  staffLeaveActions                 StaffLeaveApplicationAction[]    @relation("StaffLeaveActionActor")
+  legacyInAppNotifications          InAppNotification[]              @relation("LegacyInAppNotificationUser")
+  createdInAppNotifications         InAppNotification[]              @relation("InAppNotificationCreatedBy")
+  inAppNotificationRecipients       InAppNotificationRecipient[]
+  inAppNotificationAudienceRules    InAppNotificationAudienceRule[]
+  inAppNotificationPreferences      InAppNotificationPreference[]
+  createdInAppNotificationTemplates InAppNotificationTemplate[]      @relation("InAppNotificationTemplateCreatedBy")
+  createdPromotionBatches           StudentPromotionBatch[]          @relation("StudentPromotionCreatedBy")
+  reversedPromotionBatches          StudentPromotionBatch[]          @relation("StudentPromotionReversedBy")
+  reversedPromotionItems            StudentPromotionItem[]           @relation("StudentPromotionItemReversedBy")
+  classSectionSubjectsTaught        ClassSectionSubject[]            @relation("ClassSectionSubjectTeacher")
+  createdGradebookAssessments       GradebookAssessment[]            @relation("GradebookAssessmentCreatedBy")
+  publishedGradebookAssessments     GradebookAssessment[]            @relation("GradebookAssessmentPublishedBy")
+  cancelledGradebookAssessments     GradebookAssessment[]            @relation("GradebookAssessmentCancelledBy")
+  enteredGradebookMarks             GradebookMark[]                  @relation("GradebookMarkEnteredBy")
+  gradebookTeacherMarkAssignments   GradebookTeacherMarkAssignment[] @relation("GradebookTeacherMarkAssignmentTeacher")
 
   @@unique([tenantId, email])
   @@unique([tenantId, phone])
@@ -1504,9 +1384,10 @@ model Role {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  tenant          Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  rolePermissions RolePermission[]
-  assignments     UserRoleAssignment[]
+  tenant                         Tenant                          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  rolePermissions                RolePermission[]
+  assignments                    UserRoleAssignment[]
+  inAppNotificationAudienceRules InAppNotificationAudienceRule[]
 
   @@unique([tenantId, code])
   @@index([tenantId, isActive])
@@ -1576,42 +1457,36 @@ model UserBranchAccess {
 }
 
 model TenantSettings {
-  id                                String                 @id @default(uuid()) @db.Uuid
-  tenantId                          String                 @unique @db.Uuid
-  brandName                         String                 @default("JinaCampus")
-  brandByline                       String                 @default("powered by Parshav Insights")
-  primaryColor                      String?
-  logoUrl                           String?
-  timezone                          String                 @default("Asia/Kolkata")
-  locale                            String                 @default("en-IN")
-  dateFormat                        String                 @default("dd/MM/yyyy")
-  currency                          String                 @default("INR")
-  allowMultipleActiveAcademicYears  Boolean                @default(false)
-  gradebookEnabled                  Boolean                @default(false)
-  gradebookConfigurationEnabled     Boolean                @default(false)
-  gradebookMarksEntryEnabled        Boolean                @default(false)
-  gradebookImportEnabled            Boolean                @default(false)
-  gradebookResultCalculationEnabled Boolean                @default(false)
-  gradebookCoScholasticEnabled      Boolean                @default(false)
-  gradebookReportCardsEnabled       Boolean                @default(false)
-  gradebookPublicationEnabled       Boolean                @default(false)
-  gradebookAnalyticsEnabled         Boolean                @default(false)
-  gradebookPortalResultsEnabled     Boolean                @default(false)
-  schoolCastEnabled                 Boolean                @default(false)
-  schoolCastInAppEnabled            Boolean                @default(false)
-  schoolCastNoticesEnabled          Boolean                @default(false)
-  schoolCastHomeworkEnabled         Boolean                @default(false)
-  schoolCastApprovalsEnabled        Boolean                @default(false)
-  schoolCastEmailEnabled            Boolean                @default(false)
-  schoolCastWhatsAppEnabled         Boolean                @default(false)
-  schoolCastAutomationEnabled       Boolean                @default(false)
-  schoolCastAnalyticsEnabled        Boolean                @default(false)
-  schoolCastDeliveryMode            SchoolCastDeliveryMode @default(DRY_RUN)
-  schoolCastTeacherDirectPublish    Boolean                @default(false)
-  createdById                       String?                @db.Uuid
-  updatedById                       String?                @db.Uuid
-  createdAt                         DateTime               @default(now())
-  updatedAt                         DateTime               @updatedAt
+  id                                       String   @id @default(uuid()) @db.Uuid
+  tenantId                                 String   @unique @db.Uuid
+  brandName                                String   @default("JinaCampus")
+  brandByline                              String   @default("powered by Parshav Insights")
+  primaryColor                             String?
+  logoUrl                                  String?
+  timezone                                 String   @default("Asia/Kolkata")
+  locale                                   String   @default("en-IN")
+  dateFormat                               String   @default("dd/MM/yyyy")
+  currency                                 String   @default("INR")
+  allowMultipleActiveAcademicYears         Boolean  @default(false)
+  gradebookEnabled                         Boolean  @default(false)
+  gradebookConfigurationEnabled            Boolean  @default(false)
+  gradebookMarksEntryEnabled               Boolean  @default(false)
+  gradebookImportEnabled                   Boolean  @default(false)
+  gradebookResultCalculationEnabled        Boolean  @default(false)
+  gradebookCoScholasticEnabled             Boolean  @default(false)
+  gradebookReportCardsEnabled              Boolean  @default(false)
+  gradebookPublicationEnabled              Boolean  @default(false)
+  gradebookAnalyticsEnabled                Boolean  @default(false)
+  gradebookPortalResultsEnabled            Boolean  @default(false)
+  inAppNotificationsEnabled                Boolean  @default(true)
+  inAppNotificationSchedulingEnabled       Boolean  @default(true)
+  inAppNotificationAcknowledgementsEnabled Boolean  @default(true)
+  inAppNotificationRealtimeEnabled         Boolean  @default(false)
+  inAppNotificationBrowserPushEnabled      Boolean  @default(false)
+  createdById                              String?  @db.Uuid
+  updatedById                              String?  @db.Uuid
+  createdAt                                DateTime @default(now())
+  updatedAt                                DateTime @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -1761,8 +1636,6 @@ model ClassSection {
   gradebookAssessments       GradebookAssessment[]
   gradebookExamClassSections GradebookExamClassSection[]
 
-  schoolCastHomeworkItems SchoolCastHomeworkItem[]
-
   @@unique([tenantId, branchId, academicYearId, classId, sectionId])
   @@index([tenantId, branchId, academicYearId, status])
   @@index([tenantId, academicYearId, classId])
@@ -1787,8 +1660,6 @@ model Subject {
   classSectionSubjects  ClassSectionSubject[]
   gradebookExamSubjects GradebookExamSubject[]
 
-  schoolCastHomeworkItems SchoolCastHomeworkItem[]
-
   @@unique([tenantId, code])
   @@unique([tenantId, name])
   @@index([tenantId, status])
@@ -1799,7 +1670,6 @@ model Student {
   id                String        @id @default(uuid()) @db.Uuid
   tenantId          String        @db.Uuid
   branchId          String        @db.Uuid
-  userId            String?       @unique @db.Uuid
   admissionNumber   String
   admissionDate     DateTime?     @db.Date
   fullName          String?
@@ -1840,7 +1710,6 @@ model Student {
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 
-  portalUser                         User?                                @relation("StudentPortalUser", fields: [userId], references: [id], onDelete: SetNull)
   tenant                             Tenant                               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   branch                             Branch                               @relation(fields: [branchId], references: [id], onDelete: Restrict)
   guardianLinks                      StudentGuardianLink[]
@@ -1857,8 +1726,6 @@ model Student {
   GradebookAttendanceSummarySnapshot GradebookAttendanceSummarySnapshot[]
   GradebookReportCard                GradebookReportCard[]
   GradebookStudentResultPublication  GradebookStudentResultPublication[]
-
-  schoolCastRecipientSnapshots SchoolCastRecipientSnapshot[]
 
   @@unique([tenantId, admissionNumber])
   @@index([tenantId, branchId, status])
@@ -1899,7 +1766,6 @@ model StudentDocument {
 model Guardian {
   id           String   @id @default(uuid()) @db.Uuid
   tenantId     String   @db.Uuid
-  userId       String?  @unique @db.Uuid
   firstName    String
   middleName   String?
   lastName     String?
@@ -1918,11 +1784,8 @@ model Guardian {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  portalUser   User?                 @relation("GuardianPortalUser", fields: [userId], references: [id], onDelete: SetNull)
   tenant       Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   studentLinks StudentGuardianLink[]
-
-  schoolCastRecipientSnapshots SchoolCastRecipientSnapshot[]
 
   @@unique([tenantId, phone])
   @@unique([tenantId, email])
@@ -3528,8 +3391,6 @@ model StaffProfile {
   leaveBalances          StaffLeaveBalance[]
   leaveApplications      StaffLeaveApplication[]
 
-  schoolCastRecipientSnapshots SchoolCastRecipientSnapshot[]
-
   @@unique([tenantId, employeeCode])
   @@index([tenantId, branchId])
   @@index([tenantId, staffType])
@@ -3779,38 +3640,226 @@ model StaffLeaveDocument {
 }
 
 model InAppNotification {
-  id                      String             @id @default(uuid()) @db.Uuid
-  tenantId                String             @db.Uuid
-  branchId                String?            @db.Uuid
-  userId                  String             @db.Uuid
-  communicationId         String?            @db.Uuid
-  communicationVersionId  String?            @db.Uuid
-  recipientSnapshotId     String?            @db.Uuid
-  type                    String
+  id                      String                        @id @default(uuid()) @db.Uuid
+  tenantId                String                        @db.Uuid
+  institutionId           String?                       @db.Uuid
+  branchId                String?                       @db.Uuid
+  academicYearId          String?                       @db.Uuid
+  legacyUserId            String?                       @map("userId") @db.Uuid
+  legacyType              String?                       @map("type")
+  sourceModule            InAppNotificationSourceModule @default(SYSTEM)
+  eventType               String
+  sourceEntityType        String?
+  sourceEntityId          String?
+  category                InAppNotificationCategory     @default(SYSTEM)
+  priority                InAppNotificationPriority     @default(NORMAL)
   title                   String
-  message                 String
-  actionUrl               String?
-  priority                SchoolCastPriority @default(NORMAL)
-  acknowledgementRequired Boolean            @default(false)
-  readAt                  DateTime?
+  bodyPreview             String                        @map("message")
+  deepLink                String?                       @map("actionUrl")
+  iconKey                 String?
+  mandatory               Boolean                       @default(false)
+  requiresAcknowledgement Boolean                       @default(false)
+  scheduledAt             DateTime?
+  publishedAt             DateTime?
   expiresAt               DateTime?
-  createdAt               DateTime           @default(now())
+  cancelledAt             DateTime?
+  status                  InAppNotificationStatus       @default(PENDING)
+  idempotencyKey          String
+  templateId              String?                       @db.Uuid
+  variablesJson           Json?
+  safeMetadataJson        Json?
+  createdById             String?                       @db.Uuid
+  legacyReadAt            DateTime?                     @map("readAt")
+  createdAt               DateTime                      @default(now())
+  updatedAt               DateTime                      @default(now()) @updatedAt
 
-  tenant               Tenant                          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  branch               Branch?                         @relation(fields: [branchId], references: [id], onDelete: SetNull)
-  user                 User                            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  communication        SchoolCastCommunication?        @relation(fields: [communicationId], references: [id], onDelete: Cascade)
-  communicationVersion SchoolCastCommunicationVersion? @relation(fields: [communicationVersionId], references: [id], onDelete: Cascade)
-  recipientSnapshot    SchoolCastRecipientSnapshot?    @relation(fields: [recipientSnapshotId], references: [id], onDelete: Cascade)
+  tenant        Tenant                          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  institution   Institution?                    @relation(fields: [institutionId], references: [id], onDelete: SetNull)
+  branch        Branch?                         @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  academicYear  AcademicYear?                   @relation(fields: [academicYearId], references: [id], onDelete: SetNull)
+  legacyUser    User?                           @relation("LegacyInAppNotificationUser", fields: [legacyUserId], references: [id], onDelete: SetNull)
+  template      InAppNotificationTemplate?      @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  createdBy     User?                           @relation("InAppNotificationCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  recipients    InAppNotificationRecipient[]
+  audienceRules InAppNotificationAudienceRule[]
 
-  @@unique([tenantId, recipientSnapshotId, userId, communicationVersionId])
-  @@index([tenantId, userId, readAt, createdAt])
-  @@index([tenantId, branchId, createdAt])
-  @@index([tenantId, communicationId, createdAt])
-  @@index([tenantId, userId, expiresAt])
-  @@index([branchId])
-  @@index([userId])
+  @@unique([tenantId, idempotencyKey], map: "in_app_notifications_tenant_idempotency_key")
+  @@index([tenantId, sourceModule, category, priority, createdAt], map: "in_app_notifications_tenant_source_category_created_idx")
+  @@index([tenantId, branchId, createdAt], map: "in_app_notifications_tenantId_branchId_createdAt_idx")
+  @@index([status, scheduledAt], map: "in_app_notifications_status_scheduled_idx")
+  @@index([expiresAt], map: "in_app_notifications_expires_idx")
+  @@index([institutionId], map: "in_app_notifications_institution_idx")
+  @@index([branchId], map: "in_app_notifications_branchId_idx")
+  @@index([academicYearId], map: "in_app_notifications_academic_year_idx")
+  @@index([legacyUserId], map: "in_app_notifications_userId_idx")
+  @@index([templateId], map: "in_app_notifications_template_idx")
+  @@index([createdById], map: "in_app_notifications_created_by_idx")
   @@map("in_app_notifications")
+}
+
+model InAppNotificationRecipient {
+  id             String                           @id @default(uuid()) @db.Uuid
+  tenantId       String                           @db.Uuid
+  notificationId String                           @db.Uuid
+  userId         String                           @db.Uuid
+  deliveryStatus InAppNotificationRecipientStatus @default(PENDING)
+  deliveredAt    DateTime?
+  readAt         DateTime?
+  acknowledgedAt DateTime?
+  archivedAt     DateTime?
+  dismissedAt    DateTime?
+  failureCode    String?
+  failureReason  String?
+  createdAt      DateTime                         @default(now())
+  updatedAt      DateTime                         @updatedAt
+
+  tenant       Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  notification InAppNotification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([notificationId, userId], map: "in_app_notification_recipients_notification_user_key")
+  @@index([tenantId, userId, archivedAt, readAt, createdAt], map: "in_app_recipients_user_inbox_idx")
+  @@index([tenantId, userId, acknowledgedAt, createdAt], map: "in_app_recipients_user_ack_idx")
+  @@index([tenantId, deliveryStatus, createdAt], map: "in_app_recipients_delivery_idx")
+  @@map("in_app_notification_recipients")
+}
+
+model InAppNotificationAudienceRule {
+  id             String                        @id @default(uuid()) @db.Uuid
+  tenantId       String                        @db.Uuid
+  notificationId String                        @db.Uuid
+  audienceType   InAppNotificationAudienceType
+  institutionId  String?                       @db.Uuid
+  branchId       String?                       @db.Uuid
+  academicYearId String?                       @db.Uuid
+  roleId         String?                       @db.Uuid
+  userId         String?                       @db.Uuid
+  criteriaJson   Json?
+  createdAt      DateTime                      @default(now())
+
+  tenant       Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  notification InAppNotification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  institution  Institution?      @relation(fields: [institutionId], references: [id], onDelete: SetNull)
+  branch       Branch?           @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  academicYear AcademicYear?     @relation(fields: [academicYearId], references: [id], onDelete: SetNull)
+  role         Role?             @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  user         User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, notificationId], map: "in_app_audience_notification_idx")
+  @@index([tenantId, audienceType, branchId], map: "in_app_audience_type_branch_idx")
+  @@index([tenantId, roleId], map: "in_app_audience_role_idx")
+  @@index([tenantId, userId], map: "in_app_audience_user_idx")
+  @@map("in_app_notification_audience_rules")
+}
+
+model InAppNotificationTemplate {
+  id                      String                          @id @default(uuid()) @db.Uuid
+  tenantId                String                          @db.Uuid
+  institutionId           String?                         @db.Uuid
+  scopeKey                String                          @default("TENANT")
+  templateKey             String
+  name                    String
+  sourceModule            InAppNotificationSourceModule
+  category                InAppNotificationCategory
+  defaultPriority         InAppNotificationPriority       @default(NORMAL)
+  titleTemplate           String
+  bodyTemplate            String
+  deepLinkTemplate        String?
+  requiredVariablesJson   Json?
+  mandatory               Boolean                         @default(false)
+  requiresAcknowledgement Boolean                         @default(false)
+  status                  InAppNotificationTemplateStatus @default(ACTIVE)
+  version                 Int                             @default(1)
+  createdById             String?                         @db.Uuid
+  createdAt               DateTime                        @default(now())
+  updatedAt               DateTime                        @updatedAt
+
+  tenant        Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  institution   Institution?        @relation(fields: [institutionId], references: [id], onDelete: SetNull)
+  createdBy     User?               @relation("InAppNotificationTemplateCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  notifications InAppNotification[]
+
+  @@unique([tenantId, scopeKey, templateKey, version], map: "in_app_templates_scope_key_version_key")
+  @@index([tenantId, sourceModule, category, status], map: "in_app_templates_source_category_idx")
+  @@index([institutionId], map: "in_app_templates_institution_idx")
+  @@map("in_app_notification_templates")
+}
+
+model InAppNotificationPreference {
+  id                String                      @id @default(uuid()) @db.Uuid
+  tenantId          String                      @db.Uuid
+  userId            String                      @db.Uuid
+  category          InAppNotificationCategory
+  enabled           Boolean                     @default(true)
+  minimumPriority   InAppNotificationPriority?
+  quietHoursEnabled Boolean                     @default(false)
+  quietStart        String?
+  quietEnd          String?
+  timeZone          String                      @default("Asia/Kolkata")
+  digestMode        InAppNotificationDigestMode @default(IMMEDIATE)
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId, category], map: "in_app_preferences_user_category_key")
+  @@index([tenantId, userId, enabled], map: "in_app_preferences_user_enabled_idx")
+  @@map("in_app_notification_preferences")
+}
+
+model InAppNotificationSetting {
+  id                       String                    @id @default(uuid()) @db.Uuid
+  tenantId                 String                    @db.Uuid
+  institutionId            String?                   @db.Uuid
+  branchId                 String?                   @db.Uuid
+  scopeKey                 String
+  retentionDays            Int                       @default(365)
+  defaultPriority          InAppNotificationPriority @default(NORMAL)
+  quietHoursStart          String?
+  quietHoursEnd            String?
+  timeZone                 String                    @default("Asia/Kolkata")
+  mandatoryCategoriesJson  Json?
+  roleRulesJson            Json?
+  acknowledgementRulesJson Json?
+  featureEnabled           Boolean                   @default(true)
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  institution Institution? @relation(fields: [institutionId], references: [id], onDelete: SetNull)
+  branch      Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, scopeKey], map: "in_app_settings_tenant_scope_key")
+  @@index([tenantId, institutionId, branchId], map: "in_app_settings_scope_idx")
+  @@map("in_app_notification_settings")
+}
+
+model InAppNotificationOutbox {
+  id             String                        @id @default(uuid()) @db.Uuid
+  tenantId       String                        @db.Uuid
+  eventId        String
+  eventType      String
+  sourceModule   InAppNotificationSourceModule
+  payloadJson    Json
+  idempotencyKey String
+  status         InAppNotificationOutboxStatus @default(PENDING)
+  attemptCount   Int                           @default(0)
+  nextAttemptAt  DateTime                      @default(now())
+  lockedAt       DateTime?
+  lockToken      String?
+  processedAt    DateTime?
+  failedAt       DateTime?
+  lastError      String?
+  createdAt      DateTime                      @default(now())
+  updatedAt      DateTime                      @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, idempotencyKey], map: "in_app_outbox_tenant_idempotency_key")
+  @@index([status, nextAttemptAt, createdAt], map: "in_app_outbox_due_idx")
+  @@index([tenantId, status, createdAt], map: "in_app_outbox_tenant_status_idx")
+  @@map("in_app_notification_outbox")
 }
 
 model StaffAttendanceQrToken {
@@ -3847,29 +3896,21 @@ model StaffAttendanceQrToken {
 }
 
 model CommunicationPreference {
-  id                       String                           @id @default(uuid()) @db.Uuid
-  tenantId                 String                           @db.Uuid
-  branchId                 String?                          @db.Uuid
-  ownerType                CommunicationPreferenceOwnerType
-  ownerId                  String                           @db.Uuid
-  inAppEnabled             Boolean                          @default(true)
-  emailEnabled             Boolean                          @default(false)
-  emailAddress             String?
-  whatsappEnabled          Boolean                          @default(false)
-  whatsappNumber           String?
-  generalNoticesEnabled    Boolean                          @default(true)
-  homeworkUpdatesEnabled   Boolean                          @default(true)
-  attendanceAlertsEnabled  Boolean                          @default(false)
-  weeklySummaryEnabled     Boolean                          @default(false)
-  monthlySummaryEnabled    Boolean                          @default(false)
-  leaveUpdatesEnabled      Boolean                          @default(false)
-  calendarRemindersEnabled Boolean                          @default(true)
-  gradebookUpdatesEnabled  Boolean                          @default(true)
-  feeUpdatesEnabled        Boolean                          @default(true)
-  consentCapturedAt        DateTime?
-  consentSource            String?
-  createdAt                DateTime                         @default(now())
-  updatedAt                DateTime                         @updatedAt
+  id                      String                           @id @default(uuid()) @db.Uuid
+  tenantId                String                           @db.Uuid
+  branchId                String?                          @db.Uuid
+  ownerType               CommunicationPreferenceOwnerType
+  ownerId                 String                           @db.Uuid
+  whatsappEnabled         Boolean                          @default(false)
+  whatsappNumber          String?
+  attendanceAlertsEnabled Boolean                          @default(false)
+  weeklySummaryEnabled    Boolean                          @default(false)
+  monthlySummaryEnabled   Boolean                          @default(false)
+  leaveUpdatesEnabled     Boolean                          @default(false)
+  consentCapturedAt       DateTime?
+  consentSource           String?
+  createdAt               DateTime                         @default(now())
+  updatedAt               DateTime                         @updatedAt
 
   tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
@@ -3893,10 +3934,8 @@ model NotificationTemplate {
   createdAt            DateTime                     @default(now())
   updatedAt            DateTime                     @updatedAt
 
-  tenant                 Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  branch                 Branch?                     @relation(fields: [branchId], references: [id], onDelete: SetNull)
-  schoolCastVersions     SchoolCastTemplateVersion[]
-  schoolCastChannelPlans SchoolCastChannelPlan[]
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, branchId, channel, templateKey])
   @@index([tenantId, channel, isActive])
@@ -3904,62 +3943,33 @@ model NotificationTemplate {
 }
 
 model NotificationOutbox {
-  id                        String                    @id @default(uuid()) @db.Uuid
-  tenantId                  String                    @db.Uuid
-  branchId                  String?                   @db.Uuid
-  academicYearId            String?                   @db.Uuid
-  schoolCastCommunicationId String?                   @db.Uuid
-  communicationVersionId    String?                   @db.Uuid
-  recipientSnapshotId       String?                   @db.Uuid
-  channelPlanId             String?                   @db.Uuid
-  providerConfigId          String?                   @db.Uuid
-  templateVersionId         String?                   @db.Uuid
-  channel                   NotificationChannel
-  templateKey               String
-  recipientType             NotificationRecipientType
-  recipientId               String                    @db.Uuid
-  recipientPhone            String?
-  recipientAddressEncrypted String?                   @db.Text
-  payloadJson               Json
-  payloadHash               String?
-  status                    NotificationOutboxStatus  @default(QUEUED)
-  mode                      SchoolCastDeliveryMode    @default(DRY_RUN)
-  priority                  SchoolCastPriority        @default(NORMAL)
-  idempotencyKey            String                    @unique
-  scheduledFor              DateTime                  @default(now())
-  availableAt               DateTime                  @default(now())
-  expiresAt                 DateTime?
-  attemptCount              Int                       @default(0)
-  maxAttempts               Int                       @default(5)
-  lockedAt                  DateTime?
-  lockOwner                 String?
-  leaseUntil                DateTime?
-  lastAttemptAt             DateTime?
-  sentAt                    DateTime?
-  failedAt                  DateTime?
-  failureReason             String?
-  createdAt                 DateTime                  @default(now())
-  updatedAt                 DateTime                  @updatedAt
+  id             String                    @id @default(uuid()) @db.Uuid
+  tenantId       String                    @db.Uuid
+  branchId       String?                   @db.Uuid
+  academicYearId String?                   @db.Uuid
+  channel        NotificationChannel
+  templateKey    String
+  recipientType  NotificationRecipientType
+  recipientId    String                    @db.Uuid
+  recipientPhone String
+  payloadJson    Json
+  status         NotificationOutboxStatus  @default(QUEUED)
+  idempotencyKey String                    @unique
+  scheduledFor   DateTime                  @default(now())
+  sentAt         DateTime?
+  failedAt       DateTime?
+  failureReason  String?
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
 
-  tenant                  Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  branch                  Branch?                          @relation(fields: [branchId], references: [id], onDelete: SetNull)
-  academicYear            AcademicYear?                    @relation(fields: [academicYearId], references: [id], onDelete: SetNull)
-  schoolCastCommunication SchoolCastCommunication?         @relation(fields: [schoolCastCommunicationId], references: [id], onDelete: Cascade)
-  communicationVersion    SchoolCastCommunicationVersion?  @relation(fields: [communicationVersionId], references: [id], onDelete: Cascade)
-  recipientSnapshot       SchoolCastRecipientSnapshot?     @relation(fields: [recipientSnapshotId], references: [id], onDelete: Cascade)
-  channelPlan             SchoolCastChannelPlan?           @relation(fields: [channelPlanId], references: [id], onDelete: SetNull)
-  providerConfig          SchoolCastProviderConfiguration? @relation(fields: [providerConfigId], references: [id], onDelete: SetNull)
-  templateVersion         SchoolCastTemplateVersion?       @relation(fields: [templateVersionId], references: [id], onDelete: SetNull)
-  deliveryLogs            NotificationDeliveryLog[]
-  schoolCastAttempts      SchoolCastDeliveryAttempt[]
+  tenant       Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch       Branch?                   @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  academicYear AcademicYear?             @relation(fields: [academicYearId], references: [id], onDelete: SetNull)
+  deliveryLogs NotificationDeliveryLog[]
 
   @@index([tenantId, status, scheduledFor])
-  @@index([tenantId, status, availableAt, priority])
   @@index([tenantId, recipientType, recipientId])
   @@index([tenantId, branchId, createdAt])
-  @@index([tenantId, providerConfigId, status])
-  @@index([tenantId, recipientSnapshotId, channel])
-  @@index([leaseUntil])
   @@map("notification_outbox")
 }
 
@@ -4003,532 +4013,4 @@ model WhatsAppIntegrationSetting {
   @@index([tenantId, branchId, isEnabled])
   @@index([tenantId, provider])
   @@map("whatsapp_integration_settings")
-}
-
-model SchoolCastCommunication {
-  id                      String                        @id @default(uuid()) @db.Uuid
-  tenantId                String                        @db.Uuid
-  institutionId           String?                       @db.Uuid
-  branchId                String?                       @db.Uuid
-  academicYearId          String?                       @db.Uuid
-  type                    SchoolCastCommunicationType
-  category                String
-  priority                SchoolCastPriority            @default(NORMAL)
-  status                  SchoolCastCommunicationStatus @default(DRAFT)
-  sourceModule            String?
-  sourceEntityType        String?
-  sourceEntityId          String?
-  sourceEntityVersionId   String?
-  currentVersionId        String?                       @unique @db.Uuid
-  timeZoneId              String                        @default("Asia/Kolkata")
-  scheduledAtUtc          DateTime?
-  validFrom               DateTime?
-  validUntil              DateTime?
-  acknowledgementRequired Boolean                       @default(false)
-  submittedAt             DateTime?
-  approvedAt              DateTime?
-  publishedAt             DateTime?
-  cancelledAt             DateTime?
-  archivedAt              DateTime?
-  publicationAttemptCount Int                           @default(0)
-  lastPublicationError    String?
-  createdById             String                        @db.Uuid
-  updatedById             String                        @db.Uuid
-  createdAt               DateTime                      @default(now())
-  updatedAt               DateTime                      @updatedAt
-
-  tenant             Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  institution        Institution?                     @relation(fields: [institutionId], references: [id], onDelete: Restrict)
-  branch             Branch?                          @relation(fields: [branchId], references: [id], onDelete: Restrict)
-  academicYear       AcademicYear?                    @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
-  createdBy          User                             @relation("SchoolCastCommunicationCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedBy          User                             @relation("SchoolCastCommunicationUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
-  currentVersion     SchoolCastCommunicationVersion?  @relation("SchoolCastCurrentCommunicationVersion", fields: [currentVersionId], references: [id], onDelete: SetNull)
-  versions           SchoolCastCommunicationVersion[] @relation("SchoolCastCommunicationVersions")
-  audienceRules      SchoolCastAudienceRule[]
-  recipientSnapshots SchoolCastRecipientSnapshot[]
-  channelPlans       SchoolCastChannelPlan[]
-  approvals          SchoolCastApproval[]
-  attachments        SchoolCastAttachment[]
-  acknowledgements   SchoolCastAcknowledgement[]
-  homeworkItems      SchoolCastHomeworkItem[]
-  outboxItems        NotificationOutbox[]
-  InAppNotification  InAppNotification[]
-
-  @@unique([tenantId, sourceModule, sourceEntityType, sourceEntityId, sourceEntityVersionId])
-  @@index([tenantId, status, scheduledAtUtc])
-  @@index([tenantId, branchId, academicYearId, createdAt])
-  @@index([tenantId, type, status, createdAt])
-  @@map("schoolcast_communications")
-}
-
-model SchoolCastCommunicationVersion {
-  id                   String   @id @default(uuid()) @db.Uuid
-  tenantId             String   @db.Uuid
-  communicationId      String   @db.Uuid
-  versionNo            Int
-  title                String
-  summary              String?
-  contentText          String   @db.Text
-  contentHtmlSanitized String?  @db.Text
-  contentJson          Json?
-  contentHash          String
-  languageCode         String   @default("en")
-  createdById          String   @db.Uuid
-  createdAt            DateTime @default(now())
-
-  tenant                  Tenant                        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  communication           SchoolCastCommunication       @relation("SchoolCastCommunicationVersions", fields: [communicationId], references: [id], onDelete: Cascade)
-  currentForCommunication SchoolCastCommunication?      @relation("SchoolCastCurrentCommunicationVersion")
-  createdBy               User                          @relation("SchoolCastCommunicationVersionCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  recipientSnapshots      SchoolCastRecipientSnapshot[]
-  approvals               SchoolCastApproval[]
-  attachments             SchoolCastAttachment[]
-  acknowledgements        SchoolCastAcknowledgement[]
-  inAppNotifications      InAppNotification[]
-  outboxItems             NotificationOutbox[]
-
-  @@unique([communicationId, versionNo])
-  @@index([tenantId, communicationId, createdAt])
-  @@index([tenantId, contentHash])
-  @@map("schoolcast_communication_versions")
-}
-
-model SchoolCastAudienceRule {
-  id              String                     @id @default(uuid()) @db.Uuid
-  tenantId        String                     @db.Uuid
-  communicationId String                     @db.Uuid
-  ruleType        SchoolCastAudienceRuleType
-  mode            SchoolCastAudienceMode     @default(INCLUDE)
-  sequence        Int                        @default(0)
-  criteriaJson    Json
-  label           String?
-  createdAt       DateTime                   @default(now())
-  updatedAt       DateTime                   @updatedAt
-
-  tenant        Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  communication SchoolCastCommunication @relation(fields: [communicationId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId, communicationId, sequence])
-  @@map("schoolcast_audience_rules")
-}
-
-model SchoolCastRecipientSnapshot {
-  id                       String                  @id @default(uuid()) @db.Uuid
-  tenantId                 String                  @db.Uuid
-  communicationId          String                  @db.Uuid
-  communicationVersionId   String                  @db.Uuid
-  recipientType            SchoolCastRecipientType
-  stableRecipientKey       String
-  userId                   String?                 @db.Uuid
-  studentId                String?                 @db.Uuid
-  guardianId               String?                 @db.Uuid
-  staffId                  String?                 @db.Uuid
-  relationship             String?
-  displayName              String
-  contactEmailMasked       String?
-  contactEmailHash         String?
-  contactPhoneMasked       String?
-  contactPhoneHash         String?
-  contactSnapshotEncrypted String?                 @db.Text
-  eligibilityJson          Json
-  resolvedAt               DateTime                @default(now())
-
-  tenant               Tenant                                  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  communication        SchoolCastCommunication                 @relation(fields: [communicationId], references: [id], onDelete: Cascade)
-  communicationVersion SchoolCastCommunicationVersion          @relation(fields: [communicationVersionId], references: [id], onDelete: Restrict)
-  user                 User?                                   @relation(fields: [userId], references: [id], onDelete: SetNull)
-  student              Student?                                @relation(fields: [studentId], references: [id], onDelete: SetNull)
-  guardian             Guardian?                               @relation(fields: [guardianId], references: [id], onDelete: SetNull)
-  staff                StaffProfile?                           @relation(fields: [staffId], references: [id], onDelete: SetNull)
-  channelEligibility   SchoolCastRecipientChannelEligibility[]
-  acknowledgements     SchoolCastAcknowledgement[]
-  inAppNotifications   InAppNotification[]
-  outboxItems          NotificationOutbox[]
-
-  @@unique([communicationVersionId, recipientType, stableRecipientKey])
-  @@index([tenantId, communicationId, recipientType])
-  @@index([tenantId, userId, resolvedAt])
-  @@index([tenantId, studentId, guardianId])
-  @@index([tenantId, staffId])
-  @@map("schoolcast_recipient_snapshots")
-}
-
-model SchoolCastRecipientChannelEligibility {
-  id                  String              @id @default(uuid()) @db.Uuid
-  tenantId            String              @db.Uuid
-  recipientSnapshotId String              @db.Uuid
-  channel             NotificationChannel
-  purpose             String
-  eligible            Boolean
-  reasonCode          String?
-  consentRecordId     String?             @db.Uuid
-  evaluatedAt         DateTime            @default(now())
-
-  tenant            Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  recipientSnapshot SchoolCastRecipientSnapshot @relation(fields: [recipientSnapshotId], references: [id], onDelete: Cascade)
-  consentRecord     SchoolCastConsentRecord?    @relation(fields: [consentRecordId], references: [id], onDelete: SetNull)
-
-  @@unique([recipientSnapshotId, channel, purpose])
-  @@index([tenantId, channel, eligible])
-  @@map("schoolcast_recipient_channel_eligibility")
-}
-
-model SchoolCastChannelPlan {
-  id                String                      @id @default(uuid()) @db.Uuid
-  tenantId          String                      @db.Uuid
-  communicationId   String                      @db.Uuid
-  channel           NotificationChannel
-  templateId        String?                     @db.Uuid
-  templateVersionId String?                     @db.Uuid
-  providerConfigId  String?                     @db.Uuid
-  status            SchoolCastChannelPlanStatus @default(DRAFT)
-  fallbackOrder     Int?
-  configurationJson Json?
-  createdAt         DateTime                    @default(now())
-  updatedAt         DateTime                    @updatedAt
-
-  tenant          Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  communication   SchoolCastCommunication          @relation(fields: [communicationId], references: [id], onDelete: Cascade)
-  template        NotificationTemplate?            @relation(fields: [templateId], references: [id], onDelete: SetNull)
-  templateVersion SchoolCastTemplateVersion?       @relation(fields: [templateVersionId], references: [id], onDelete: SetNull)
-  providerConfig  SchoolCastProviderConfiguration? @relation(fields: [providerConfigId], references: [id], onDelete: SetNull)
-  outboxItems     NotificationOutbox[]
-
-  @@unique([communicationId, channel])
-  @@index([tenantId, channel, status])
-  @@map("schoolcast_channel_plans")
-}
-
-model SchoolCastApproval {
-  id                     String                   @id @default(uuid()) @db.Uuid
-  tenantId               String                   @db.Uuid
-  communicationId        String                   @db.Uuid
-  communicationVersionId String                   @db.Uuid
-  status                 SchoolCastApprovalStatus @default(PENDING)
-  requiredPermission     String
-  selfApprovalAllowed    Boolean                  @default(false)
-  submittedById          String                   @db.Uuid
-  submittedAt            DateTime                 @default(now())
-  completedAt            DateTime?
-  createdAt              DateTime                 @default(now())
-  updatedAt              DateTime                 @updatedAt
-
-  tenant               Tenant                         @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  communication        SchoolCastCommunication        @relation(fields: [communicationId], references: [id], onDelete: Cascade)
-  communicationVersion SchoolCastCommunicationVersion @relation(fields: [communicationVersionId], references: [id], onDelete: Restrict)
-  submittedBy          User                           @relation("SchoolCastApprovalSubmittedBy", fields: [submittedById], references: [id], onDelete: Restrict)
-  actions              SchoolCastApprovalAction[]
-
-  @@index([tenantId, status, submittedAt])
-  @@index([tenantId, communicationId, status])
-  @@map("schoolcast_approvals")
-}
-
-model SchoolCastApprovalAction {
-  id          String                       @id @default(uuid()) @db.Uuid
-  tenantId    String                       @db.Uuid
-  approvalId  String                       @db.Uuid
-  actorUserId String                       @db.Uuid
-  action      SchoolCastApprovalActionType
-  reason      String?                      @db.Text
-  occurredAt  DateTime                     @default(now())
-
-  tenant   Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  approval SchoolCastApproval @relation(fields: [approvalId], references: [id], onDelete: Cascade)
-  actor    User               @relation("SchoolCastApprovalActionActor", fields: [actorUserId], references: [id], onDelete: Restrict)
-
-  @@index([tenantId, approvalId, occurredAt])
-  @@index([tenantId, actorUserId, occurredAt])
-  @@map("schoolcast_approval_actions")
-}
-
-model SchoolCastTemplateVersion {
-  id                 String              @id @default(uuid()) @db.Uuid
-  tenantId           String              @db.Uuid
-  templateId         String              @db.Uuid
-  versionNo          Int
-  channel            NotificationChannel
-  languageCode       String              @default("en")
-  subject            String?
-  bodyText           String              @db.Text
-  bodyHtmlSanitized  String?             @db.Text
-  variableSchemaJson Json
-  contentHash        String
-  status             String              @default("DRAFT")
-  createdById        String              @db.Uuid
-  createdAt          DateTime            @default(now())
-
-  tenant       Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  template     NotificationTemplate    @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  createdBy    User                    @relation("SchoolCastTemplateVersionCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  channelPlans SchoolCastChannelPlan[]
-  outboxItems  NotificationOutbox[]
-
-  @@unique([templateId, versionNo, channel, languageCode])
-  @@index([tenantId, channel, status])
-  @@index([tenantId, contentHash])
-  @@map("schoolcast_template_versions")
-}
-
-model SchoolCastProviderConfiguration {
-  id                     String                   @id @default(uuid()) @db.Uuid
-  tenantId               String                   @db.Uuid
-  institutionId          String?                  @db.Uuid
-  branchId               String?                  @db.Uuid
-  channel                NotificationChannel
-  providerCode           String
-  mode                   SchoolCastDeliveryMode   @default(DRY_RUN)
-  status                 SchoolCastProviderStatus @default(DRAFT)
-  senderDisplayName      String?
-  senderIdentifierMasked String?
-  secretRef              String?
-  webhookSecretRef       String?
-  configurationJson      Json?
-  limitsJson             Json?
-  healthStatus           String?
-  isDefault              Boolean                  @default(false)
-  createdById            String                   @db.Uuid
-  updatedById            String                   @db.Uuid
-  createdAt              DateTime                 @default(now())
-  updatedAt              DateTime                 @updatedAt
-
-  tenant       Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  institution  Institution?            @relation(fields: [institutionId], references: [id], onDelete: Restrict)
-  branch       Branch?                 @relation(fields: [branchId], references: [id], onDelete: Restrict)
-  createdBy    User                    @relation("SchoolCastProviderCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedBy    User                    @relation("SchoolCastProviderUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
-  channelPlans SchoolCastChannelPlan[]
-  outboxItems  NotificationOutbox[]
-
-  @@index([tenantId, institutionId, branchId, channel, status])
-  @@index([tenantId, channel, isDefault])
-  @@map("schoolcast_provider_configurations")
-}
-
-model SchoolCastConsentRecord {
-  id             String                           @id @default(uuid()) @db.Uuid
-  tenantId       String                           @db.Uuid
-  ownerType      CommunicationPreferenceOwnerType
-  ownerId        String                           @db.Uuid
-  channel        NotificationChannel
-  purpose        String
-  status         SchoolCastConsentStatus
-  noticeVersion  String
-  noticeTextHash String
-  source         String
-  proofReference String?
-  capturedAt     DateTime                         @default(now())
-  withdrawnAt    DateTime?
-  expiresAt      DateTime?
-  createdAt      DateTime                         @default(now())
-
-  tenant             Tenant                                  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  channelEligibility SchoolCastRecipientChannelEligibility[]
-
-  @@index([tenantId, ownerType, ownerId, channel, purpose, capturedAt])
-  @@index([tenantId, status, expiresAt])
-  @@map("schoolcast_consent_records")
-}
-
-model SchoolCastAttachment {
-  id                     String                         @id @default(uuid()) @db.Uuid
-  tenantId               String                         @db.Uuid
-  communicationId        String?                        @db.Uuid
-  communicationVersionId String?                        @db.Uuid
-  homeworkVersionId      String?                        @db.Uuid
-  storageBucket          String
-  storagePath            String
-  originalFileName       String
-  mimeType               String
-  sizeBytes              Int
-  checksumSha256         String
-  scanStatus             SchoolCastAttachmentScanStatus @default(PENDING)
-  scanAttemptCount       Int                            @default(0)
-  scanAvailableAt        DateTime                       @default(now())
-  scanLockedAt           DateTime?
-  scanLeaseUntil         DateTime?
-  scanLockOwner          String?
-  scanCompletedAt        DateTime?
-  scanEngine             String?
-  scanReference          String?
-  scanFailureCode        String?
-  retentionClass         String                         @default("COMMUNICATION")
-  uploadedById           String                         @db.Uuid
-  deletedById            String?                        @db.Uuid
-  deletedAt              DateTime?
-  createdAt              DateTime                       @default(now())
-  updatedAt              DateTime                       @updatedAt
-
-  tenant               Tenant                          @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  communication        SchoolCastCommunication?        @relation(fields: [communicationId], references: [id], onDelete: Cascade)
-  communicationVersion SchoolCastCommunicationVersion? @relation(fields: [communicationVersionId], references: [id], onDelete: Cascade)
-  homeworkVersion      SchoolCastHomeworkVersion?      @relation(fields: [homeworkVersionId], references: [id], onDelete: Cascade)
-  uploadedBy           User                            @relation("SchoolCastAttachmentUploadedBy", fields: [uploadedById], references: [id], onDelete: Restrict)
-  deletedBy            User?                           @relation("SchoolCastAttachmentDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
-
-  @@unique([storageBucket, storagePath])
-  @@index([tenantId, communicationVersionId, deletedAt])
-  @@index([tenantId, homeworkVersionId, deletedAt])
-  @@index([tenantId, scanStatus])
-  @@index([scanStatus, scanAvailableAt, scanLeaseUntil], map: "schoolcast_attachments_scanStatus_scanAvailableAt_scanLeaseUnti")
-  @@map("schoolcast_attachments")
-}
-
-model SchoolCastHomeworkItem {
-  id               String                   @id @default(uuid()) @db.Uuid
-  tenantId         String                   @db.Uuid
-  institutionId    String                   @db.Uuid
-  branchId         String                   @db.Uuid
-  academicYearId   String                   @db.Uuid
-  classSectionId   String                   @db.Uuid
-  subjectId        String                   @db.Uuid
-  teacherUserId    String                   @db.Uuid
-  workType         SchoolCastWorkType
-  status           SchoolCastHomeworkStatus @default(DRAFT)
-  currentVersionId String?                  @unique @db.Uuid
-  communicationId  String?                  @db.Uuid
-  publishedAt      DateTime?
-  cancelledAt      DateTime?
-  createdAt        DateTime                 @default(now())
-  updatedAt        DateTime                 @updatedAt
-
-  tenant         Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  institution    Institution                 @relation(fields: [institutionId], references: [id], onDelete: Restrict)
-  branch         Branch                      @relation(fields: [branchId], references: [id], onDelete: Restrict)
-  academicYear   AcademicYear                @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
-  classSection   ClassSection                @relation(fields: [classSectionId], references: [id], onDelete: Restrict)
-  subject        Subject                     @relation(fields: [subjectId], references: [id], onDelete: Restrict)
-  teacher        User                        @relation("SchoolCastHomeworkTeacher", fields: [teacherUserId], references: [id], onDelete: Restrict)
-  currentVersion SchoolCastHomeworkVersion?  @relation("SchoolCastCurrentHomeworkVersion", fields: [currentVersionId], references: [id], onDelete: SetNull)
-  communication  SchoolCastCommunication?    @relation(fields: [communicationId], references: [id], onDelete: SetNull)
-  versions       SchoolCastHomeworkVersion[] @relation("SchoolCastHomeworkVersions")
-
-  @@index([tenantId, branchId, academicYearId, classSectionId, status])
-  @@index([tenantId, teacherUserId, status, createdAt])
-  @@index([tenantId, subjectId, status])
-  @@map("schoolcast_homework_items")
-}
-
-model SchoolCastHomeworkVersion {
-  id                    String    @id @default(uuid()) @db.Uuid
-  tenantId              String    @db.Uuid
-  homeworkItemId        String    @db.Uuid
-  versionNo             Int
-  title                 String
-  instructionsSanitized String    @db.Text
-  assignmentDate        DateTime  @db.Date
-  completionDueAt       DateTime?
-  teacherRemarks        String?   @db.Text
-  contentHash           String
-  createdById           String    @db.Uuid
-  createdAt             DateTime  @default(now())
-
-  tenant                 Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  homeworkItem           SchoolCastHomeworkItem  @relation("SchoolCastHomeworkVersions", fields: [homeworkItemId], references: [id], onDelete: Cascade)
-  currentForHomeworkItem SchoolCastHomeworkItem? @relation("SchoolCastCurrentHomeworkVersion")
-  createdBy              User                    @relation("SchoolCastHomeworkVersionCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  attachments            SchoolCastAttachment[]
-
-  @@unique([homeworkItemId, versionNo])
-  @@index([tenantId, assignmentDate])
-  @@index([tenantId, contentHash])
-  @@map("schoolcast_homework_versions")
-}
-
-model SchoolCastAcknowledgement {
-  id                      String   @id @default(uuid()) @db.Uuid
-  tenantId                String   @db.Uuid
-  communicationId         String   @db.Uuid
-  communicationVersionId  String   @db.Uuid
-  recipientSnapshotId     String   @db.Uuid
-  userId                  String   @db.Uuid
-  acknowledgementTextHash String?
-  acknowledgedAt          DateTime @default(now())
-
-  tenant               Tenant                         @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  communication        SchoolCastCommunication        @relation(fields: [communicationId], references: [id], onDelete: Restrict)
-  communicationVersion SchoolCastCommunicationVersion @relation(fields: [communicationVersionId], references: [id], onDelete: Restrict)
-  recipientSnapshot    SchoolCastRecipientSnapshot    @relation(fields: [recipientSnapshotId], references: [id], onDelete: Restrict)
-  user                 User                           @relation(fields: [userId], references: [id], onDelete: Restrict)
-
-  @@unique([communicationVersionId, recipientSnapshotId, userId])
-  @@index([tenantId, userId, acknowledgedAt])
-  @@map("schoolcast_acknowledgements")
-}
-
-model SchoolCastDeliveryAttempt {
-  id                String                          @id @default(uuid()) @db.Uuid
-  tenantId          String                          @db.Uuid
-  outboxId          String                          @db.Uuid
-  attemptNo         Int
-  providerMessageId String?
-  requestHash       String
-  status            SchoolCastDeliveryAttemptStatus @default(STARTED)
-  startedAt         DateTime                        @default(now())
-  completedAt       DateTime?
-  errorCategory     String?
-  errorCode         String?
-  errorMessage      String?
-  costAmount        Decimal?                        @db.Decimal(12, 4)
-  currency          String?                         @db.VarChar(3)
-
-  tenant Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  outbox NotificationOutbox        @relation(fields: [outboxId], references: [id], onDelete: Cascade)
-  events SchoolCastDeliveryEvent[]
-
-  @@unique([outboxId, attemptNo])
-  @@index([tenantId, status, startedAt])
-  @@index([providerMessageId])
-  @@map("schoolcast_delivery_attempts")
-}
-
-model SchoolCastDeliveryEvent {
-  id                String                        @id @default(uuid()) @db.Uuid
-  tenantId          String                        @db.Uuid
-  attemptId         String                        @db.Uuid
-  providerEventId   String?
-  canonicalStatus   SchoolCastDeliveryEventStatus
-  providerStatus    String?
-  occurredAt        DateTime
-  receivedAt        DateTime                      @default(now())
-  payloadHash       String?
-  signatureVerified Boolean                       @default(false)
-
-  tenant  Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  attempt SchoolCastDeliveryAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
-
-  @@unique([attemptId, providerEventId])
-  @@index([tenantId, canonicalStatus, occurredAt])
-  @@map("schoolcast_delivery_events")
-}
-
-model SchoolCastDomainEvent {
-  id               String                      @id @default(uuid()) @db.Uuid
-  tenantId         String                      @db.Uuid
-  branchId         String?                     @db.Uuid
-  academicYearId   String?                     @db.Uuid
-  sourceModule     String
-  sourceEventId    String
-  eventType        String
-  sourceEntityType String
-  sourceEntityId   String
-  payloadJson      Json
-  payloadHash      String
-  status           SchoolCastDomainEventStatus @default(PENDING)
-  availableAt      DateTime                    @default(now())
-  attemptCount     Int                         @default(0)
-  lastError        String?
-  processedAt      DateTime?
-  createdAt        DateTime                    @default(now())
-  updatedAt        DateTime                    @updatedAt
-
-  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  branch       Branch?       @relation(fields: [branchId], references: [id], onDelete: Restrict)
-  academicYear AcademicYear? @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
-
-  @@unique([tenantId, sourceModule, sourceEventId])
-  @@index([tenantId, status, availableAt])
-  @@index([tenantId, sourceModule, eventType, createdAt])
-  @@map("schoolcast_domain_events")
 }

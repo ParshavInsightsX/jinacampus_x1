@@ -6,6 +6,9 @@
 # Local-only QA, certificates, logs, and tool state.
 .tmp/
 .tmp-*
+.docker-tmp/
+.home/
+temp_meta_data/
 certificates/
 *.log
 .vercel/

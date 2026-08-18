@@ -5,9 +5,12 @@
 .github
 .next
 .tmp
+.tmp-*
+.docker-tmp
+.home
+temp_meta_data
 coverage
 docs
 node_modules
 tests
 *.log
-({tag

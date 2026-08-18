@@ -16,12 +16,13 @@ import type { TenantContext } from "@/lib/tenant/context";
 
 const mocks = vi.hoisted(() => {
   const tx = {
+    $executeRaw: vi.fn(),
     auditLog: { findMany: vi.fn() },
     attendanceSetting: { findMany: vi.fn() },
     permission: { findMany: vi.fn() },
     role: { create: vi.fn(), findMany: vi.fn() },
     rolePermission: { create: vi.fn() },
-    tenantSettings: { findUnique: vi.fn(), upsert: vi.fn() },
+    tenantSettings: { findUnique: vi.fn(), update: vi.fn() },
     user: { create: vi.fn(), findMany: vi.fn() },
     userBranchAccess: { create: vi.fn() },
     userRoleAssignment: { create: vi.fn() }
@@ -51,6 +52,10 @@ const ctx: TenantContext = {
 
 function resetMocks() {
   for (const model of Object.values(mocks.tx)) {
+    if (typeof model === "function") {
+      model.mockReset();
+      continue;
+    }
     for (const method of Object.values(model)) {
       method.mockReset();
     }
@@ -186,7 +191,7 @@ describe("CampusCore RBAC", () => {
     })).rejects.toThrow("FORBIDDEN_PERMISSION:campuscore.settings.manage");
 
     expect(mocks.requirePermission).toHaveBeenCalledWith({ ctx, permission: "campuscore.settings.manage" });
-    expect(mocks.tx.tenantSettings.upsert).not.toHaveBeenCalled();
+    expect(mocks.tx.tenantSettings.update).not.toHaveBeenCalled();
   });
 
   it("keeps CampusCore settings compatible before optional module migrations", async () => {
@@ -211,16 +216,49 @@ describe("CampusCore RBAC", () => {
       updatedAt: new Date("2026-08-15T00:00:00.000Z")
     };
     mocks.tx.tenantSettings.findUnique.mockResolvedValue(settings);
-    mocks.tx.tenantSettings.upsert.mockResolvedValue(settings);
+    mocks.tx.tenantSettings.update.mockResolvedValue(settings);
 
     await expect(updateTenantSettingsService(ctx, input)).resolves.toEqual(settings);
 
     const readArgs = mocks.tx.tenantSettings.findUnique.mock.calls[0]?.[0];
-    const writeArgs = mocks.tx.tenantSettings.upsert.mock.calls[0]?.[0];
+    const writeArgs = mocks.tx.tenantSettings.update.mock.calls[0]?.[0];
     expect(readArgs.select).toEqual(expect.objectContaining({ id: true, timezone: true }));
     expect(writeArgs.select).toEqual(expect.objectContaining({ id: true, timezone: true }));
-    expect(readArgs.select).not.toHaveProperty("schoolCastEnabled");
-    expect(writeArgs.select).not.toHaveProperty("schoolCastEnabled");
+    expect(mocks.tx.$executeRaw).not.toHaveBeenCalled();
+  });
+
+  it("creates a baseline settings row without optional-module defaults when one is missing", async () => {
+    const input = {
+      brandName: "JinaCampus",
+      timezone: "Asia/Kolkata",
+      locale: "en-IN",
+      dateFormat: "dd/MM/yyyy",
+      currency: "INR",
+      allowMultipleActiveAcademicYears: false
+    };
+    const settings = {
+      id: "settings-id",
+      tenantId: ctx.tenantId,
+      ...input,
+      brandByline: "powered by Parshav Insights",
+      primaryColor: null,
+      logoUrl: null,
+      createdById: ctx.userId,
+      updatedById: ctx.userId,
+      createdAt: new Date("2026-08-15T00:00:00.000Z"),
+      updatedAt: new Date("2026-08-15T00:00:00.000Z")
+    };
+    mocks.tx.tenantSettings.findUnique.mockResolvedValue(null);
+    mocks.tx.$executeRaw.mockResolvedValue(1);
+    mocks.tx.tenantSettings.update.mockResolvedValue(settings);
+
+    await expect(updateTenantSettingsService(ctx, input)).resolves.toEqual(settings);
+
+    expect(mocks.tx.$executeRaw).toHaveBeenCalledTimes(1);
+    expect(mocks.tx.tenantSettings.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { tenantId: ctx.tenantId },
+      select: expect.objectContaining({ id: true, timezone: true })
+    }));
   });
 
   it("requires settings manage before reading tenant or attendance settings", async () => {

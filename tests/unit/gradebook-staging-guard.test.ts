@@ -117,13 +117,14 @@ describe("GradeBook staging database guard", () => {
     expect(recoveryQa).toContain("unauthorizedRoleDenied: true");
   });
 
-  it("provides a production-safe localhost launcher with an authenticated pilot preflight", () => {
+  it("retires staging npm launchers while preserving guarded recovery tooling", () => {
     const packageJson = JSON.parse(readFileSync(path.join(root, "package.json"), "utf8")) as {
       scripts?: Record<string, string>;
     };
     const devServerBlock = runner.slice(runner.indexOf('"DevServer" {'));
-    expect(packageJson.scripts?.["dev:gradebook:staging"]).toContain("-Command DevServer -Port 3000");
-    expect(packageJson.scripts?.["qa:gradebook:staging:ready"]).toContain("-Command PilotLocalReady");
+    expect(packageJson.scripts?.dev).toBe("next dev");
+    expect(packageJson.scripts?.["dev:gradebook:staging"]).toBeUndefined();
+    expect(packageJson.scripts?.["qa:gradebook:staging:ready"]).toBeUndefined();
     expect(runner).toContain("Assert-LocalPortAvailable");
     expect(runner).toContain("Get-NetTCPConnection -State Listen -LocalPort");
     expect(runner).toContain("Assert-StagingStorageEnvironment");

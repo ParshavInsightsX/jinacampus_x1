@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { getEffectivePermissions } from "@/lib/rbac/require-permission";
-import { markStaffLeaveNotificationsReadAction } from "@/modules/staffboard-lite/actions/staff-leave.actions";
 import { PageHeader } from "@/modules/staffboard-lite/components/staffboard-page-shell";
 import { getMyStaffLeaveWorkspace } from "@/modules/staffboard-lite/queries";
 import { StatusBadge } from "@/components/ui/table-primitives";
@@ -13,7 +12,6 @@ export default async function StaffLeavePage() {
   const ctx = await requireAuth();
   const workspace = await getMyStaffLeaveWorkspace(ctx);
   const permissions = await getEffectivePermissions({ ctx, branchId: workspace.staff.branchId });
-  const unreadCount = workspace.notifications.filter((notice) => !notice.readAt).length;
 
   return (
     <div className="space-y-6">
@@ -47,16 +45,6 @@ export default async function StaffLeavePage() {
           ))}
         </div>
       </section>
-
-      {workspace.notifications.length ? (
-        <section className="premium-card p-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div><h2 className="text-lg font-semibold text-slate-950">Leave updates</h2><p className="mt-1 text-sm text-slate-500">{unreadCount} unread update{unreadCount === 1 ? "" : "s"}</p></div>
-            {unreadCount ? <form action={markStaffLeaveNotificationsReadAction}><button className="premium-secondary-button min-h-11">Mark all read</button></form> : null}
-          </div>
-          <div className="mt-4 space-y-2">{workspace.notifications.map((notice) => <Link key={notice.id} href={notice.actionUrl ?? "/staffboard/leave"} className={`block rounded-lg border p-3 ${notice.readAt ? "border-slate-200 bg-white" : "border-blue-200 bg-blue-50"}`}><p className="font-semibold text-slate-900">{notice.title}</p><p className="mt-1 text-sm text-slate-600">{notice.message}</p></Link>)}</div>
-        </section>
-      ) : null}
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold text-slate-950">Application history</h2>

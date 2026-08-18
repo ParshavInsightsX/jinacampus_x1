@@ -152,6 +152,6 @@ describe("mobile web/PWA UI redesign", () => {
     expect(combined).toContain('data-mobile-branch-cards="true"');
     expect(combined).toContain('data-mobile-academic-year-cards="true"');
     expect(combined).toContain("hidden md:block");
-    expect(combined).not.toMatch(/passwordHash|tokenHash|rawToken|FeeDesk|GradeBook|SchoolCast|payroll|biometric/i);
+    expect(combined).not.toMatch(/passwordHash|tokenHash|rawToken|FeeDesk|GradeBook|payroll|biometric/i);
   });
 });

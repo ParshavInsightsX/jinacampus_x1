@@ -59,8 +59,6 @@ describe("Base MVP UI/UX modernization", () => {
       ])
     );
     expect(shell).toContain("GradeBook");
-    expect(shell).toContain("SchoolCast");
-    expect(shell).toContain("schoolCastEnabled");
     expect(shell).not.toMatch(/FeeDesk|payroll|biometric/i);
   });
 

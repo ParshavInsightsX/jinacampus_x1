@@ -3,6 +3,11 @@ import { describe, expect, it, vi } from "vitest";
 import { DEFAULT_ROLE_PERMISSION_MAP } from "@/lib/rbac/roles";
 import { isPermissionCode, NOTIFICATION_PERMISSIONS, PERMISSION_DEFINITIONS } from "@/lib/rbac/permissions";
 import {
+  EXTERNAL_NOTIFICATION_PERMISSIONS,
+  IN_APP_NOTIFICATION_MANAGEMENT_PERMISSIONS,
+  IN_APP_NOTIFICATION_SELF_PERMISSIONS
+} from "@/modules/notifications/permissions";
+import {
   updateCommunicationPreferenceSchema,
   updateNotificationAttendanceSettingsSchema
 } from "@/modules/notifications/schemas";
@@ -579,12 +584,21 @@ describe("webhook and security boundaries", () => {
     expect(verifyWhatsAppWebhookSignature(body, "sha256=bad", "secret")).toBe(false);
   });
 
-  it("notification permissions are seeded only to admin/principal governance roles", () => {
+  it("separates notification self-service from Principal governance permissions", () => {
     for (const permission of NOTIFICATION_PERMISSIONS) {
       expect(isPermissionCode(permission)).toBe(true);
       expect(PERMISSION_DEFINITIONS).toContainEqual(expect.objectContaining({ code: permission, module: "NOTIFICATIONS" }));
       expect(DEFAULT_ROLE_PERMISSION_MAP.ADMIN).toContain(permission);
       expect(DEFAULT_ROLE_PERMISSION_MAP.PRINCIPAL).toContain(permission);
+    }
+    for (const permission of IN_APP_NOTIFICATION_SELF_PERMISSIONS) {
+      expect(DEFAULT_ROLE_PERMISSION_MAP.TEACHER).toContain(permission);
+      expect(DEFAULT_ROLE_PERMISSION_MAP.STAFF).toContain(permission);
+    }
+    for (const permission of [
+      ...IN_APP_NOTIFICATION_MANAGEMENT_PERMISSIONS,
+      ...EXTERNAL_NOTIFICATION_PERMISSIONS
+    ]) {
       expect(DEFAULT_ROLE_PERMISSION_MAP.TEACHER).not.toContain(permission);
       expect(DEFAULT_ROLE_PERMISSION_MAP.STAFF).not.toContain(permission);
     }

@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { db } from "@/lib/db";
 import { mapActionError } from "@/lib/errors";
 import { getTenantContext } from "@/lib/tenant/context";
 import {
@@ -232,13 +231,4 @@ export async function adjustStaffLeaveBalanceAction(
   } catch (error) {
     return initialError(error, "Unable to adjust this leave balance.");
   }
-}
-
-export async function markStaffLeaveNotificationsReadAction() {
-  const ctx = await getTenantContext();
-  await db.inAppNotification.updateMany({
-    where: { tenantId: ctx.tenantId, userId: ctx.userId, readAt: null, type: { startsWith: "STAFF_LEAVE_" } },
-    data: { readAt: new Date() }
-  });
-  revalidatePath("/staffboard/leave");
 }

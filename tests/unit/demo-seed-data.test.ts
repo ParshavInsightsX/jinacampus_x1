@@ -78,6 +78,14 @@ describe("commercial seed safety", () => {
       .toBeNull();
   });
 
+  it("keeps synthetic Principal identities distinct and reuses the seeded administrator profile", () => {
+    const seedSource = readFileSync(join(process.cwd(), "prisma/seeds/demo-tenant.seed.ts"), "utf8");
+
+    expect(seedSource).toContain('employeeCode: "JD-ADM-001"');
+    expect(seedSource).toContain('user.key === "admin" ? "DEMO-PRINCIPAL-ADMIN" : "DEMO-PRINCIPAL-001"');
+    expect(seedSource).toContain("principalId: demoPrincipalId(demoUser)");
+  });
+
   it("requires commercial tenant and administrator environment values", () => {
     expect(() => getCommercialBootstrapConfig({ COMMERCIAL_BOOTSTRAP_ENABLED: "true" }))
       .toThrow("SEED_TENANT_NAME is required");

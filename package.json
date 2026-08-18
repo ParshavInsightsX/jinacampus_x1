@@ -9,9 +9,6 @@
   "scripts": {
     "dev": "next dev",
     "dev:raw": "next dev",
-    "dev:gradebook:staging": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/gradebook-staging.ps1 -Command DevServer -Port 3000",
-    "dev:schoolcast:staging": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/schoolcast-staging.ps1 -Command DevServer -Port 3000",
-    "qa:gradebook:staging:ready": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/gradebook-staging.ps1 -Command PilotLocalReady",
     "build": "next build",
     "postinstall": "prisma generate",
     "start": "next start",
@@ -28,15 +25,7 @@
     "platform-admin:provision": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/provision-platform-administrator.ts",
     "platform-admin:principal-recovery-access": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/set-platform-principal-recovery-access.ts",
     "smoke:notifications:whatsapp": "tsx scripts/whatsapp-notification-db-smoke.ts",
-    "test": "vitest run",
-    "worker:schoolcast": "node --import tsx scripts/run-schoolcast-worker.ts",
-    "infra:schoolcast:validate": "node --import tsx scripts/validate-schoolcast-self-hosted.ts",
-    "infra:schoolcast:alerts": "node --import tsx scripts/render-schoolcast-alertmanager-config.ts",
-    "infra:schoolcast:hosts:validate": "node --import tsx scripts/validate-schoolcast-host-inventory.ts",
-    "infra:schoolcast:monitoring": "node --import tsx scripts/render-schoolcast-distributed-monitoring.ts",
-    "infra:schoolcast:rehearsal:validate": "node --import tsx scripts/validate-schoolcast-rehearsal-evidence.ts",
-    "release:schoolcast:evidence": "node --import tsx scripts/validate-schoolcast-production-readiness-evidence.ts",
-    "infra:schoolcast:host:preflight": "node --import tsx scripts/verify-schoolcast-staging-host.ts"
+    "test": "vitest run"
   },
   "prisma": {
     "seed": "node --import tsx prisma/seed.ts"
@@ -55,7 +44,6 @@
     "qrcode.react": "^4.2.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "svix": "1.99.1",
     "tailwind-merge": "^2.5.5",
     "zod": "^3.24.1"
   },

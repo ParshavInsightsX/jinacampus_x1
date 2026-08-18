@@ -24,7 +24,7 @@ export type NavGroup = {
 export type DesktopDockNavItem = NavItem & {
   activeHrefs: readonly string[];
   iconHref: string;
-  moduleKey: "dashboard" | "campus-core" | "academia" | "gradebook" | "schoolcast" | "staffboard";
+  moduleKey: "dashboard" | "campus-core" | "academia" | "gradebook" | "staffboard";
 };
 
 type PermissionNavGroup = {
@@ -36,6 +36,10 @@ export const NAVIGATION_GROUPS = [
   {
     title: "Dashboard",
     items: [{ title: "Dashboard", href: "/dashboard", permissions: ["campuscore.tenant.view"] }]
+  },
+  {
+    title: "Notifications",
+    items: [{ title: "Notification Centre", href: "/notifications", permissions: ["notifications.access"] }]
   },
   {
     title: "CampusCore",
@@ -71,19 +75,6 @@ export const NAVIGATION_GROUPS = [
     items: [
       { title: "GradeBook", href: "/gradebook", permissions: GRADEBOOK_PERMISSIONS },
       { title: "Published Results", href: "/gradebook/reports", permissions: ["gradebook.report"] }
-    ]
-  },
-  {
-    title: "SchoolCast",
-    items: [
-      { title: "SchoolCast", href: "/schoolcast", permissions: ["schoolcast.dashboard.view"] },
-      { title: "Notices", href: "/schoolcast/notices", permissions: ["schoolcast.communication.view"] },
-      { title: "Broadcasts", href: "/schoolcast/broadcasts", permissions: ["schoolcast.communication.view"] },
-      { title: "Approvals", href: "/schoolcast/approvals", permissions: ["schoolcast.approval.view"] },
-      { title: "Homework", href: "/schoolcast/homework", permissions: ["schoolcast.homework.view"] },
-      { title: "Notifications", href: "/notifications", permissions: ["schoolcast.inbox.view"] },
-      { title: "Delivery", href: "/schoolcast/delivery", permissions: ["schoolcast.delivery.view"] },
-      { title: "Settings", href: "/schoolcast/settings", permissions: ["schoolcast.settings.view"] }
     ]
   },
   {
@@ -188,18 +179,6 @@ export const MOBILE_NAVIGATION_SHORTCUTS = [
     href: "/gradebook",
     permissions: ["gradebook.view"],
     audiences: ["admin", "teacher"]
-  },
-  {
-    title: "SchoolCast",
-    href: "/schoolcast",
-    permissions: ["schoolcast.dashboard.view"],
-    audiences: ["admin", "teacher"]
-  },
-  {
-    title: "Notifications",
-    href: "/notifications",
-    permissions: ["schoolcast.inbox.view"],
-    audiences: ["admin", "office", "teacher", "staff"]
   },
   {
     title: "Staff Reports",
@@ -358,12 +337,6 @@ const DESKTOP_DOCK_GROUP_CONFIG = {
     iconHref: "/gradebook",
     moduleKey: "gradebook"
   },
-  SchoolCast: {
-    title: "SchoolCast",
-    preferredHref: "/schoolcast",
-    iconHref: "/schoolcast",
-    moduleKey: "schoolcast"
-  },
   "StaffBoard Lite": {
     title: "StaffBoard",
     preferredHref: "/staffboard",
@@ -382,16 +355,11 @@ function hasEveryPermission(permissions: ReadonlySet<PermissionCode>, requiredPe
 
 type NavigationFeatureOptions = {
   gradebookEnabled?: boolean;
-  schoolCastEnabled?: boolean;
 };
 
 function isFeatureNavigationEnabled(href: string, features: NavigationFeatureOptions) {
   if (href === "/gradebook" || href.startsWith("/gradebook/")) {
     return features.gradebookEnabled === true;
-  }
-
-  if (href === "/notifications" || href === "/schoolcast" || href.startsWith("/schoolcast/")) {
-    return features.schoolCastEnabled === true;
   }
 
   return true;
@@ -402,11 +370,7 @@ export function getVisibleNavigationGroups(
   features: NavigationFeatureOptions = {}
 ) {
   return NAVIGATION_GROUPS
-    .filter(
-      (group) =>
-        (group.title !== "GradeBook" || features.gradebookEnabled === true) &&
-        (group.title !== "SchoolCast" || features.schoolCastEnabled === true)
-    )
+    .filter((group) => group.title !== "GradeBook" || features.gradebookEnabled === true)
     .map((group) => ({
       title: group.title,
       items: group.items

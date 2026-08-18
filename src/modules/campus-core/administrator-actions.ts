@@ -143,17 +143,6 @@ export async function updateSchoolAction(
       gradebookPublicationEnabled: optionalChecked(formData, "gradebookPublicationEnabled"),
       gradebookAnalyticsEnabled: optionalChecked(formData, "gradebookAnalyticsEnabled"),
       gradebookPortalResultsEnabled: optionalChecked(formData, "gradebookPortalResultsEnabled"),
-      schoolCastEnabled: optionalChecked(formData, "schoolCastEnabled"),
-      schoolCastInAppEnabled: optionalChecked(formData, "schoolCastInAppEnabled"),
-      schoolCastNoticesEnabled: optionalChecked(formData, "schoolCastNoticesEnabled"),
-      schoolCastHomeworkEnabled: optionalChecked(formData, "schoolCastHomeworkEnabled"),
-      schoolCastApprovalsEnabled: optionalChecked(formData, "schoolCastApprovalsEnabled"),
-      schoolCastEmailEnabled: optionalChecked(formData, "schoolCastEmailEnabled"),
-      schoolCastWhatsAppEnabled: optionalChecked(formData, "schoolCastWhatsAppEnabled"),
-      schoolCastAutomationEnabled: optionalChecked(formData, "schoolCastAutomationEnabled"),
-      schoolCastAnalyticsEnabled: optionalChecked(formData, "schoolCastAnalyticsEnabled"),
-      schoolCastDeliveryMode: s(formData, "schoolCastDeliveryMode"),
-      schoolCastTeacherDirectPublish: optionalChecked(formData, "schoolCastTeacherDirectPublish")
     });
     await updateSchool(await getPlatformAdministratorContext(), input);
     revalidateAdministratorSchoolRoutes(input.tenantId);

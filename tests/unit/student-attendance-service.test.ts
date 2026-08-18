@@ -140,7 +140,6 @@ function resetMocks() {
   mocks.writeAuditLog.mockReset();
   mocks.writeAuditLog.mockResolvedValue({ id: "audit-id" });
   mocks.tx.academicCalendarEntry.findFirst.mockResolvedValue(null);
-  mocks.tx.tenantSettings.findUnique.mockResolvedValue({ schoolCastEnabled: false, schoolCastAutomationEnabled: false });
   mocks.tx.branch.findFirst.mockResolvedValue({ id: branchId, timezone: "Asia/Kolkata" });
   mocks.tx.attendanceSetting.findFirst.mockResolvedValue({
     studentAutoLockEnabled: true,

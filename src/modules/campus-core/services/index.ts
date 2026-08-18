@@ -12,6 +12,7 @@ import { writeAuditLog } from "@/lib/audit/audit-log";
 import { CAMPUS_CORE_AUDIT_EVENTS } from "@/modules/campus-core/audit-events";
 import { ensureAttendanceNotificationTemplates } from "@/modules/notifications/services/notification-template.service";
 import { requestPrincipalPasswordRecovery } from "@/modules/campus-core/principal-password-recovery.service";
+import { ensureTenantSettingsRow } from "@/modules/campus-core/services/tenant-settings-compat";
 import type {
   activateAcademicYearSchema,
   adminResetPasswordSchema,
@@ -917,10 +918,16 @@ export async function updateTenantSettingsService(ctx: TenantContext, input: z.i
       where: { tenantId: ctx.tenantId },
       select: campusCoreTenantSettingsSelect
     });
-    const after = await tx.tenantSettings.upsert({
+    if (!before) {
+      await ensureTenantSettingsRow(tx, {
+        tenantId: ctx.tenantId,
+        brandName: input.brandName,
+        createdById: ctx.userId
+      });
+    }
+    const after = await tx.tenantSettings.update({
       where: { tenantId: ctx.tenantId },
-      create: { tenantId: ctx.tenantId, ...input, createdById: ctx.userId },
-      update: { ...input, updatedById: ctx.userId },
+      data: { ...input, updatedById: ctx.userId },
       select: campusCoreTenantSettingsSelect
     });
     await writeAuditLog({ ctx, action: CAMPUS_CORE_AUDIT_EVENTS.SETTINGS_UPDATED, entityType: "TenantSettings", entityId: after.id, before, after }, tx);

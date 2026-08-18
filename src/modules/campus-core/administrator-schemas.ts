@@ -104,17 +104,6 @@ export const updateSchoolSchema = z.object({
   gradebookPublicationEnabled: z.boolean().optional(),
   gradebookAnalyticsEnabled: z.boolean().optional(),
   gradebookPortalResultsEnabled: z.boolean().optional(),
-  schoolCastEnabled: z.boolean().optional(),
-  schoolCastInAppEnabled: z.boolean().optional(),
-  schoolCastNoticesEnabled: z.boolean().optional(),
-  schoolCastHomeworkEnabled: z.boolean().optional(),
-  schoolCastApprovalsEnabled: z.boolean().optional(),
-  schoolCastEmailEnabled: z.boolean().optional(),
-  schoolCastWhatsAppEnabled: z.boolean().optional(),
-  schoolCastAutomationEnabled: z.boolean().optional(),
-  schoolCastAnalyticsEnabled: z.boolean().optional(),
-  schoolCastDeliveryMode: z.enum(["DRY_RUN", "TEST", "LIVE"]).optional(),
-  schoolCastTeacherDirectPublish: z.boolean().optional()
 }).refine(({ tenantId: _tenantId, ...value }) => Object.values(value).some((field) => field !== undefined), {
   message: "At least one school field is required."
 });

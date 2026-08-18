@@ -25,10 +25,10 @@ describe("navigation polish", () => {
   it("renders the completed MVP navigation groups", () => {
     expect(NAVIGATION_GROUPS.map((group) => group.title)).toEqual([
       "Dashboard",
+      "Notifications",
       "CampusCore",
       "Academia",
       "GradeBook",
-      "SchoolCast",
       "StaffBoard Lite"
     ]);
   });

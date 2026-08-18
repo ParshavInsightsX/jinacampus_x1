@@ -87,7 +87,6 @@ function resetMocks() {
   mocks.requirePermission.mockResolvedValue(true);
   mocks.writeAuditLog.mockReset();
   mocks.writeAuditLog.mockResolvedValue({ id: "audit-id" });
-  mocks.tx.tenantSettings.findUnique.mockResolvedValue({ schoolCastEnabled: false, schoolCastAutomationEnabled: false });
   mocks.tx.attendanceSetting.findFirst.mockResolvedValue({
     staffLateAfterTime: "08:00",
     staffHalfDayBeforeMinutes: 240,

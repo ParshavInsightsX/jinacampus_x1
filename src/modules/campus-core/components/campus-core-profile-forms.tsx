@@ -89,7 +89,7 @@ type RoleOption = {
 type AssignedRole = {
   id: string;
   roleId: string;
-  scopeType: "TENANT" | "BRANCH" | "ACADEMIC_YEAR";
+  scopeType: "TENANT" | "INSTITUTION" | "BRANCH" | "ACADEMIC_YEAR";
   scopeId: string;
   role: RoleOption;
 };

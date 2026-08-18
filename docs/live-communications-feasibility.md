@@ -70,6 +70,14 @@ Meta's onboarding guidance states that a business needs a dedicated number capab
 
 For scalable self-service school onboarding, Meta's Embedded Signup flow requires App Review and Advanced Access for relevant business/WhatsApp management permissions, secure HTTPS endpoints, system-user access, WABA subscription, phone registration, and billing integration. See Meta's [official Embedded Signup collection](https://www.postman.com/meta/whatsapp-business-platform/documentation/du6gzjv/embedded-signup).
 
+### Existing School Numbers
+
+The preferred onboarding path is an institution-owned WhatsApp Business App number when Meta and the selected provider expose an eligible Embedded Signup or Coexistence path. Eligibility must be checked during onboarding and must never be promised in advance. If Coexistence is unavailable, the school should use a dedicated institution-owned number accepted by the current WhatsApp Business registration process.
+
+A number registered only with personal WhatsApp Messenger is not accepted directly as an automated institutional sender. An authorised school representative must first complete a supported move to WhatsApp Business App or WhatsApp Business Platform.
+
+Schools must not manually enter access tokens, app secrets, webhook secrets, WABA IDs, phone-number IDs, or other provider internals into JinaCampus. Any guided provider-onboarding workflow requires a separate approved architecture, security review, and release plan before implementation.
+
 ## WhatsApp Administrative Requirements
 
 ### JinaCampus / Legal Entity

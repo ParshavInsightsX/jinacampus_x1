@@ -10,7 +10,6 @@ import { AppError, forbidden, notFound } from "@/lib/errors";
 import { requirePermission } from "@/lib/rbac/require-permission";
 import type { TenantContext } from "@/lib/tenant/context";
 import { CAMPUS_CORE_AUDIT_EVENTS } from "@/modules/campus-core/audit-events";
-import { enqueueCalendarSchoolCastEvents } from "./calendar-schoolcast-event";
 import {
   cancelAcademicCalendarEntrySchema,
   createAcademicCalendarEntrySchema,
@@ -476,7 +475,6 @@ export async function createAcademicCalendarEntry(ctx: TenantContext, input: unk
       after: calendarSnapshot(entry),
       metadata: { targetBranchCount: scope.targetBranchIds.length, staffRowsCreated: sync.created, staffRowsUpdated: sync.updated }
     }, tx);
-    await enqueueCalendarSchoolCastEvents(tx, entry, scope.targetBranchIds, "CREATED");
     return calendarSnapshot(entry);
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 10_000, timeout: 30_000 });
 }
@@ -518,7 +516,6 @@ export async function updateAcademicCalendarEntry(ctx: TenantContext, input: unk
       after: calendarSnapshot(entry),
       metadata: { releasedStaffRows: released, staffRowsCreated: sync.created, staffRowsUpdated: sync.updated }
     }, tx);
-    await enqueueCalendarSchoolCastEvents(tx, entry, scope.targetBranchIds, "UPDATED");
     return calendarSnapshot(entry);
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 10_000, timeout: 30_000 });
 }
@@ -552,7 +549,6 @@ export async function cancelAcademicCalendarEntry(ctx: TenantContext, input: unk
       after: calendarSnapshot(after),
       metadata: { releasedStaffRows: released, cancellationReason: data.cancellationReason }
     }, tx);
-    await enqueueCalendarSchoolCastEvents(tx, after, scope.targetBranchIds, "CANCELLED");
     return calendarSnapshot(after);
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 10_000, timeout: 30_000 });
 }
