@@ -203,6 +203,3 @@ Legal should preserve current copies/links in the internal evidence system. Mini
 - CERT-In Directions dated 28 April 2022 and current FAQs/guidelines — CERT-In.
 - Consumer Protection Act, 2019 and Consumer Protection (E-Commerce) Rules, 2020 as amended — India Code / Department of Consumer Affairs.
 - CGST/IGST Acts, invoice/e-invoice rules and current notifications applicable to the legal entity — CBIC/GST authorities.
-- RBI/payment-provider requirements if JinaCampus or FeeDesk handles payments.
-
-## 13. Current decision
