@@ -1,13 +1,15 @@
 import Link from "next/link";
-import { Clock3, History, QrCode } from "lucide-react";
+import { Clock3, History, IdCard, QrCode } from "lucide-react";
 import { MobilePageHeader } from "@/components/app-shell/mobile-page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireAuth } from "@/lib/auth/require-auth";
+import { ATTENDANCE_ENTITLEMENT_FEATURES } from "@/modules/campus-core/entitlements/catalog";
+import { requireAttendanceEntitlements } from "@/modules/campus-core/entitlements/service";
 import { getUserSafeErrorMessage } from "@/lib/errors";
+import { safeTimeZone } from "@/lib/dates/time-zone";
 import { getMobileStaffAttendanceStatus } from "@/lib/mobile-api/staff-attendance";
 import { getEffectivePermissions } from "@/lib/rbac/require-permission";
-import type { StaffQrScanActionData } from "@/modules/staffboard-lite/actions/staff-qr-scan.actions";
-import { StaffQrScanResult } from "@/modules/staffboard-lite/components/attendance/staff-qr-scan-result";
+import { StaffAttendanceCorrectionForm } from "@/modules/staffboard-lite/components/attendance/staff-attendance-correction-form";
 import {
   formatStaffAttendanceStatus,
   formatStaffScanDateTime
@@ -16,39 +18,15 @@ import { StaffQrSelfNavigation } from "@/modules/staffboard-lite/components/atte
 import { PageHeader } from "@/modules/staffboard-lite/components/staffboard-page-shell";
 import { listMyStaffAttendanceHistory } from "@/modules/staffboard-lite/queries/staff-attendance.queries";
 
-type SearchParams = Promise<Record<string, string | string[] | undefined>>;
-
-function stringParam(value: string | string[] | undefined) {
-  return typeof value === "string" ? value : undefined;
-}
-
-function confirmationResult(
-  attendance: Awaited<ReturnType<typeof getMobileStaffAttendanceStatus>>["attendance"],
-  scan: string | undefined,
-  purpose: string | undefined
-): StaffQrScanActionData | null {
-  if (!attendance || scan !== "success" || (purpose !== "CHECK_IN" && purpose !== "CHECK_OUT")) return null;
-  if (purpose === "CHECK_IN" && !attendance.checkInAt) return null;
-  if (purpose === "CHECK_OUT" && !attendance.checkOutAt) return null;
-
-  return {
-    success: true,
-    purpose,
-    attendanceDate: attendance.attendanceDate,
-    status: attendance.status,
-    message: purpose === "CHECK_IN" ? "Check-in recorded successfully." : "Check-out recorded successfully.",
-    ...(attendance.checkInAt ? { checkInAt: attendance.checkInAt } : {}),
-    ...(attendance.checkOutAt ? { checkOutAt: attendance.checkOutAt } : {}),
-    ...(typeof attendance.workingMinutes === "number" ? { workingMinutes: attendance.workingMinutes } : {})
-  };
-}
-
-export default async function MyStaffAttendancePage({ searchParams }: { searchParams?: SearchParams }) {
+export default async function MyStaffAttendancePage() {
   const ctx = await requireAuth();
-  const params = searchParams ? await searchParams : {};
+  await requireAttendanceEntitlements(ctx, [
+    { featureKey: ATTENDANCE_ENTITLEMENT_FEATURES.STAFF_ATTENDANCE, operation: "READ" }
+  ], { branchId: ctx.activeBranchId });
   const permissions = await getEffectivePermissions({ ctx, branchId: ctx.activeBranchId });
-  const canScan = permissions.has("staffboard.attendance.self_scan");
+  const canViewCard = permissions.has("staffboard.attendance.credential.self_view");
   const canViewAttendance = permissions.has("staffboard.attendance.self_view");
+  const canRequestCorrection = permissions.has("staffboard.attendance.adjustment.request");
 
   let result;
   let history;
@@ -64,7 +42,7 @@ export default async function MyStaffAttendancePage({ searchParams }: { searchPa
         <div className="hidden lg:block">
           <PageHeader title="My Attendance" description="Your own staff attendance records." />
         </div>
-        <StaffQrSelfNavigation active="today" canScan={canScan} canViewAttendance={canViewAttendance} />
+        <StaffQrSelfNavigation active="today" canViewCard={canViewCard} canViewAttendance={canViewAttendance} />
         <p role="alert" className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-4 text-sm font-medium text-amber-900">
           {getUserSafeErrorMessage(error, "Unable to load your attendance.")}
         </p>
@@ -76,37 +54,23 @@ export default async function MyStaffAttendancePage({ searchParams }: { searchPa
   const institutionName =
     ctx.institutionDisplayName ?? ctx.institutionName ?? ctx.tenantName ?? "Your institution";
   const branchName = ctx.activeBranchName ?? ctx.activeBranchCode ?? "Assigned branch";
-  const userName = ctx.userName ?? ctx.userEmail;
-  const confirmation = confirmationResult(
-    attendance,
-    stringParam(params.scan),
-    stringParam(params.purpose)
-  );
+
 
   return (
-    <div className="space-y-6">
+    <div className="attendance-page-wash space-y-6 rounded-lg p-1 sm:p-2">
       <MobilePageHeader
         eyebrow="Staff attendance"
-        title={confirmation ? "Attendance confirmed" : "My Attendance"}
+        title="My Attendance"
         description="Review today's record and your recent attendance history."
       />
       <div className="hidden lg:block">
         <PageHeader title="My Attendance" description="Review today's record and your recent staff attendance history." />
       </div>
 
-      <StaffQrSelfNavigation active="today" canScan={canScan} canViewAttendance={canViewAttendance} />
+      <StaffQrSelfNavigation active="today" canViewCard={canViewCard} canViewAttendance={canViewAttendance} />
 
-      {confirmation ? (
-        <StaffQrScanResult
-          result={confirmation}
-          userName={userName}
-          institutionName={institutionName}
-          branchName={branchName}
-          timeZone={ctx.timeZone}
-        />
-      ) : null}
 
-      <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-soft sm:p-5" aria-labelledby="today-attendance-title">
+      <section className="attendance-glass-panel p-4 sm:p-5" aria-labelledby="today-attendance-title">
         <div className="flex items-center gap-3">
           <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-brand-700">
             <QrCode className="h-5 w-5" aria-hidden="true" />
@@ -120,9 +84,9 @@ export default async function MyStaffAttendancePage({ searchParams }: { searchPa
         {!attendance ? (
           <EmptyState
             title="No attendance recorded yet today"
-            description="Scan the active school QR when you are ready to check in."
-            actionLabel={canScan ? "Scan attendance QR" : undefined}
-            actionHref={canScan ? "/staffboard/attendance/scan" : undefined}
+            description="Your record will appear after an authorised attendance operator scans your staff card or marks attendance."
+            actionLabel={canViewCard ? "Open My Staff Card" : undefined}
+            actionHref={canViewCard ? "/staffboard/attendance/card" : undefined}
           />
         ) : (
           <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -156,7 +120,7 @@ export default async function MyStaffAttendancePage({ searchParams }: { searchPa
 
       <section
         id="attendance-history"
-        className="scroll-mt-24 rounded-lg border border-slate-200 bg-white p-4 shadow-soft sm:p-5"
+        className="attendance-glass-panel scroll-mt-24 p-4 sm:p-5"
         aria-labelledby="attendance-history-title"
       >
         <div className="flex items-center gap-3">
@@ -176,7 +140,7 @@ export default async function MyStaffAttendancePage({ searchParams }: { searchPa
         ) : (
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             {history.map((record) => (
-              <article key={record.attendanceDate} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <article key={record.attendanceRecordId} className="attendance-glass-inset p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="font-semibold text-slate-950">{record.attendanceDate}</p>
@@ -198,6 +162,25 @@ export default async function MyStaffAttendancePage({ searchParams }: { searchPa
                     </dd>
                   </div>
                 </dl>
+                {record.reviewState === "PENDING" || record.lifecycle === "REVIEW_REQUIRED" ? (
+                  <p className="mt-3 text-sm font-semibold text-amber-800">Correction pending review</p>
+                ) : null}
+                {canRequestCorrection && !record.calendarManaged && record.lifecycle !== "LOCKED" ? (
+                  <div className="mt-4 border-t border-slate-200/80 pt-4">
+                    <StaffAttendanceCorrectionForm
+                      attendanceRecordId={record.attendanceRecordId}
+                      employeeCode={record.employeeCode}
+                      staffName={record.staffName}
+                      attendanceDate={record.attendanceDate}
+                      currentStatus={record.status}
+                      checkInAt={record.checkInAt}
+                      checkOutAt={record.checkOutAt}
+                      workingMinutes={record.workingMinutes}
+                      correctionReason={record.correctionReason}
+                      timeZone={safeTimeZone(ctx.timeZone)}
+                    />
+                  </div>
+                ) : null}
               </article>
             ))}
           </div>
@@ -205,9 +188,10 @@ export default async function MyStaffAttendancePage({ searchParams }: { searchPa
       </section>
 
       <div className="grid gap-3 sm:flex">
-        {canScan ? (
-          <Link href="/staffboard/attendance/scan" className="premium-primary-button min-h-11 w-full premium-focus sm:w-auto">
-            Scan another QR
+        {canViewCard ? (
+          <Link href="/staffboard/attendance/card" className="premium-primary-button min-h-11 w-full gap-2 premium-focus sm:w-auto">
+            <IdCard className="h-4 w-4" aria-hidden="true" />
+            Open My Staff Card
           </Link>
         ) : null}
         <Link href="/account/change-password" className="premium-secondary-button min-h-11 w-full premium-focus sm:w-auto">

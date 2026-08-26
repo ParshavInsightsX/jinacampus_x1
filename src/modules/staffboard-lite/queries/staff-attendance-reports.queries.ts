@@ -11,6 +11,8 @@ import {
 } from "@/modules/staffboard-lite/schemas";
 import { pagination } from "./shared";
 import { dateOnlyInTimeZone, getZonedDateTimeParts } from "@/lib/dates/time-zone";
+import { ATTENDANCE_ENTITLEMENT_FEATURES } from "@/modules/campus-core/entitlements/catalog";
+import { requireAttendanceEntitlements } from "@/modules/campus-core/entitlements/service";
 
 export type StaffAttendanceReportBranchOption = {
   id: string;
@@ -51,6 +53,8 @@ export type MonthlyStaffAttendanceSummaryRow = {
   absentDays: number;
   onLeaveDays: number;
   holidayWeekOffDays: number;
+  officialDutyDays: number;
+  incompleteDays: number;
   markedDays: number;
   totalWorkingMinutes: number;
 };
@@ -239,6 +243,10 @@ async function resolveReportScope(ctx: TenantContext, branchId?: string): Promis
   for (const branch of branches) {
     try {
       await requirePermission({ ctx, permission: "staffboard.attendance.report", branchId: branch.id });
+      await requireAttendanceEntitlements(ctx, [
+        { featureKey: ATTENDANCE_ENTITLEMENT_FEATURES.STAFF_ATTENDANCE, operation: "READ" },
+        { featureKey: ATTENDANCE_ENTITLEMENT_FEATURES.REPORTS, operation: "READ" }
+      ], { branchId: branch.id });
       branchOptions.push(branch);
     } catch (error) {
       if (isForbiddenPermissionError(error)) continue;
@@ -258,6 +266,10 @@ async function resolveReportScope(ctx: TenantContext, branchId?: string): Promis
       : branchOptions[0].id);
 
   await requirePermission({ ctx, permission: "staffboard.attendance.report", branchId: selectedBranchId });
+  await requireAttendanceEntitlements(ctx, [
+    { featureKey: ATTENDANCE_ENTITLEMENT_FEATURES.STAFF_ATTENDANCE, operation: "READ" },
+    { featureKey: ATTENDANCE_ENTITLEMENT_FEATURES.REPORTS, operation: "READ" }
+  ], { branchId: selectedBranchId });
   return { branchOptions, selectedBranchId };
 }
 
@@ -431,10 +443,12 @@ export async function getMonthlyStaffAttendanceSummary(ctx: TenantContext, input
       absentDays: 0,
       onLeaveDays: 0,
       holidayWeekOffDays: 0,
+      officialDutyDays: 0,
+      incompleteDays: 0,
       markedDays: 0,
       totalWorkingMinutes: 0
     };
-    summary.markedDays += 1;
+    if (record.status !== "INCOMPLETE" && record.status !== "NOT_MARKED") summary.markedDays += 1;
     summary.totalWorkingMinutes += record.workingMinutes ?? 0;
     if (record.status === "PRESENT") summary.presentDays += 1;
     if (record.status === "LATE") summary.lateDays += 1;
@@ -442,6 +456,8 @@ export async function getMonthlyStaffAttendanceSummary(ctx: TenantContext, input
     if (record.status === "ABSENT") summary.absentDays += 1;
     if (record.status === "ON_LEAVE") summary.onLeaveDays += 1;
     if (record.status === "HOLIDAY" || record.status === "WEEK_OFF") summary.holidayWeekOffDays += 1;
+    if (record.status === "OFFICIAL_DUTY") summary.officialDutyDays += 1;
+    if (record.status === "INCOMPLETE" || record.status === "NOT_MARKED") summary.incompleteDays += 1;
     summaryByStaffId.set(record.staff.id, summary);
   }
 

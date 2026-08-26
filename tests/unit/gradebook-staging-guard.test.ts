@@ -122,7 +122,7 @@ describe("GradeBook staging database guard", () => {
       scripts?: Record<string, string>;
     };
     const devServerBlock = runner.slice(runner.indexOf('"DevServer" {'));
-    expect(packageJson.scripts?.dev).toBe("next dev");
+    expect(packageJson.scripts?.dev).toBe("next dev --webpack");
     expect(packageJson.scripts?.["dev:gradebook:staging"]).toBeUndefined();
     expect(packageJson.scripts?.["qa:gradebook:staging:ready"]).toBeUndefined();
     expect(runner).toContain("Assert-LocalPortAvailable");

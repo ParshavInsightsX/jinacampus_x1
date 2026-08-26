@@ -7,8 +7,11 @@ const icons: Record<StaffboardModuleKey, typeof UsersRound> = {
   staff: UsersRound,
   categories: WalletCards,
   attendance: ClipboardList,
-  "qr-attendance": QrCode,
+  "my-attendance": CalendarDays,
+  "my-card": WalletCards,
   scan: QrCode,
+  credentials: QrCode,
+  adjustments: ClipboardCheck,
   reports: FileText,
   leave: CalendarDays,
   "leave-review": ClipboardCheck

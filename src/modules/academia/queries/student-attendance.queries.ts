@@ -4,6 +4,10 @@ import { getEffectivePermissions, requirePermission } from "@/lib/rbac/require-p
 import type { TenantContext } from "@/lib/tenant/context";
 import { activeEnrolledStudentsForAttendanceSchema } from "@/modules/academia/schemas";
 import { findApplicableCalendarEntry } from "@/modules/campus-core/calendar/calendar-policy";
+import { ATTENDANCE_ENTITLEMENT_FEATURES } from "@/modules/campus-core/entitlements/catalog";
+import { requireAttendanceEntitlements } from "@/modules/campus-core/entitlements/service";
+import { dateOnlyInTimeZone } from "@/lib/dates/time-zone";
+import { listAssignedAttendanceClassSectionIds } from "@/modules/academia/services/student-attendance-responsibility.service";
 
 export type ActiveEnrolledStudentForAttendance = {
   enrollmentId: string;
@@ -75,10 +79,17 @@ function canManageAnyClassSection(permissions: Set<string>) {
     permissions.has("academia.attendance.lock");
 }
 
-export async function listClassSectionsForAttendance(ctx: TenantContext): Promise<AttendanceClassSectionOption[]> {
+export async function listClassSectionsForAttendance(
+  ctx: TenantContext,
+  attendanceDate = dateOnlyInTimeZone(new Date(), ctx.timeZone)
+): Promise<AttendanceClassSectionOption[]> {
   const branchId = ctx.activeBranchId ?? undefined;
   const academicYearId = ctx.activeAcademicYearId ?? undefined;
   if (!branchId || !academicYearId) return [];
+
+  await requireAttendanceEntitlements(ctx, [
+    { featureKey: ATTENDANCE_ENTITLEMENT_FEATURES.STUDENT_ATTENDANCE, operation: "READ" }
+  ], { branchId });
 
   await requirePermission({
     ctx,
@@ -89,6 +100,9 @@ export async function listClassSectionsForAttendance(ctx: TenantContext): Promis
 
   const permissions = await getEffectivePermissions({ ctx, branchId, academicYearId });
   const canMarkAnyClassSection = canManageAnyClassSection(permissions);
+  const assignedClassSectionIds = canMarkAnyClassSection
+    ? []
+    : await listAssignedAttendanceClassSectionIds(ctx, attendanceDate);
 
   const classSections = await db.classSection.findMany({
     where: {
@@ -96,7 +110,12 @@ export async function listClassSectionsForAttendance(ctx: TenantContext): Promis
       branchId,
       academicYearId,
       status: "ACTIVE",
-      ...(canMarkAnyClassSection ? {} : { classTeacherUserId: ctx.userId })
+      ...(canMarkAnyClassSection ? {} : {
+        OR: [
+          { classTeacherUserId: ctx.userId },
+          ...(assignedClassSectionIds.length ? [{ id: { in: assignedClassSectionIds } }] : [])
+        ]
+      })
     },
     include: {
       academicClass: { select: { name: true, sortOrder: true } },
@@ -128,6 +147,10 @@ export async function listActiveEnrolledStudentsForAttendance(
   const academicYearId = ctx.activeAcademicYearId ?? undefined;
 
   if (!branchId || !academicYearId) return [];
+
+  await requireAttendanceEntitlements(ctx, [
+    { featureKey: ATTENDANCE_ENTITLEMENT_FEATURES.STUDENT_ATTENDANCE, operation: "READ" }
+  ], { branchId });
 
   await requirePermission({
     ctx,

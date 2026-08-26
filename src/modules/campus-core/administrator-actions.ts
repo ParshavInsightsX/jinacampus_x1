@@ -8,9 +8,11 @@ import {
   deactivateSchoolSchema,
   deleteSchoolSchema,
   reactivateSchoolSchema,
+  updateInstitutionEntitlementsSchema,
   updateInstitutionLogoSchema,
   updateSchoolIdSchema,
-  updateSchoolSchema
+  updateSchoolSchema,
+  updateTenantSubscriptionSchema
 } from "@/modules/campus-core/administrator-schemas";
 import {
   createSchool,
@@ -22,6 +24,14 @@ import {
   updateSchoolId
 } from "@/modules/campus-core/administrator-services";
 import { updateInstitutionLogoForAdministrator } from "@/modules/campus-core/administrator-branding.service";
+import {
+  updateInstitutionEntitlementsForAdministrator,
+  updateTenantSubscriptionForAdministrator
+} from "@/modules/campus-core/entitlements/administrator.service";
+import {
+  INSTITUTION_ENTITLEMENT_DEFINITIONS,
+  entitlementFormFieldName
+} from "@/modules/campus-core/entitlements/catalog";
 import type { CampusCoreFormActionState } from "@/modules/campus-core/actions";
 import { changeOwnPasswordSchema } from "@/modules/campus-core/schemas";
 import {
@@ -149,6 +159,59 @@ export async function updateSchoolAction(
     return { ok: true, message: "School profile updated." };
   } catch (error) {
     return formError(error, "Unable to update school. Please try again.");
+  }
+}
+
+export async function updateTenantSubscriptionAction(
+  _state: CampusCoreFormActionState,
+  formData: FormData
+): Promise<CampusCoreFormActionState> {
+  try {
+    const input = updateTenantSubscriptionSchema.parse({
+      tenantId: req(formData, "tenantId"),
+      planCode: req(formData, "planCode"),
+      status: req(formData, "subscriptionStatus"),
+      trialEndsAt: nullableS(formData, "trialEndsAt"),
+      currentPeriodEndsAt: nullableS(formData, "currentPeriodEndsAt"),
+      graceEndsAt: nullableS(formData, "graceEndsAt")
+    });
+    await updateTenantSubscriptionForAdministrator(await getPlatformAdministratorContext(), input);
+    revalidateAdministratorSchoolRoutes(input.tenantId);
+    return {
+      ok: true,
+      message: "Subscription status saved. No billing-provider request was made."
+    };
+  } catch (error) {
+    return formError(error, "Unable to update this school subscription.");
+  }
+}
+
+export async function updateInstitutionEntitlementsAction(
+  _state: CampusCoreFormActionState,
+  formData: FormData
+): Promise<CampusCoreFormActionState> {
+  try {
+    const entitlements = INSTITUTION_ENTITLEMENT_DEFINITIONS.map((definition) => ({
+      moduleKey: definition.moduleKey,
+      featureKey: definition.featureKey,
+      access: req(formData, entitlementFormFieldName(definition.moduleKey, definition.featureKey))
+    }));
+    const input = updateInstitutionEntitlementsSchema.parse({
+      tenantId: req(formData, "tenantId"),
+      institutionId: req(formData, "institutionId"),
+      entitlements
+    });
+    await updateInstitutionEntitlementsForAdministrator(
+      await getPlatformAdministratorContext(),
+      input
+    );
+    revalidateAdministratorSchoolRoutes(input.tenantId);
+    return {
+      ok: true,
+      message: "Institution module access saved. Historical records were preserved."
+    };
+  } catch (error) {
+    return formError(error, "Unable to update institution module access.");
   }
 }
 

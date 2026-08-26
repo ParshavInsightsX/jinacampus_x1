@@ -15,11 +15,20 @@ import {
   deactivateSchoolAction,
   deleteSchoolAction,
   reactivateSchoolAction,
+  updateInstitutionEntitlementsAction,
   updateInstitutionLogoAction,
   updateSchoolAction,
-  updateSchoolIdAction
+  updateSchoolIdAction,
+  updateTenantSubscriptionAction
 } from "@/modules/campus-core/administrator-actions";
 import type { CampusCoreFormActionState } from "@/modules/campus-core/actions";
+import {
+  ATTENDANCE_ENTITLEMENT_DEFINITIONS,
+  GRADEBOOK_ENTITLEMENT_DEFINITIONS,
+  entitlementFormFieldName,
+  type EntitlementAccess,
+  type EntitlementDefinition
+} from "@/modules/campus-core/entitlements/catalog";
 
 type SchoolStatus = "ACTIVE" | "SUSPENDED" | "ARCHIVED";
 
@@ -42,28 +51,35 @@ type SchoolFormRecord = {
     gradebookAnalyticsEnabled: boolean;
     gradebookPortalResultsEnabled: boolean;
   } | null;
+  subscription: {
+    id: string;
+    planCode: string;
+    status: "TRIAL" | "ACTIVE" | "GRACE_PERIOD" | "SUSPENDED" | "CANCELLED" | "EXPIRED";
+    startsAt: Date;
+    trialEndsAt: Date | null;
+    currentPeriodStartsAt: Date | null;
+    currentPeriodEndsAt: Date | null;
+    graceEndsAt: Date | null;
+  } | null;
   institutions: Array<{
     id: string;
     name: string;
     displayName: string | null;
     logoUrl: string | null;
+    entitlements: Array<{
+      moduleKey: string;
+      featureKey: string;
+      access: "DISABLED" | "READ_ONLY" | "FULL";
+      source: "PLAN" | "ADD_ON" | "TRIAL" | "MANUAL" | "SYSTEM";
+      startsAt: Date | null;
+      endsAt: Date | null;
+    }>;
   }>;
 };
 
 const initialState: CampusCoreFormActionState = { ok: false };
 const inputClassName = "min-h-11 w-full rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-sm text-slate-900 shadow-sm premium-focus";
 const statusOptions: SchoolStatus[] = ["ACTIVE", "SUSPENDED", "ARCHIVED"];
-const gradebookFeatureOptions = [
-  ["gradebookConfigurationEnabled", "Configuration", "Schemes, terms, exam types, grade scales and calculation policy."],
-  ["gradebookMarksEntryEnabled", "Marks entry", "Assignments, draft marks, submission and approval queues."],
-  ["gradebookImportEnabled", "Spreadsheet import", "Private, validated CSV/XLSX marks import workflow."],
-  ["gradebookResultCalculationEnabled", "Result calculation", "Versioned deterministic result runs and approval."],
-  ["gradebookCoScholasticEnabled", "Co-scholastic", "Institution-defined areas, ratings and teacher evaluation."],
-  ["gradebookReportCardsEnabled", "Report cards", "Immutable report-card snapshots and private documents."],
-  ["gradebookPublicationEnabled", "Publication", "Controlled result/report-card recipient publication."],
-  ["gradebookAnalyticsEnabled", "Analytics", "Approved-result operational summaries and history."],
-  ["gradebookPortalResultsEnabled", "Portal results", "Published student/guardian result access when portals are approved."]
-] as const satisfies ReadonlyArray<readonly [keyof NonNullable<SchoolFormRecord["tenantSettings"]>, string, string]>;
 
 function fieldError(state: CampusCoreFormActionState, name: string) {
   return getFieldError(state.fieldErrors, name);
@@ -199,43 +215,201 @@ export function SchoolEditForm({ school }: { school: SchoolFormRecord }) {
           <input id="edit-institution-display-name" name="institutionDisplayName" defaultValue={institution?.displayName ?? ""} className={inputClassName} />
         </FormField>
       </div>
-      <section className="rounded-lg border border-campus-border bg-surface-muted p-4" aria-labelledby="school-module-access-title">
-        <h3 id="school-module-access-title" className="text-sm font-semibold text-ink">Pilot module access</h3>
-        <input type="hidden" name="gradebookEnabled" value="off" />
-        <label className="mt-3 flex min-h-11 items-start gap-3 text-sm text-slate-700">
+
+      <FieldErrorMessage id="school-edit-form-error" message={fieldError(state, "form")} />
+      <FormActions pending={pending} label="Save School" pendingLabel="Saving..." backHref={`/administrator/schools/${school.id}`} />
+    </form>
+  );
+}
+
+function dateInputValue(value: Date | null | undefined) {
+  if (!value) return "";
+  return new Date(value).toISOString().slice(0, 10);
+}
+
+function EntitlementAccessField({
+  definition,
+  access
+}: {
+  definition: EntitlementDefinition;
+  access: EntitlementAccess;
+}) {
+  return (
+    <label className="grid min-h-11 gap-2 border-t border-campus-border py-3 md:grid-cols-[minmax(0,1fr)_10rem] md:items-center">
+      <span>
+        <span className="block text-sm font-semibold text-ink">{definition.label}</span>
+        <span className="mt-1 block text-xs leading-5 text-slate-500">{definition.description}</span>
+      </span>
+      <select
+        name={entitlementFormFieldName(definition.moduleKey, definition.featureKey)}
+        defaultValue={access}
+        className={inputClassName}
+        aria-label={definition.label + " access"}
+      >
+        <option value="DISABLED">Disabled</option>
+        <option value="READ_ONLY">View only</option>
+        <option value="FULL">Full access</option>
+      </select>
+    </label>
+  );
+}
+
+export function TenantSubscriptionForm({
+  school
+}: {
+  school: Pick<SchoolFormRecord, "id" | "subscription">;
+}) {
+  const [state, formAction, pending] = useActionState(updateTenantSubscriptionAction, initialState);
+  const subscription = school.subscription;
+
+  return (
+    <form action={formAction} className="premium-card space-y-5 p-5" aria-labelledby="subscription-readiness-title">
+      <input type="hidden" name="tenantId" value={school.id} />
+      <div>
+        <h2 id="subscription-readiness-title" className="text-lg font-semibold text-slate-950">Subscription readiness</h2>
+        <p className="mt-1 text-sm leading-6 text-slate-500">
+          This records access lifecycle only. No billing provider is connected and saving does not charge the school.
+        </p>
+      </div>
+      <FormMessage state={state} />
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <FormField id="subscription-plan-code" label="Plan code" required error={fieldError(state, "planCode")}>
           <input
-            type="checkbox"
-            name="gradebookEnabled"
-            defaultChecked={school.tenantSettings?.gradebookEnabled ?? false}
-            className="mt-1 size-5 rounded border-slate-300 text-brand-600 focus:ring-brand-200"
+            id="subscription-plan-code"
+            name="planCode"
+            required
+            defaultValue={subscription?.planCode ?? "TRIAL"}
+            autoCapitalize="characters"
+            className={inputClassName}
           />
-          <span>
-            <span className="block font-semibold text-ink">Enable GradeBook</span>
-            <span className="mt-1 block leading-5 text-slate-500">
-              Exposes the GradeBook workspace only to school users who also hold its server-side permissions.
-            </span>
-          </span>
-        </label>
-        <div className="mt-4 grid gap-2 border-t border-campus-border pt-4 md:grid-cols-2">
-          {gradebookFeatureOptions.map(([name, label, help]) => (
-            <label key={name} className="flex min-h-11 items-start gap-3 rounded-lg border border-campus-border bg-white p-3 text-sm text-slate-700">
-              <input type="hidden" name={name} value="off" />
-              <input
-                type="checkbox"
-                name={name}
-                defaultChecked={school.tenantSettings?.[name] ?? false}
-                className="mt-1 size-5 rounded border-slate-300 text-brand-600 focus:ring-brand-200"
-              />
-              <span>
-                <span className="block font-semibold text-ink">{label}</span>
-                <span className="mt-1 block leading-5 text-slate-500">{help}</span>
-              </span>
-            </label>
+        </FormField>
+        <FormField id="subscription-status" label="Subscription status" required error={fieldError(state, "status")}>
+          <select
+            id="subscription-status"
+            name="subscriptionStatus"
+            required
+            defaultValue={subscription?.status ?? "TRIAL"}
+            className={inputClassName}
+          >
+            <option value="TRIAL">Trial</option>
+            <option value="ACTIVE">Active</option>
+            <option value="GRACE_PERIOD">Grace period</option>
+            <option value="SUSPENDED">Suspended</option>
+            <option value="CANCELLED">Cancelled</option>
+            <option value="EXPIRED">Expired</option>
+          </select>
+        </FormField>
+        <FormField id="subscription-trial-end" label="Trial ends" error={fieldError(state, "trialEndsAt")}>
+          <input
+            id="subscription-trial-end"
+            name="trialEndsAt"
+            type="date"
+            defaultValue={dateInputValue(subscription?.trialEndsAt)}
+            className={inputClassName}
+          />
+        </FormField>
+        <FormField id="subscription-period-end" label="Current period ends" error={fieldError(state, "currentPeriodEndsAt")}>
+          <input
+            id="subscription-period-end"
+            name="currentPeriodEndsAt"
+            type="date"
+            defaultValue={dateInputValue(subscription?.currentPeriodEndsAt)}
+            className={inputClassName}
+          />
+        </FormField>
+        <FormField id="subscription-grace-end" label="Grace period ends" error={fieldError(state, "graceEndsAt")}>
+          <input
+            id="subscription-grace-end"
+            name="graceEndsAt"
+            type="date"
+            defaultValue={dateInputValue(subscription?.graceEndsAt)}
+            className={inputClassName}
+          />
+        </FormField>
+      </div>
+      <p className="text-xs leading-5 text-slate-500">
+        Suspended, cancelled, or expired subscriptions fail closed for subscribed modules while historical data stays stored.
+      </p>
+      <FieldErrorMessage id="subscription-form-error" message={fieldError(state, "form")} />
+      <div className="flex justify-end">
+        <button disabled={pending} className="premium-primary-button w-full premium-focus sm:w-auto">
+          {pending ? "Saving..." : "Save subscription"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function entitlementAccessFor(
+  institution: SchoolFormRecord["institutions"][number],
+  definition: EntitlementDefinition
+): EntitlementAccess {
+  return institution.entitlements.find(
+    (entitlement) =>
+      entitlement.moduleKey === definition.moduleKey &&
+      entitlement.featureKey === definition.featureKey
+  )?.access ?? "DISABLED";
+}
+
+export function InstitutionEntitlementForm({
+  tenantId,
+  institution
+}: {
+  tenantId: string;
+  institution: SchoolFormRecord["institutions"][number];
+}) {
+  const [state, formAction, pending] = useActionState(updateInstitutionEntitlementsAction, initialState);
+  const displayName = institution.displayName ?? institution.name;
+
+  return (
+    <form action={formAction} className="premium-card space-y-5 p-5" aria-labelledby={"institution-entitlements-" + institution.id}>
+      <input type="hidden" name="tenantId" value={tenantId} />
+      <input type="hidden" name="institutionId" value={institution.id} />
+      <div>
+        <h2 id={"institution-entitlements-" + institution.id} className="text-lg font-semibold text-slate-950">
+          Module access: {displayName}
+        </h2>
+        <p className="mt-1 text-sm leading-6 text-slate-500">
+          Subscription access and role permissions are separate. A user needs both an enabled capability and the required school role permission.
+        </p>
+      </div>
+      <FormMessage state={state} />
+      <section aria-labelledby={"attendance-entitlements-" + institution.id}>
+        <h3 id={"attendance-entitlements-" + institution.id} className="text-sm font-semibold text-ink">Attendance</h3>
+        <p className="mt-1 text-xs leading-5 text-slate-500">
+          View only preserves reporting access but blocks new records, corrections, settings changes, and QR operations.
+        </p>
+        <div className="mt-2">
+          {ATTENDANCE_ENTITLEMENT_DEFINITIONS.map((definition) => (
+            <EntitlementAccessField
+              key={definition.featureKey}
+              definition={definition}
+              access={entitlementAccessFor(institution, definition)}
+            />
           ))}
         </div>
       </section>
-      <FieldErrorMessage id="school-edit-form-error" message={fieldError(state, "form")} />
-      <FormActions pending={pending} label="Save School" pendingLabel="Saving..." backHref={`/administrator/schools/${school.id}`} />
+      <section aria-labelledby={"gradebook-entitlements-" + institution.id}>
+        <h3 id={"gradebook-entitlements-" + institution.id} className="text-sm font-semibold text-ink">GradeBook</h3>
+        <p className="mt-1 text-xs leading-5 text-slate-500">
+          GradeBook remains disabled unless its module and required capabilities are enabled here.
+        </p>
+        <div className="mt-2">
+          {GRADEBOOK_ENTITLEMENT_DEFINITIONS.map((definition) => (
+            <EntitlementAccessField
+              key={definition.featureKey}
+              definition={definition}
+              access={entitlementAccessFor(institution, definition)}
+            />
+          ))}
+        </div>
+      </section>
+      <FieldErrorMessage id={"entitlement-form-error-" + institution.id} message={fieldError(state, "form")} />
+      <div className="flex justify-end">
+        <button disabled={pending} className="premium-primary-button w-full premium-focus sm:w-auto">
+          {pending ? "Saving..." : "Save module access"}
+        </button>
+      </div>
     </form>
   );
 }

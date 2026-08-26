@@ -13,12 +13,27 @@ export type GradebookRequestContext = TenantContext & {
   permissions: ReadonlySet<PermissionCode>;
 };
 
+function entitlementOperation(permission?: PermissionCode): "READ" | "WRITE" {
+  if (!permission || permission.includes(".view") || permission.endsWith(".download_template")) {
+    return "READ";
+  }
+  return "WRITE";
+}
+
 export async function resolveGradebookRequestContext(
   ctx: TenantContext,
-  options: { permission?: PermissionCode; feature?: GradebookSubfeature } = {}
+  options: {
+    permission?: PermissionCode;
+    feature?: GradebookSubfeature;
+    entitlementOperation?: "READ" | "WRITE";
+  } = {}
 ): Promise<GradebookRequestContext> {
-  await requireGradebookEnabled(ctx);
-  if (options.feature) await requireGradebookSubfeature(ctx, options.feature);
+  const operation = options.entitlementOperation ?? entitlementOperation(options.permission);
+  if (options.feature) {
+    await requireGradebookSubfeature(ctx, options.feature, operation);
+  } else {
+    await requireGradebookEnabled(ctx, operation);
+  }
 
   const branchId = ctx.activeBranchId;
   const academicYearId = ctx.activeAcademicYearId;

@@ -122,17 +122,18 @@ describe("intelligent auto-hide navbar", () => {
     expect(styles).toContain("@media (prefers-reduced-motion: reduce)");
   });
 
-  it("uses an accessible focus-trapped drawer and restores focus", () => {
-    const drawer = source("src/components/app-shell/mobile-navigation-drawer.tsx");
+  it("uses an accessible focus-trapped module sheet and restores focus", () => {
+    const moduleSheet = source("src/components/app-shell/mobile-module-sheet.tsx");
     const bottomNavigation = source("src/components/app-shell/mobile-bottom-nav.tsx");
 
-    expect(drawer).toContain('role="dialog"');
-    expect(drawer).toContain('aria-modal="true"');
-    expect(drawer).toContain('event.key === "Escape"');
-    expect(drawer).toContain('event.key !== "Tab"');
-    expect(drawer).toContain('document.body.style.overflow = "hidden"');
-    expect(drawer).toContain("returnFocusRef.current?.focus()");
+    expect(moduleSheet).toContain('role="dialog"');
+    expect(moduleSheet).toContain('aria-modal="true"');
+    expect(moduleSheet).toContain('event.key === "Escape"');
+    expect(moduleSheet).toContain('event.key !== "Tab"');
+    expect(moduleSheet).toContain('document.body.style.overflow = "hidden"');
+    expect(moduleSheet).toContain("returnFocusRef.current?.focus()");
     expect(bottomNavigation).toContain("onOpenNavigation");
+    expect(bottomNavigation).toContain('aria-controls="mobile-module-sheet"');
   });
 
   it("serializes only already-filtered navigation labels and URLs into client chrome", () => {
@@ -142,9 +143,9 @@ describe("intelligent auto-hide navbar", () => {
 
     expect(serialized).toContain("Dashboard");
     expect(serialized).not.toMatch(/permissions|tenantId|branchId|userId/);
-    expect(layout).toContain("getVisibleNavigationGroups(permissions, { gradebookEnabled })");
+    expect(layout).toContain("getVisibleNavigationGroups(permissions, navigationFeatures)");
     expect(layout).toContain("getMobileBottomNavigationItems(");
-    expect(layout).toContain("{ gradebookEnabled }");
+    expect(layout).toContain("const navigationFeatures = { gradebookEnabled, attendance }");
     expect(layout).not.toMatch(/<AppChrome[\s\S]{0,240}permissions=/);
   });
 

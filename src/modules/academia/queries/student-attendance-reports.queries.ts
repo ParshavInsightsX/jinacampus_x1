@@ -12,6 +12,8 @@ import {
 } from "@/modules/academia/schemas";
 import type { AttendanceClassSectionOption } from "./student-attendance.queries";
 import { findApplicableCalendarEntry } from "@/modules/campus-core/calendar/calendar-policy";
+import { ATTENDANCE_ENTITLEMENT_FEATURES } from "@/modules/campus-core/entitlements/catalog";
+import { requireAttendanceEntitlements } from "@/modules/campus-core/entitlements/service";
 
 type AttendanceReportScope = {
   branchId: string;
@@ -133,6 +135,11 @@ async function resolveReportScope(ctx: TenantContext): Promise<AttendanceReportS
   const branchId = ctx.activeBranchId ?? undefined;
   const academicYearId = ctx.activeAcademicYearId ?? undefined;
   if (!branchId || !academicYearId) return null;
+
+  await requireAttendanceEntitlements(ctx, [
+    { featureKey: ATTENDANCE_ENTITLEMENT_FEATURES.STUDENT_ATTENDANCE, operation: "READ" },
+    { featureKey: ATTENDANCE_ENTITLEMENT_FEATURES.REPORTS, operation: "READ" }
+  ], { branchId });
 
   await requirePermission({
     ctx,

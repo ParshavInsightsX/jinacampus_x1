@@ -1,12 +1,15 @@
 import { notFound } from "next/navigation";
 import { PermissionState } from "@/components/ui/empty-state";
+import { AppError } from "@/lib/errors";
 import { requireAdministratorContext } from "@/modules/campus-core/administrator-auth";
 import { getSchoolByIdForAdministrator } from "@/modules/campus-core/administrator-services";
 import { AdministratorShell } from "@/modules/campus-core/components/administrator-shell";
 import {
+  InstitutionEntitlementForm,
   InstitutionLogoUploadForm,
   SchoolEditForm,
-  SchoolIdUpdateForm
+  SchoolIdUpdateForm,
+  TenantSubscriptionForm
 } from "@/modules/campus-core/components/administrator-school-forms";
 
 type PageParams = Promise<{ tenantId: string }>;
@@ -33,6 +36,31 @@ export default async function EditAdministratorSchoolPage({ params }: { params: 
           </p>
         </section>
         <SchoolEditForm school={school} />
+        {school.commercialAccessSchemaAvailable ? (
+          <>
+            <TenantSubscriptionForm school={school} />
+            <section className="space-y-4" aria-labelledby="institution-module-access-title">
+              <div>
+                <h2 id="institution-module-access-title" className="text-xl font-semibold text-slate-950">Institution Module Access</h2>
+                <p className="mt-1 text-sm leading-6 text-slate-500">
+                  Choose what each institution may use. School role permissions still decide which users can perform each action.
+                </p>
+              </div>
+              <div className="grid gap-4">
+                {school.institutions.map((institution) => (
+                  <InstitutionEntitlementForm key={institution.id} tenantId={school.id} institution={institution} />
+                ))}
+              </div>
+            </section>
+          </>
+        ) : (
+          <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5" role="status">
+            <h2 className="text-lg font-semibold text-amber-950">Module access setup pending</h2>
+            <p className="mt-2 text-sm leading-6 text-amber-900">
+              School profile and branding remain available. Subscription and module-access controls will unlock after the approved database migration is applied.
+            </p>
+          </section>
+        )}
         <section className="space-y-4" aria-labelledby="institution-logo-upload-title">
           <div>
             <h2 id="institution-logo-upload-title" className="text-xl font-semibold text-slate-950">Institution Logos</h2>
@@ -51,6 +79,7 @@ export default async function EditAdministratorSchoolPage({ params }: { params: 
     );
   } catch (error) {
     if (isNextNotFound(error)) throw error;
+    if (!(error instanceof AppError) || error.status !== 403) throw error;
     return (
       <AdministratorShell ctx={ctx} activeHref="/administrator/schools">
         <PermissionState

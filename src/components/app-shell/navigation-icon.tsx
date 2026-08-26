@@ -54,6 +54,8 @@ const navigationIconsByHref: Record<string, LucideIcon> = {
   "/staffboard/attendance": CalendarCheck2,
   "/staffboard/attendance/qr": QrCode,
   "/staffboard/attendance/scan": ScanLine,
+  "/staffboard/attendance/credentials": QrCode,
+  "/staffboard/attendance/adjustments": ClipboardCheck,
   "/staffboard/attendance/me": CalendarCheck2,
   "/staffboard/attendance/reports": ScrollText,
   "/account/change-password": KeyRound,

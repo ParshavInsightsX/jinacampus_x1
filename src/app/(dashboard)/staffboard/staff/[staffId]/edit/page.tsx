@@ -1,10 +1,12 @@
 import { notFound } from "next/navigation";
-import { PermissionState } from "@/components/ui/empty-state";
+import { ErrorState, PermissionState } from "@/components/ui/empty-state";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { getEffectivePermissions } from "@/lib/rbac/require-permission";
+import { env } from "@/lib/env";
 import { listAccessibleBranches } from "@/modules/campus-core/queries";
 import { getStaffProfileById } from "@/modules/staffboard-lite/queries";
 import { StaffProfileEditForm } from "@/modules/staffboard-lite/components/staff-profile-edit-form";
+import { StaffProfilePhotoPanel } from "@/modules/staffboard-lite/components/staff-profile-photo-panel";
 import { CommunicationPreferenceForm } from "@/modules/notifications/components/communication-preference-form";
 import { getCommunicationPreference } from "@/modules/notifications/services/communication-preference.service";
 
@@ -55,6 +57,18 @@ export default async function EditStaffProfilePage({ params }: { params: Promise
             : null
         }}
       />
+      {staffProfile.identityCardSchemaAvailable ? (
+        <StaffProfilePhotoPanel
+          staffId={staffProfile.id}
+          initialHasPhoto={Boolean(staffProfile.profilePhoto)}
+          maxBytes={env.STAFF_PROFILE_PHOTO_MAX_BYTES}
+        />
+      ) : (
+        <ErrorState
+          title="Staff photographs are temporarily unavailable"
+          description="The required identity-card setup is still being completed. Other staff profile details can still be updated."
+        />
+      )}
       {notificationPreference ? (
         <CommunicationPreferenceForm
           ownerType="STAFF"

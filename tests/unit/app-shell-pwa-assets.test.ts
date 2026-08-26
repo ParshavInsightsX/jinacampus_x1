@@ -28,6 +28,13 @@ function publicPath(url: string) {
 }
 
 describe("app shell PWA and brand assets", () => {
+  it("limits extension-related hydration suppression to the document root", () => {
+    const layoutSource = source("src/app/layout.tsx");
+    const suppressions = layoutSource.match(/suppressHydrationWarning/g) ?? [];
+
+    expect(layoutSource).toMatch(/<html[^>]*suppressHydrationWarning/);
+    expect(suppressions).toHaveLength(1);
+  });
   it("references the actual favicon, apple-touch icon, and web manifest from Next metadata", () => {
     const layoutSource = source("src/app/layout.tsx");
 

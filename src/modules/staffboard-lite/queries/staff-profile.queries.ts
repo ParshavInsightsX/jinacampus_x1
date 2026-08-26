@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { requirePermission } from "@/lib/rbac/require-permission";
+import { isIdentityCardSchemaAvailable } from "@/lib/schema-readiness/identity-cards";
 import type { TenantContext } from "@/lib/tenant/context";
 import { listStaffProfilesSchema } from "@/modules/staffboard-lite/schemas";
 import { idSchema } from "@/modules/staffboard-lite/schemas/shared";
@@ -107,7 +108,22 @@ export async function getStaffProfileById(ctx: TenantContext, staffId: string) {
   if (!staffProfile) return null;
 
   await requirePermission({ ctx, permission: "staffboard.staff.view", branchId: staffProfile.branchId });
-  return staffProfile;
+  const identityCardSchemaAvailable = await isIdentityCardSchemaAvailable();
+  const profilePhoto = identityCardSchemaAvailable
+    ? await db.staffProfilePhoto.findFirst({
+      where: {
+        tenantId: ctx.tenantId,
+        branchId: staffProfile.branchId,
+        staffId: staffProfile.id
+      },
+      select: { id: true }
+    })
+    : null;
+  return {
+    ...staffProfile,
+    identityCardSchemaAvailable,
+    profilePhoto
+  };
 }
 
 export async function getStaffProfileByUserId(ctx: TenantContext, userId: string) {

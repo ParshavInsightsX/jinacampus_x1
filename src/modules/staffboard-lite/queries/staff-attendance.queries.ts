@@ -6,6 +6,8 @@ import type { TenantContext } from "@/lib/tenant/context";
 import { listStaffAttendanceSchema } from "@/modules/staffboard-lite/schemas";
 import { pagination } from "./shared";
 import { dateOnlyInTimeZone } from "@/lib/dates/time-zone";
+import { ATTENDANCE_ENTITLEMENT_FEATURES } from "@/modules/campus-core/entitlements/catalog";
+import { requireAttendanceEntitlements } from "@/modules/campus-core/entitlements/service";
 
 export type StaffAttendanceBranchOption = {
   id: string;
@@ -28,6 +30,9 @@ export type StaffAttendanceAdminRow = {
   workingMinutes: number | null;
   source: string;
   correctionReason: string | null;
+  flags: string[];
+  reviewState: string;
+  lifecycle: string;
   calendarManaged: boolean;
 };
 
@@ -39,6 +44,8 @@ export type StaffAttendanceDailySummary = {
   halfDay: number;
   absentNotMarked: number;
   onLeaveHoliday: number;
+  officialDuty: number;
+  pendingReview: number;
 };
 
 export type StaffAttendanceAdminData = {
@@ -53,11 +60,18 @@ export type StaffAttendanceAdminData = {
 };
 
 export type StaffSelfAttendanceHistoryRow = {
+  attendanceRecordId: string;
+  employeeCode: string;
+  staffName: string;
   attendanceDate: string;
   status: StaffAttendanceStatus;
   checkInAt: string | null;
   checkOutAt: string | null;
   workingMinutes: number | null;
+  correctionReason: string | null;
+  reviewState: string;
+  lifecycle: string;
+  calendarManaged: boolean;
 };
 
 const EMPTY_SUMMARY: StaffAttendanceDailySummary = {
@@ -67,7 +81,9 @@ const EMPTY_SUMMARY: StaffAttendanceDailySummary = {
   late: 0,
   halfDay: 0,
   absentNotMarked: 0,
-  onLeaveHoliday: 0
+  onLeaveHoliday: 0,
+  officialDuty: 0,
+  pendingReview: 0
 };
 
 function isForbiddenPermissionError(error: unknown) {
@@ -96,10 +112,12 @@ function summarize(rows: StaffAttendanceAdminRow[]): StaffAttendanceDailySummary
     if (row.status === "PRESENT") summary.present += 1;
     if (row.status === "LATE") summary.late += 1;
     if (row.status === "HALF_DAY") summary.halfDay += 1;
-    if (row.status === "ABSENT" || row.status === "NOT_MARKED") summary.absentNotMarked += 1;
+    if (row.status === "ABSENT" || row.status === "NOT_MARKED" || row.status === "INCOMPLETE") summary.absentNotMarked += 1;
     if (row.status === "ON_LEAVE" || row.status === "WEEK_OFF" || row.status === "HOLIDAY") {
       summary.onLeaveHoliday += 1;
     }
+    if (row.status === "OFFICIAL_DUTY") summary.officialDuty += 1;
+    if (row.reviewState === "PENDING" || row.lifecycle === "REVIEW_REQUIRED") summary.pendingReview += 1;
   }
   return summary;
 }
@@ -126,6 +144,9 @@ export async function listStaffAttendanceBranchOptions(ctx: TenantContext): Prom
   for (const branch of branches) {
     try {
       await requirePermission({ ctx, permission: "staffboard.attendance.view", branchId: branch.id });
+      await requireAttendanceEntitlements(ctx, [
+        { featureKey: ATTENDANCE_ENTITLEMENT_FEATURES.STAFF_ATTENDANCE, operation: "READ" }
+      ], { branchId: branch.id });
       allowedBranches.push(branch);
     } catch (error) {
       if (isForbiddenPermissionError(error)) continue;
@@ -165,6 +186,9 @@ export async function listStaffAttendanceForDate(
       ? ctx.activeBranchId
       : branchOptions[0].id);
   await requirePermission({ ctx, permission: "staffboard.attendance.view", branchId: selectedBranchId });
+  await requireAttendanceEntitlements(ctx, [
+    { featureKey: ATTENDANCE_ENTITLEMENT_FEATURES.STAFF_ATTENDANCE, operation: "READ" }
+  ], { branchId: selectedBranchId });
 
   const selectedBranch = branchOptions.find((branch) => branch.id === selectedBranchId);
   const attendanceDate = params.date ?? dateOnlyInTimeZone(new Date(), selectedBranch?.timezone ?? ctx.timeZone);
@@ -215,6 +239,9 @@ export async function listStaffAttendanceForDate(
           checkInSource: true,
           checkOutSource: true,
           correctionReason: true,
+          flags: true,
+          reviewState: true,
+          lifecycle: true,
           calendarEntryId: true
         },
         take: 1
@@ -239,6 +266,9 @@ export async function listStaffAttendanceForDate(
       workingMinutes: record?.workingMinutes ?? null,
       source: sourceLabel(record),
       correctionReason: record?.correctionReason ?? null,
+      flags: record?.flags ?? [],
+      reviewState: record?.reviewState ?? "NOT_REQUIRED",
+      lifecycle: record?.lifecycle ?? "OPEN",
       calendarManaged: Boolean(record?.calendarEntryId)
     };
   });
@@ -273,6 +303,10 @@ export async function listMyStaffAttendanceHistory(
     select: {
       id: true,
       branchId: true,
+      employeeCode: true,
+      firstName: true,
+      middleName: true,
+      lastName: true,
       branch: { select: { status: true } }
     }
   });
@@ -289,6 +323,9 @@ export async function listMyStaffAttendanceHistory(
     permission: "staffboard.attendance.self_view",
     branchId: staffProfile.branchId
   });
+  await requireAttendanceEntitlements(ctx, [
+    { featureKey: ATTENDANCE_ENTITLEMENT_FEATURES.STAFF_ATTENDANCE, operation: "READ" }
+  ], { branchId: staffProfile.branchId });
 
   const records = await db.staffAttendanceRecord.findMany({
     where: {
@@ -297,21 +334,33 @@ export async function listMyStaffAttendanceHistory(
       staffId: staffProfile.id
     },
     select: {
+      id: true,
       attendanceDate: true,
       status: true,
       checkInAt: true,
       checkOutAt: true,
-      workingMinutes: true
+      workingMinutes: true,
+      correctionReason: true,
+      reviewState: true,
+      lifecycle: true,
+      calendarEntryId: true
     },
     orderBy: [{ attendanceDate: "desc" }],
     take: Math.min(Math.max(limit, 1), 31)
   });
 
   return records.map((record) => ({
+    attendanceRecordId: record.id,
+    employeeCode: staffProfile.employeeCode,
+    staffName: staffName(staffProfile),
     attendanceDate: toDateOnlyString(record.attendanceDate),
     status: record.status,
     checkInAt: record.checkInAt?.toISOString() ?? null,
     checkOutAt: record.checkOutAt?.toISOString() ?? null,
-    workingMinutes: record.workingMinutes
+    workingMinutes: record.workingMinutes,
+    correctionReason: record.correctionReason,
+    reviewState: record.reviewState,
+    lifecycle: record.lifecycle,
+    calendarManaged: Boolean(record.calendarEntryId)
   }));
 }

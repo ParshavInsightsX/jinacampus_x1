@@ -174,6 +174,49 @@ export function getUserSafeErrorMessage(errorOrCode: unknown, fallback = DEFAULT
     case "STUDENT_ATTENDANCE_LOCKED":
     case "STUDENT_ATTENDANCE_CUTOFF_PASSED":
       return "Attendance is locked. Please contact an administrator for correction.";
+    case "STUDENT_ATTENDANCE_UPGRADE_REQUIRED":
+      return "Student Attendance is temporarily unavailable while setup is completed. Please contact the JinaCampus Administrator.";
+    case "IDENTITY_CARD_UPGRADE_REQUIRED":
+      return "Identity cards and staff photographs are temporarily unavailable while setup is completed. Please contact the JinaCampus Administrator.";
+    case "INSTITUTION_REGULATORY_UPGRADE_REQUIRED":
+      return "Institution legal identity and recognition records are temporarily unavailable while setup is completed.";
+    case "OFFICIAL_IDENTIFIER_ALREADY_REGISTERED":
+      return "This official identifier is already registered. Review the value or contact an authorised JinaCampus administrator.";
+    case "EDUCATION_AUTHORITY_NOT_FOUND":
+      return "Choose an active education authority.";
+    case "INSTITUTION_IDENTIFIER_NOT_FOUND":
+    case "INSTITUTION_AUTHORIZATION_NOT_FOUND":
+    case "INSTITUTION_REGULATORY_DOCUMENT_NOT_FOUND":
+      return "The requested regulatory record was not found or is no longer accessible.";
+    case "REGULATORY_RECORD_NOT_DRAFT":
+      return "Only a draft record can be submitted for verification.";
+    case "INVALID_REGULATORY_DOCUMENT_SCOPE":
+      return "The evidence document must use the same institution and branch scope as its linked record.";
+    case "INSTITUTION_REGULATORY_STORAGE_UNAVAILABLE":
+    case "INSTITUTION_REGULATORY_BUCKET_MUST_BE_PRIVATE":
+      return "Institution evidence storage is unavailable. Ask an administrator to check the private storage configuration.";
+    case "INSTITUTION_REGULATORY_DOCUMENT_FILE_REQUIRED":
+      return "Choose an evidence document to upload.";
+    case "INSTITUTION_REGULATORY_DOCUMENT_TOO_LARGE":
+      return "This evidence document exceeds the configured file-size limit.";
+    case "INSTITUTION_REGULATORY_DOCUMENT_TYPE_NOT_ALLOWED":
+      return "Use a valid PDF, JPEG, PNG, or WebP evidence document.";
+    case "INSTITUTION_REGULATORY_DOCUMENT_UPLOAD_FAILED":
+      return "The evidence document could not be stored securely. Please try again.";
+    case "INSTITUTION_REGULATORY_DOCUMENT_DOWNLOAD_FAILED":
+      return "The evidence document could not be opened. Please try again.";
+    case "INSTITUTION_REGULATORY_DOCUMENT_DELETE_FAILED":
+      return "The evidence document could not be deleted. Please try again.";
+    case "STUDENT_ATTENDANCE_SESSION_COMPLETED":
+      return "This attendance session is complete and can no longer be changed.";
+    case "STUDENT_ATTENDANCE_VERSION_CONFLICT":
+      return "Attendance changed on another device. Reload the class and review the latest status.";
+    case "STUDENT_ATTENDANCE_MUTATION_ID_REUSED":
+      return "This attendance request could not be safely repeated. Reload the class and try again.";
+    case "STUDENT_ATTENDANCE_UNMARKED_REMAIN":
+      return "Mark every remaining student before finishing attendance.";
+    case "STUDENT_ATTENDANCE_BULK_UNDO_UNAVAILABLE":
+      return "The bulk action can no longer be undone because one or more student statuses changed.";
     case "STUDENT_ATTENDANCE_ALREADY_EXISTS":
     case "STUDENT_ATTENDANCE_ALREADY_MARKED_FOR_DIFFERENT_SCOPE":
       return "Attendance has already been recorded for this student and date.";
@@ -181,6 +224,32 @@ export function getUserSafeErrorMessage(errorOrCode: unknown, fallback = DEFAULT
       return "Student attendance is not required on this calendar holiday or non-working day.";
     case "NO_ACTIVE_ENROLLMENTS":
       return "No active enrolled students were found for the selected class-section and date.";
+    case "ATTENDANCE_DUTY_USER_NOT_ELIGIBLE":
+    case "ATTENDANCE_DUTY_STAFF_PROFILE_REQUIRED":
+      return "Choose an active teacher, Principal, or attendance operator with access to this branch.";
+    case "ATTENDANCE_DUTY_CLASS_TEACHER_ALREADY_RESPONSIBLE":
+      return "The class teacher already has attendance responsibility. Choose another staff member only when coverage is required.";
+    case "ATTENDANCE_DUTY_ALREADY_ASSIGNED":
+      return "This class already has an active attendance duty for the selected date.";
+    case "ATTENDANCE_DUTY_WINDOW_EXPIRED":
+    case "ATTENDANCE_DUTY_OUTSIDE_ACTIVE_WINDOW":
+    case "ATTENDANCE_DUTY_NO_LONGER_ACTIVE":
+      return "This attendance duty is outside its active time window.";
+    case "ATTENDANCE_DUTY_WINDOW_OUTSIDE_SCHOOL_DAY":
+      return "Keep the temporary duty within the selected school day.";
+    case "ATTENDANCE_DUTY_ACKNOWLEDGEMENT_REQUIRED":
+      return "Acknowledge this attendance duty before opening the class.";
+    case "ATTENDANCE_DUTY_NOT_PENDING":
+    case "ATTENDANCE_DUTY_STATUS_CHANGED":
+      return "This attendance duty changed. Refresh the coverage page and review its latest status.";
+    case "ATTENDANCE_RESPONSIBILITY_REQUIRED":
+      return "You need an active attendance duty for this class and date.";
+    case "ATTENDANCE_SESSION_ASSIGNED_TO_ANOTHER_USER":
+      return "This attendance session is currently assigned to another authorised user.";
+    case "ATTENDANCE_TAKEOVER_REASON_REQUIRED":
+      return "Enter a clear reason before taking over this attendance session.";
+    case "ATTENDANCE_SESSION_RESPONSIBILITY_LOCKED":
+      return "Responsibility cannot be changed after attendance is completed or locked.";
     case "STUDENT_NOT_ACTIVE_ENROLLED":
       return "One or more selected students are not actively enrolled for this class-section.";
     case "PROMOTION_NO_ACTIVE_ENROLLMENTS":
@@ -213,6 +282,18 @@ export function getUserSafeErrorMessage(errorOrCode: unknown, fallback = DEFAULT
       return "This batch cannot be reversed because attendance exists for a target-year enrollment.";
     case "PROMOTION_REVERSAL_BLOCKED_BY_LATER_CHANGES":
       return "This batch cannot be reversed because related student or enrollment records changed later.";
+    case "ENTITLEMENT_CONFIGURATION_REQUIRED":
+      return "Module access is not configured yet. Ask the JinaCampus Administrator to complete institution setup.";
+    case "SUBSCRIPTION_INACTIVE":
+      return "This school subscription is not currently active. Contact the JinaCampus Administrator.";
+    case "MODULE_NOT_INCLUDED":
+      return "This module is not included for the current institution.";
+    case "FEATURE_NOT_INCLUDED":
+      return "This feature is not included for the current institution.";
+    case "MODULE_READ_ONLY":
+      return "This feature is available in view-only mode. Changes are not permitted.";
+    case "ENTITLEMENT_SCOPE_NOT_FOUND":
+      return "The requested institution or branch is not available for module access.";
     case "GRADEBOOK_NOT_ENABLED":
       return "GradeBook is not enabled for this school.";
     case "GRADEBOOK_FEATURE_NOT_ENABLED":
@@ -314,7 +395,12 @@ export function getUserSafeErrorMessage(errorOrCode: unknown, fallback = DEFAULT
     case "STAFF_BRANCH_INACTIVE":
       return "Your assigned branch is not active for staff attendance.";
     case "STAFF_QR_ATTENDANCE_DISABLED":
+    case "STAFF_ATTENDANCE_QR_DISABLED":
       return "Staff QR attendance is disabled for this branch.";
+    case "STAFF_SHARED_QR_RETIRED":
+      return "Shared attendance QR codes are no longer available. Use Staff QR Cards and the authorised attendance scanner.";
+    case "STAFF_SELF_SCAN_DISABLED":
+      return "Staff cannot scan their own attendance. Present your Staff QR Card to an authorised attendance operator.";
     case "STAFF_QR_BRANCH_REQUIRED":
       return "Select a branch before generating a QR code.";
     case "STAFF_QR_OPERATOR_ACCESS_REQUIRED":

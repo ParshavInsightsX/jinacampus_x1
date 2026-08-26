@@ -27,7 +27,8 @@ describe("Academia UI route config", () => {
     expect(academiaAttendanceRoutes).toEqual({
       overview: "/academia/attendance",
       mark: "/academia/attendance/mark",
-      reports: "/academia/attendance/reports"
+      reports: "/academia/attendance/reports",
+      coverage: "/academia/attendance/coverage"
     });
   });
 

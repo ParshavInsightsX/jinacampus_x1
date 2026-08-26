@@ -3,7 +3,9 @@ import { getEffectivePermissions } from "@/lib/rbac/require-permission";
 import { listPermissions, listRoles } from "@/modules/campus-core/queries";
 import { createRoleAction } from "@/modules/campus-core/actions";
 import { EmptyState, PermissionState } from "@/components/ui/empty-state";
+import { FormField } from "@/components/ui/form-primitives";
 import { ResponsiveTable, formatEnumLabel } from "@/components/ui/table-primitives";
+import { MobileDataList, MobileDataRow } from "@/components/mobile/mobile-data-list";
 
 export default async function RolesPage() {
   const ctx = await requireAuth();
@@ -17,27 +19,62 @@ export default async function RolesPage() {
 
   return (
     <div className="space-y-6">
-      <div><h1 className="text-2xl font-semibold">Roles & Permissions</h1><p className="text-sm text-slate-500">Permission-based tenant-scoped RBAC.</p></div>
+      <header>
+        <h1 className="text-2xl font-semibold text-slate-950">Roles &amp; Permissions</h1>
+        <p className="mt-1 text-sm leading-6 text-slate-500">Manage tenant-scoped roles and the work each role is allowed to perform.</p>
+      </header>
       {canCreateRoles ? (
-        <form action={createRoleAction} className="premium-card grid gap-3 p-5 md:grid-cols-5">
-          <input name="code" placeholder="ROLE_CODE" required />
-          <input name="name" placeholder="Role name" required />
-          <select name="scope"><option value="TENANT">Tenant</option><option value="BRANCH">Branch</option></select>
-          <select name="permissionCodes" multiple>{permissions.map((p) => <option key={p.id} value={p.code}>{p.code}</option>)}</select>
-          <button className="bg-brand-700 px-4 py-2 text-sm font-medium text-white">Create</button>
+        <form action={createRoleAction} className="premium-card grid gap-4 p-4 md:grid-cols-2 md:p-5 xl:grid-cols-5">
+          <FormField id="role-code" label="Role code" required helpText="Use uppercase letters and underscores.">
+            <input id="role-code" name="code" placeholder="ACADEMIC_COORDINATOR" required autoCapitalize="characters" className="min-h-11 w-full" />
+          </FormField>
+          <FormField id="role-name" label="Role name" required>
+            <input id="role-name" name="name" placeholder="Academic Coordinator" required className="min-h-11 w-full" />
+          </FormField>
+          <FormField id="role-scope" label="Access scope" required>
+            <select id="role-scope" name="scope" className="min-h-11 w-full">
+              <option value="TENANT">Whole school</option>
+              <option value="BRANCH">Assigned branch</option>
+            </select>
+          </FormField>
+          <FormField id="role-permissions" label="Permissions" required helpText="Select one or more permissions.">
+            <select id="role-permissions" name="permissionCodes" multiple className="min-h-36 w-full">
+              {permissions.map((permission) => <option key={permission.id} value={permission.code}>{permission.code}</option>)}
+            </select>
+          </FormField>
+          <div className="flex items-end">
+            <button type="submit" className="premium-primary-button w-full">Create role</button>
+          </div>
         </form>
       ) : null}
       {roles.length ? (
-        <ResponsiveTable columns={["Role Code", "Name", "Scope", "Permissions"]} caption="Roles table">
-          {roles.map((r) => (
-            <tr key={r.id}>
-              <td className="whitespace-nowrap px-4 py-3 font-medium text-slate-900">{r.code}</td>
-              <td className="whitespace-nowrap px-4 py-3">{r.name}</td>
-              <td className="whitespace-nowrap px-4 py-3">{formatEnumLabel(r.scope)}</td>
-              <td className="whitespace-nowrap px-4 py-3">{r.rolePermissions.length}</td>
-            </tr>
-          ))}
-        </ResponsiveTable>
+        <>
+          <MobileDataList label="Roles" className="motion-slide-up">
+            {roles.map((role) => (
+              <MobileDataRow
+                key={role.id}
+                title={role.name}
+                subtitle={role.code}
+                details={[
+                  { label: "Access scope", value: formatEnumLabel(role.scope) },
+                  { label: "Permissions", value: `${role.rolePermissions.length} assigned` }
+                ]}
+              />
+            ))}
+          </MobileDataList>
+          <div className="hidden md:block">
+            <ResponsiveTable columns={["Role Code", "Name", "Scope", "Permissions"]} caption="Roles table">
+              {roles.map((role) => (
+                <tr key={role.id}>
+                  <td className="whitespace-nowrap px-4 py-3 font-medium text-slate-900">{role.code}</td>
+                  <td className="whitespace-nowrap px-4 py-3">{role.name}</td>
+                  <td className="whitespace-nowrap px-4 py-3">{formatEnumLabel(role.scope)}</td>
+                  <td className="whitespace-nowrap px-4 py-3">{role.rolePermissions.length}</td>
+                </tr>
+              ))}
+            </ResponsiveTable>
+          </div>
+        </>
       ) : (
         <EmptyState title="No roles found" description="Seed or create a tenant-scoped role." />
       )}

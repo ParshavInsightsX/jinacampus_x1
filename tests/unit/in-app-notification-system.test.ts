@@ -204,6 +204,8 @@ describe("provider-independent in-app notification core", () => {
     const cronRoute = source("src/app/api/cron/in-app-notifications/route.ts");
 
     expect(bell).toContain("POLL_INTERVAL_MS = 45_000");
+    expect(bell).toContain("let unreadCountRequest: Promise<number> | null = null");
+    expect(bell).toContain("requestUnreadNotificationCount");
     expect(bell).toContain('window.addEventListener("focus"');
     expect(bell).toContain('document.addEventListener("visibilitychange"');
     expect(recipientService).toContain("NOTIFICATION_ACKNOWLEDGEMENT_REQUIRED");

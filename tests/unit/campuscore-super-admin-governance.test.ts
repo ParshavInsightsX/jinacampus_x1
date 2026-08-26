@@ -78,7 +78,7 @@ describe("CampusCore five-role user governance", () => {
     expect(getPostLoginRedirectPath(["PRINCIPAL"])).toBe("/dashboard");
     expect(getPostLoginRedirectPath(["CLASS_TEACHER"])).toBe("/academia/attendance/mark");
     expect(getPostLoginRedirectPath(["TEACHER"])).toBe("/academia/attendance/mark");
-    expect(getPostLoginRedirectPath(["STAFF"])).toBe("/staffboard/attendance/scan");
+    expect(getPostLoginRedirectPath(["STAFF"])).toBe("/staffboard/attendance/me");
   });
 
   it("keeps user-list role labels aligned to active role assignments only", () => {

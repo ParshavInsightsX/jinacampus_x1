@@ -4,8 +4,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   db: {
+    $queryRaw: vi.fn(),
     tenant: {
       findUnique: vi.fn()
+    },
+    tenantSubscription: {
+      findUnique: vi.fn()
+    },
+    institutionEntitlement: {
+      findMany: vi.fn()
     }
   },
   writePlatformAuditLog: vi.fn(),
@@ -53,6 +60,12 @@ const administratorContext: PlatformAdministratorContext = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.db.$queryRaw.mockResolvedValue([{
+    subscriptionTableAvailable: true,
+    entitlementTableAvailable: true
+  }]);
+  mocks.db.tenantSubscription.findUnique.mockResolvedValue(null);
+  mocks.db.institutionEntitlement.findMany.mockResolvedValue([]);
 });
 
 describe("administrator school detail query", () => {
@@ -101,11 +114,54 @@ describe("administrator school detail query", () => {
     }));
     expect(school).toEqual(expect.objectContaining({
       id: "school-id",
+      commercialAccessSchemaAvailable: true,
+      subscription: null,
       dependencySummary: dependencyCounts
     }));
     expect(school).not.toHaveProperty("_count");
   });
 
+  it("loads core school details without querying unavailable commercial tables", async () => {
+    mocks.db.$queryRaw.mockResolvedValue([{
+      subscriptionTableAvailable: false,
+      entitlementTableAvailable: false
+    }]);
+    mocks.db.tenant.findUnique.mockResolvedValue({
+      id: "school-id",
+      name: "Example School",
+      slug: "example-school",
+      status: "ACTIVE",
+      legalName: null,
+      supportEmail: null,
+      phone: null,
+      website: null,
+      createdAt: new Date("2026-07-01T00:00:00.000Z"),
+      updatedAt: new Date("2026-07-02T00:00:00.000Z"),
+      institutions: [{
+        id: "institution-id",
+        name: "Example Institution",
+        displayName: null,
+        code: "MAIN",
+        status: "ACTIVE",
+        logoUrl: null
+      }],
+      branches: [],
+      users: [],
+      tenantSettings: null,
+      _count: dependencyCounts
+    });
+
+    await expect(
+      getSchoolByIdForAdministrator(administratorContext, "school-id")
+    ).resolves.toMatchObject({
+      id: "school-id",
+      commercialAccessSchemaAvailable: false,
+      subscription: null,
+      institutions: [{ id: "institution-id", entitlements: [] }]
+    });
+    expect(mocks.db.tenantSubscription.findUnique).not.toHaveBeenCalled();
+    expect(mocks.db.institutionEntitlement.findMany).not.toHaveBeenCalled();
+  });
   it("uses the same bounded relation-count query for lifecycle checks", async () => {
     mocks.db.tenant.findUnique.mockResolvedValue({ _count: dependencyCounts });
 
@@ -114,11 +170,17 @@ describe("administrator school detail query", () => {
   });
 
   it("does not hide infrastructure failures behind a permission message", () => {
-    const page = readFileSync(
+    const detailPage = readFileSync(
       resolve(process.cwd(), "src/app/administrator/schools/[tenantId]/page.tsx"),
       "utf8"
     );
+    const editPage = readFileSync(
+      resolve(process.cwd(), "src/app/administrator/schools/[tenantId]/edit/page.tsx"),
+      "utf8"
+    );
 
-    expect(page).toContain("if (!(error instanceof AppError) || error.status !== 403) throw error;");
+    expect(detailPage).toContain("if (!(error instanceof AppError) || error.status !== 403) throw error;");
+    expect(editPage).toContain("if (!(error instanceof AppError) || error.status !== 403) throw error;");
+    expect(editPage).toContain("Module access setup pending");
   });
 });

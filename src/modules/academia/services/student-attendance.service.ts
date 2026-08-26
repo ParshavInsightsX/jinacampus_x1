@@ -6,6 +6,9 @@ import { requirePermission } from "@/lib/rbac/require-permission";
 import type { TenantContext } from "@/lib/tenant/context";
 import { ACADEMIA_AUDIT_EVENTS } from "@/modules/academia/audit-events";
 import { findApplicableCalendarEntry } from "@/modules/campus-core/calendar/calendar-policy";
+import { ATTENDANCE_ENTITLEMENT_FEATURES } from "@/modules/campus-core/entitlements/catalog";
+import { requireAttendanceEntitlements } from "@/modules/campus-core/entitlements/service";
+import { isStudentAttendanceSessionSchemaAvailable } from "./student-attendance-schema-readiness";
 import {
   autoLockStudentAttendanceSchema,
   correctStudentAttendanceSchema,
@@ -21,6 +24,10 @@ type AttendanceLockClient = Prisma.TransactionClient;
 const DEFAULT_STUDENT_AUTO_LOCK_TIME = "15:00";
 const DEFAULT_ATTENDANCE_TIME_ZONE = "Asia/Kolkata";
 const cutoffTimePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
+const STUDENT_ATTENDANCE_CORRECTION_TRANSACTION_OPTIONS = {
+  maxWait: 10_000,
+  timeout: 60_000
+} as const;
 
 export type SubmitDailyStudentAttendanceResult = {
   classSectionId: string;
@@ -73,6 +80,14 @@ function normalizeDateOnly(date: Date) {
 
 function toDateOnlyString(date: Date) {
   return date.toISOString().slice(0, 10);
+}
+
+function toAttendanceCaptureStatus(
+  status: SubmittedAttendanceStatus
+): "PRESENT" | "ABSENT" | "LEAVE" {
+  if (status === "ABSENT") return "ABSENT";
+  if (status === "ON_LEAVE" || status === "EXCUSED") return "LEAVE";
+  return "PRESENT";
 }
 
 function incrementStatusCount(result: SubmitDailyStudentAttendanceResult, status: SubmittedAttendanceStatus) {
@@ -203,7 +218,7 @@ async function loadAutoLockPolicy(tx: AttendanceLockClient, ctx: TenantContext, 
   };
 }
 
-async function queueAndDispatchStudentAttendanceNotifications(
+export async function queueAndDispatchStudentAttendanceNotifications(
   ctx: TenantContext,
   input: {
     branchId: string;
@@ -213,6 +228,10 @@ async function queueAndDispatchStudentAttendanceNotifications(
     attendanceRecordIds: string[];
   }
 ) {
+  await requireAttendanceEntitlements(ctx, [
+    { featureKey: ATTENDANCE_ENTITLEMENT_FEATURES.EXCEPTION_MANAGEMENT, operation: "WRITE" }
+  ], { branchId: input.branchId });
+
   const queued = await queueStudentAttendanceWhatsAppNotifications({
     tenantId: ctx.tenantId,
     branchId: input.branchId,
@@ -231,7 +250,7 @@ async function queueAndDispatchStudentAttendanceNotifications(
   }
 }
 
-async function lockStudentAttendanceRecordsForScope(
+export async function lockStudentAttendanceRecordsForScope(
   tx: AttendanceLockClient,
   ctx: TenantContext,
   input: {
@@ -359,6 +378,11 @@ export async function autoLockStudentAttendanceForDate(
   if (!academicYearId) throw validationError("ACTIVE_ACADEMIC_YEAR_REQUIRED");
   if (data.sessionType !== "FULL_DAY") throw validationError("UNSUPPORTED_ATTENDANCE_SESSION_TYPE");
 
+  await requireAttendanceEntitlements(ctx, [
+    { featureKey: ATTENDANCE_ENTITLEMENT_FEATURES.STUDENT_ATTENDANCE, operation: "READ" },
+    { featureKey: ATTENDANCE_ENTITLEMENT_FEATURES.APPROVAL_AUDIT, operation: "WRITE" }
+  ], { branchId });
+
   return db.$transaction(async (tx) => {
     await requirePermission({
       ctx,
@@ -389,6 +413,11 @@ export async function correctStudentAttendance(
   if (!branchId) throw validationError("ACTIVE_BRANCH_REQUIRED");
   if (!academicYearId) throw validationError("ACTIVE_ACADEMIC_YEAR_REQUIRED");
 
+  await requireAttendanceEntitlements(ctx, [
+    { featureKey: ATTENDANCE_ENTITLEMENT_FEATURES.STUDENT_ATTENDANCE, operation: "READ" },
+    { featureKey: ATTENDANCE_ENTITLEMENT_FEATURES.CORRECTION, operation: "WRITE" }
+  ], { branchId });
+
   const result = await db.$transaction(async (tx) => {
     await requirePermission({
       ctx,
@@ -396,6 +425,9 @@ export async function correctStudentAttendance(
       branchId,
       academicYearId
     });
+
+    const attendanceSessionSchemaAvailable =
+      await isStudentAttendanceSessionSchemaAvailable(tx);
 
     const before = await tx.studentAttendanceRecord.findFirst({
       where: {
@@ -426,6 +458,62 @@ export async function correctStudentAttendance(
         correctedAt
       }
     });
+
+    if (attendanceSessionSchemaAvailable) {
+      const attendanceSession = await tx.studentAttendanceSession.findFirst({
+        where: {
+          tenantId: ctx.tenantId,
+          academicYearId: before.academicYearId,
+          classSectionId: before.classSectionId,
+          attendanceDate: before.attendanceDate,
+          sessionType: "FULL_DAY"
+        },
+        select: {
+          id: true,
+          entries: {
+            where: { enrollmentId: before.enrollmentId },
+            take: 1,
+            select: { id: true, status: true, recordVersion: true }
+          }
+        }
+      });
+      const sessionEntry = attendanceSession?.entries[0];
+      if (attendanceSession && sessionEntry) {
+        const captureStatus = toAttendanceCaptureStatus(data.status);
+        await tx.studentAttendanceSessionEntry.update({
+          where: { id: sessionEntry.id },
+          data: {
+            status: captureStatus,
+            legacyStatus: data.status,
+            recordVersion: { increment: 1 },
+            updatedById: ctx.userId,
+            markedAt: correctedAt
+          }
+        });
+        await tx.studentAttendanceMutation.create({
+          data: {
+            tenantId: ctx.tenantId,
+            sessionId: attendanceSession.id,
+            entryId: sessionEntry.id,
+            actorUserId: ctx.userId,
+            clientMutationId: crypto.randomUUID(),
+            source: "ADMIN_CORRECTION",
+            previousStatus: sessionEntry.status,
+            newStatus: captureStatus,
+            baseRecordVersion: sessionEntry.recordVersion,
+            resultingRecordVersion: sessionEntry.recordVersion + 1,
+            metadataJson: {
+              attendanceRecordId: after.id,
+              correctionReason: data.correctionReason
+            }
+          }
+        });
+        await tx.studentAttendanceSession.update({
+          where: { id: attendanceSession.id },
+          data: { sessionVersion: { increment: 1 }, lastMutationAt: correctedAt }
+        });
+      }
+    }
 
     await writeAuditLog({
       ctx,
@@ -467,7 +555,7 @@ export async function correctStudentAttendance(
       correctedById: ctx.userId,
       lockedAt: after.lockedAt?.toISOString() ?? null
     };
-  });
+  }, STUDENT_ATTENDANCE_CORRECTION_TRANSACTION_OPTIONS);
 
   await queueAndDispatchStudentAttendanceNotifications(ctx, {
     branchId,
@@ -493,6 +581,11 @@ export async function submitDailyStudentAttendance(
   if (!branchId) throw validationError("ACTIVE_BRANCH_REQUIRED");
   if (!academicYearId) throw validationError("ACTIVE_ACADEMIC_YEAR_REQUIRED");
   if (data.sessionType !== "FULL_DAY") throw validationError("UNSUPPORTED_ATTENDANCE_SESSION_TYPE");
+
+  await requireAttendanceEntitlements(ctx, [
+    { featureKey: ATTENDANCE_ENTITLEMENT_FEATURES.STUDENT_ATTENDANCE, operation: "READ" },
+    { featureKey: ATTENDANCE_ENTITLEMENT_FEATURES.MARKING, operation: "WRITE" }
+  ], { branchId });
 
   try {
     const transactionResult = await db.$transaction(async (tx) => {

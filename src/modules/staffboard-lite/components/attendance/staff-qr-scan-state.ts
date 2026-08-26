@@ -6,7 +6,17 @@ export function formatStaffQrPurpose(value: StaffQrScanActionData["purpose"]) {
 }
 
 export function formatStaffAttendanceStatus(value: string) {
-  return value
+  const labels: Readonly<Record<string, string>> = {
+    LATE: "Late Arrival",
+    HOLIDAY: "Paid Holiday",
+    WEEK_OFF: "Weekly Off",
+    ON_LEAVE: "On Leave",
+    OFFICIAL_DUTY: "Official Duty",
+    HALF_DAY: "Half Day",
+    INCOMPLETE: "Incomplete Attendance",
+    NOT_MARKED: "Not Marked"
+  };
+  return labels[value] ?? value
     .split("_")
     .map((part) => part.charAt(0) + part.slice(1).toLowerCase())
     .join(" ");
@@ -51,6 +61,7 @@ export function staffQrScanErrorMessage(code: string, fallback: string) {
   if (code === "ACTIVE_STAFF_PROFILE_NOT_FOUND") return "An active staff profile was not found for your account.";
   if (code === "STAFF_BRANCH_INACTIVE") return "Your assigned branch is inactive. Contact your school administrator.";
   if (code === "STAFF_QR_ATTENDANCE_DISABLED") return "Staff QR attendance is disabled for this branch.";
+  if (code === "STAFF_SELF_SCAN_DISABLED") return "Staff self check-in is not enabled for this branch. Ask the attendance operator to mark your attendance.";
   if (code === "STAFF_ATTENDANCE_HOLIDAY") return "Attendance scanning is not required on this school holiday.";
   if (code === "STAFF_ON_APPROVED_LEAVE") return "Your attendance is already covered by approved leave for today.";
   if (code === "FORBIDDEN" || code.startsWith("FORBIDDEN_PERMISSION") || code.startsWith("FORBIDDEN_")) {

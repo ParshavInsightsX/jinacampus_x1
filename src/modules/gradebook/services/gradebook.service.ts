@@ -116,7 +116,7 @@ async function requireMarksEntryAccess(ctx: TenantContext, assessment: Awaited<R
 
 export async function assignClassSectionSubject(ctx: TenantContext, input: unknown) {
   const data = assignClassSectionSubjectSchema.parse(input);
-  await requireGradebookEnabled(ctx);
+  await requireGradebookEnabled(ctx, "WRITE");
 
   const classSection = await db.classSection.findFirst({
     where: {
@@ -229,7 +229,7 @@ export async function assignClassSectionSubject(ctx: TenantContext, input: unkno
 
 export async function updateClassSectionSubject(ctx: TenantContext, input: unknown) {
   const data = updateClassSectionSubjectSchema.parse(input);
-  await requireGradebookEnabled(ctx);
+  await requireGradebookEnabled(ctx, "WRITE");
 
   const assignment = await db.classSectionSubject.findFirst({
     where: {
@@ -310,7 +310,7 @@ export async function updateClassSectionSubject(ctx: TenantContext, input: unkno
 
 export async function createGradebookAssessment(ctx: TenantContext, input: unknown) {
   const data = createGradebookAssessmentSchema.parse(input);
-  await requireGradebookEnabled(ctx);
+  await requireGradebookEnabled(ctx, "WRITE");
 
   const assignment = await db.classSectionSubject.findFirst({
     where: {
@@ -379,7 +379,7 @@ export async function createGradebookAssessment(ctx: TenantContext, input: unkno
 
 export async function saveGradebookMarks(ctx: TenantContext, input: unknown) {
   const data = saveGradebookMarksSchema.parse(input);
-  await requireGradebookEnabled(ctx);
+  await requireGradebookEnabled(ctx, "WRITE");
   const assessment = await loadAssessmentScope(ctx, data.assessmentId);
   await requireMarksEntryAccess(ctx, assessment);
   if (assessment.status === "CANCELLED") throw conflict("GRADEBOOK_ASSESSMENT_CANCELLED");
@@ -484,7 +484,7 @@ export async function saveGradebookMarks(ctx: TenantContext, input: unknown) {
 
 export async function publishGradebookAssessment(ctx: TenantContext, input: unknown) {
   const { assessmentId } = gradebookAssessmentIdSchema.parse(input);
-  await requireGradebookEnabled(ctx);
+  await requireGradebookEnabled(ctx, "WRITE");
   const assessment = await loadAssessmentScope(ctx, assessmentId);
   await requirePermission({
     ctx,
@@ -551,7 +551,7 @@ export async function publishGradebookAssessment(ctx: TenantContext, input: unkn
 
 export async function reopenGradebookAssessment(ctx: TenantContext, input: unknown) {
   const data = reopenGradebookAssessmentSchema.parse(input);
-  await requireGradebookEnabled(ctx);
+  await requireGradebookEnabled(ctx, "WRITE");
   const assessment = await loadAssessmentScope(ctx, data.assessmentId);
   await requirePermission({
     ctx,
@@ -588,7 +588,7 @@ export async function reopenGradebookAssessment(ctx: TenantContext, input: unkno
 
 export async function cancelGradebookAssessment(ctx: TenantContext, input: unknown) {
   const data = cancelGradebookAssessmentSchema.parse(input);
-  await requireGradebookEnabled(ctx);
+  await requireGradebookEnabled(ctx, "WRITE");
   const assessment = await loadAssessmentScope(ctx, data.assessmentId);
   await requirePermission({
     ctx,

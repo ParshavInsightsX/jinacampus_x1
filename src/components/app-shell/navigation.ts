@@ -67,6 +67,7 @@ export const NAVIGATION_GROUPS = [
       { title: "Students", href: "/academia/students", permissions: ["academia.student.view"] },
       { title: "Student Promotion", href: "/academia/promotions", permissions: ["academia.promotion.manage"] },
       { title: "Student Attendance", href: "/academia/attendance", permissions: ["academia.attendance.view"] },
+      { title: "Attendance Coverage", href: "/academia/attendance/coverage", permissions: ["academia.attendance.coverage.manage"] },
       { title: "Student Attendance Reports", href: "/academia/attendance/reports", permissions: ["academia.attendance.report"] }
     ]
   },
@@ -83,14 +84,16 @@ export const NAVIGATION_GROUPS = [
       { title: "Overview", href: "/staffboard", permissions: STAFFBOARD_LITE_PERMISSIONS },
       { title: "Staff Profiles", href: "/staffboard/staff", permissions: ["staffboard.staff.view"] },
       { title: "Categories", href: "/staffboard/categories", permissions: ["staffboard.staff.view"] },
-      { title: "Staff Attendance", href: "/staffboard/attendance", permissions: ["staffboard.attendance.view"] },
-      { title: "QR Console", href: "/staffboard/attendance/qr", permissions: ["staffboard.attendance.qr.generate"] },
-      { title: "Scan QR", href: "/staffboard/attendance/scan", permissions: ["staffboard.attendance.self_scan"] },
+      { title: "Attendance Register", href: "/staffboard/attendance", permissions: ["staffboard.attendance.view"] },
+      { title: "Mark Attendance", href: "/staffboard/attendance/scan", permissions: ["staffboard.attendance.scan"] },
+      { title: "Staff QR Cards", href: "/staffboard/attendance/credentials", permissions: ["staffboard.attendance.credential.manage"] },
+      { title: "Attendance Corrections", href: "/staffboard/attendance/adjustments", permissions: ["staffboard.attendance.adjustment.approve"] },
+      { title: "My Staff Card", href: "/staffboard/attendance/card", permissions: ["staffboard.attendance.credential.self_view"] },
       { title: "My Attendance", href: "/staffboard/attendance/me", permissions: ["staffboard.attendance.self_view"] },
       { title: "My Leave", href: "/staffboard/leave", permissions: ["staffboard.leave.self_view"] },
       { title: "Leave Review", href: "/staffboard/leave/review", permissions: ["staffboard.leave.view"] },
       { title: "Leave Settings", href: "/staffboard/leave/settings", permissions: ["staffboard.leave.settings.manage"] },
-      { title: "Staff Reports", href: "/staffboard/attendance/reports", permissions: ["staffboard.attendance.report"] }
+      { title: "Attendance Reports", href: "/staffboard/attendance/reports", permissions: ["staffboard.attendance.report"] }
     ]
   }
 ] satisfies readonly PermissionNavGroup[];
@@ -123,6 +126,8 @@ const ADMIN_NAV_SIGNALS = [
   "academia.enrollment.manage",
   "staffboard.staff.view",
   "staffboard.attendance.qr.generate",
+  "staffboard.attendance.scan",
+  "staffboard.attendance.credential.manage",
   "staffboard.attendance.report"
 ] as const satisfies readonly PermissionCode[];
 
@@ -157,9 +162,15 @@ export const MOBILE_NAVIGATION_SHORTCUTS = [
     audiences: ["teacher"]
   },
   {
-    title: "Scan QR",
+    title: "Mark Attendance",
     href: "/staffboard/attendance/scan",
-    permissions: ["staffboard.attendance.self_scan"],
+    permissions: ["staffboard.attendance.scan"],
+    audiences: ["admin", "office"]
+  },
+  {
+    title: "My Staff Card",
+    href: "/staffboard/attendance/card",
+    permissions: ["staffboard.attendance.credential.self_view"],
     audiences: ["office", "teacher", "staff"]
   },
   {
@@ -181,7 +192,7 @@ export const MOBILE_NAVIGATION_SHORTCUTS = [
     audiences: ["admin", "teacher"]
   },
   {
-    title: "Staff Reports",
+    title: "Attendance Reports",
     href: "/staffboard/attendance/reports",
     permissions: ["staffboard.attendance.report"],
     audiences: ["admin", "office"]
@@ -261,9 +272,9 @@ const MOBILE_BOTTOM_NAVIGATION_ITEMS = {
       audiences: ["office"]
     },
     {
-      title: "Scan QR",
+      title: "Mark Attendance",
       href: "/staffboard/attendance/scan",
-      permissions: ["staffboard.attendance.self_scan"],
+      permissions: ["staffboard.attendance.scan"],
       audiences: ["office"]
     },
     {
@@ -281,9 +292,9 @@ const MOBILE_BOTTOM_NAVIGATION_ITEMS = {
       audiences: ["staff"]
     },
     {
-      title: "Scan QR",
-      href: "/staffboard/attendance/scan",
-      permissions: ["staffboard.attendance.self_scan"],
+      title: "My Staff Card",
+      href: "/staffboard/attendance/card",
+      permissions: ["staffboard.attendance.credential.self_view"],
       audiences: ["staff"]
     },
     {
@@ -353,13 +364,48 @@ function hasEveryPermission(permissions: ReadonlySet<PermissionCode>, requiredPe
   return requiredPermissions.every((permission) => permissions.has(permission));
 }
 
-type NavigationFeatureOptions = {
-  gradebookEnabled?: boolean;
+export type AttendanceNavigationFeatures = {
+  studentAttendance?: boolean;
+  staffAttendance?: boolean;
+  marking?: boolean;
+  qr?: boolean;
+  reports?: boolean;
 };
 
-function isFeatureNavigationEnabled(href: string, features: NavigationFeatureOptions) {
+export type NavigationFeatureOptions = {
+  gradebookEnabled?: boolean;
+  attendance?: AttendanceNavigationFeatures;
+};
+
+export function isFeatureNavigationEnabled(href: string, features: NavigationFeatureOptions) {
   if (href === "/gradebook" || href.startsWith("/gradebook/")) {
     return features.gradebookEnabled === true;
+  }
+
+  const attendance = features.attendance;
+  if (!attendance) return true;
+  if (href === "/academia/attendance/reports" || href.startsWith("/academia/attendance/reports/")) {
+    return attendance.studentAttendance === true && attendance.reports === true;
+  }
+  if (href === "/academia/attendance/mark" || href.startsWith("/academia/attendance/mark/")) {
+    return attendance.studentAttendance === true && attendance.marking === true;
+  }
+  if (href === "/academia/attendance" || href.startsWith("/academia/attendance/")) {
+    return attendance.studentAttendance === true;
+  }
+  if (
+    href === "/staffboard/attendance/qr" || href.startsWith("/staffboard/attendance/qr/") ||
+    href === "/staffboard/attendance/credentials" || href.startsWith("/staffboard/attendance/credentials/") ||
+    href === "/staffboard/attendance/card" || href.startsWith("/staffboard/attendance/card/") ||
+    href === "/staffboard/attendance/scan" || href.startsWith("/staffboard/attendance/scan/")
+  ) {
+    return attendance.staffAttendance === true && attendance.qr === true;
+  }
+  if (href === "/staffboard/attendance/reports" || href.startsWith("/staffboard/attendance/reports/")) {
+    return attendance.staffAttendance === true && attendance.reports === true;
+  }
+  if (href === "/staffboard/attendance" || href.startsWith("/staffboard/attendance/")) {
+    return attendance.staffAttendance === true;
   }
 
   return true;
@@ -371,12 +417,21 @@ export function getVisibleNavigationGroups(
 ) {
   return NAVIGATION_GROUPS
     .filter((group) => group.title !== "GradeBook" || features.gradebookEnabled === true)
-    .map((group) => ({
-      title: group.title,
-      items: group.items
-        .filter((item) => canViewNavItem(permissions, item))
-        .map((item) => ({ title: item.title, href: item.href }))
-    }))
+    .map((group) => {
+      const uniqueItems = new Map<string, NavItem>();
+
+      for (const item of group.items) {
+        if (
+          canViewNavItem(permissions, item) &&
+          isFeatureNavigationEnabled(item.href, features) &&
+          !uniqueItems.has(item.href)
+        ) {
+          uniqueItems.set(item.href, { title: item.title, href: item.href });
+        }
+      }
+
+      return { title: group.title, items: Array.from(uniqueItems.values()) };
+    })
     .filter((group) => group.items.length > 0);
 }
 

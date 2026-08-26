@@ -8,12 +8,12 @@ export function StaffQrHelpCard() {
           <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 text-brand-700">
             <QrCode aria-hidden="true" className="h-5 w-5" />
           </span>
-          <h2 className="text-base font-semibold text-slate-950">How it works</h2>
+          <h2 className="text-base font-semibold text-slate-950">How supervised scanning works</h2>
         </div>
         <ol className="mt-4 space-y-3 text-sm leading-6 text-slate-600">
-          <li>1. Select check-in or check-out for the branch.</li>
-          <li>2. Generate a five-hour QR code for display at the gate or office.</li>
-          <li>3. Staff use the Scan QR page to validate the token and record attendance.</li>
+          <li>1. An authorised operator starts a branch-bound attendance session.</li>
+          <li>2. Each staff member presents their active Staff QR Card.</li>
+          <li>3. The operator scans the card to record check-in or check-out.</li>
         </ol>
       </section>
 
@@ -25,10 +25,10 @@ export function StaffQrHelpCard() {
           <h2 className="text-base font-semibold text-amber-950">Security rules</h2>
         </div>
         <ul className="mt-4 space-y-2 text-sm leading-6 text-amber-900">
-          <li>QR codes are time-bound and branch-scoped.</li>
-          <li>Regeneration deactivates the previous code for the same purpose.</li>
-          <li>Do not share outside the school premises.</li>
-          <li>Raw tokens are only rendered in the QR and are not stored.</li>
+          <li>Only authorised operators can open a scanning session.</li>
+          <li>Cards are institution- and branch-scoped, revocable, and time-bound when configured.</li>
+          <li>Staff cannot submit their own QR attendance from their account.</li>
+          <li>The readable token is never displayed; only the QR symbol is rendered.</li>
         </ul>
       </section>
     </aside>

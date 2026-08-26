@@ -1,5 +1,9 @@
 import { z } from "zod";
 import {
+  INSTITUTION_ENTITLEMENT_DEFINITIONS,
+  isKnownEntitlementPair
+} from "@/modules/campus-core/entitlements/catalog";
+import {
   SCHOOL_ID_ERROR_MESSAGES,
   SCHOOL_ID_MAX_LENGTH,
   SCHOOL_ID_MIN_LENGTH,
@@ -106,6 +110,86 @@ export const updateSchoolSchema = z.object({
   gradebookPortalResultsEnabled: z.boolean().optional(),
 }).refine(({ tenantId: _tenantId, ...value }) => Object.values(value).some((field) => field !== undefined), {
   message: "At least one school field is required."
+});
+
+const optionalSubscriptionEndDate = z.preprocess((value) => {
+  if (typeof value !== "string") return value;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  return /^\d{4}-\d{2}-\d{2}$/.test(trimmed)
+    ? new Date(`${trimmed}T23:59:59.999Z`)
+    : value;
+}, z.coerce.date().nullable());
+
+export const updateTenantSubscriptionSchema = z.object({
+  tenantId: uuid,
+  planCode: z.preprocess(
+    (value) => typeof value === "string" ? value.trim().toUpperCase() : value,
+    z.string().min(2).max(50).regex(/^[A-Z][A-Z0-9_-]+$/, "Use letters, numbers, hyphens, or underscores.")
+  ),
+  status: z.enum(["TRIAL", "ACTIVE", "GRACE_PERIOD", "SUSPENDED", "CANCELLED", "EXPIRED"]),
+  trialEndsAt: optionalSubscriptionEndDate,
+  currentPeriodEndsAt: optionalSubscriptionEndDate,
+  graceEndsAt: optionalSubscriptionEndDate
+}).superRefine((value, ctx) => {
+  if (value.status === "TRIAL" && !value.trialEndsAt) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["trialEndsAt"],
+      message: "Set a trial end date."
+    });
+  }
+  if (value.status === "GRACE_PERIOD" && !value.graceEndsAt) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["graceEndsAt"],
+      message: "Set a grace-period end date."
+    });
+  }
+  if (
+    value.currentPeriodEndsAt &&
+    value.graceEndsAt &&
+    value.graceEndsAt < value.currentPeriodEndsAt
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["graceEndsAt"],
+      message: "Grace period cannot end before the current subscription period."
+    });
+  }
+});
+
+const institutionEntitlementEntrySchema = z.object({
+  moduleKey: z.enum(["attendance", "gradebook"]),
+  featureKey: z.string().min(2).max(64),
+  access: z.enum(["DISABLED", "READ_ONLY", "FULL"])
+});
+
+export const updateInstitutionEntitlementsSchema = z.object({
+  tenantId: uuid,
+  institutionId: uuid,
+  entitlements: z.array(institutionEntitlementEntrySchema)
+    .length(INSTITUTION_ENTITLEMENT_DEFINITIONS.length)
+}).superRefine((value, ctx) => {
+  const seen = new Set<string>();
+  for (const entitlement of value.entitlements) {
+    const key = entitlement.moduleKey + ":" + entitlement.featureKey;
+    if (!isKnownEntitlementPair(entitlement.moduleKey, entitlement.featureKey)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["entitlements"],
+        message: "An unsupported module entitlement was submitted."
+      });
+    }
+    if (seen.has(key)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["entitlements"],
+        message: "Duplicate module entitlements are not allowed."
+      });
+    }
+    seen.add(key);
+  }
 });
 
 export const updateInstitutionLogoSchema = z.object({

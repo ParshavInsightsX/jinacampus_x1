@@ -202,7 +202,7 @@ describe("School ID login", () => {
       status: 200,
       body: {
         ok: true,
-        redirectTo: "/staffboard/attendance/scan",
+        redirectTo: "/staffboard/attendance/me",
         passwordChangeRequired: false
       }
     });

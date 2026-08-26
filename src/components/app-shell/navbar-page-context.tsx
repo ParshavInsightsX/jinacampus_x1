@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
@@ -6,9 +7,10 @@ import type { NavbarRouteContext } from "@/config/navbar";
 type NavbarPageContextProps = {
   routeContext: NavbarRouteContext;
   variant: "desktop" | "mobile";
+  supporting?: ReactNode;
 };
 
-export function NavbarPageContext({ routeContext, variant }: NavbarPageContextProps) {
+export function NavbarPageContext({ routeContext, variant, supporting }: NavbarPageContextProps) {
   const titleId = variant === "desktop" ? "desktop-navbar-page-title" : "mobile-navbar-page-title";
 
   return (
@@ -33,6 +35,7 @@ export function NavbarPageContext({ routeContext, variant }: NavbarPageContextPr
         >
           {routeContext.title}
         </p>
+        {variant === "mobile" && supporting ? supporting : null}
       </div>
     </div>
   );

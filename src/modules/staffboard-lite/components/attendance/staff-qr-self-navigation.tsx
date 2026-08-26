@@ -1,20 +1,20 @@
 import Link from "next/link";
-import { CalendarClock, QrCode, ScanLine } from "lucide-react";
+import { CalendarClock, IdCard, QrCode } from "lucide-react";
 
 type StaffQrSelfNavigationProps = {
-  active: "scan" | "today" | "history";
-  canScan: boolean;
+  active: "card" | "today" | "history";
+  canViewCard: boolean;
   canViewAttendance: boolean;
 };
 
 export function StaffQrSelfNavigation({
   active,
-  canScan,
+  canViewCard,
   canViewAttendance
 }: StaffQrSelfNavigationProps) {
   const links = [
-    canScan
-      ? { key: "scan" as const, href: "/staffboard/attendance/scan", label: "Scan QR", icon: ScanLine }
+    canViewCard
+      ? { key: "card" as const, href: "/staffboard/attendance/card", label: "My Staff Card", icon: IdCard }
       : null,
     canViewAttendance
       ? { key: "today" as const, href: "/staffboard/attendance/me", label: "Today", icon: QrCode }
@@ -33,7 +33,7 @@ export function StaffQrSelfNavigation({
 
   return (
     <nav aria-label="My staff attendance" className="overflow-x-auto pb-1">
-      <div className="inline-flex min-w-full gap-1 rounded-lg border border-slate-200 bg-white p-1 shadow-sm sm:min-w-0">
+      <div className="attendance-glass-bar inline-flex min-w-full gap-1 p-1 sm:min-w-0">
         {links.map((link) => {
           const Icon = link.icon;
           const isActive = active === link.key;
@@ -42,9 +42,12 @@ export function StaffQrSelfNavigation({
               key={link.key}
               href={link.href}
               aria-current={isActive ? "page" : undefined}
-              className={`inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-md px-3 text-sm font-semibold premium-focus sm:flex-none ${
-                isActive ? "bg-brand-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
-              }`}
+              className={
+                "inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-md px-3 text-sm font-semibold premium-focus sm:flex-none " +
+                (isActive
+                  ? "bg-brand-600 text-white shadow-sm"
+                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-950")
+              }
             >
               <Icon className="h-4 w-4" aria-hidden="true" />
               {link.label}

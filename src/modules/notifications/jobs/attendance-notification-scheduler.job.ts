@@ -1,4 +1,7 @@
 import { db } from "@/lib/db";
+import { AppError } from "@/lib/errors";
+import { ATTENDANCE_ENTITLEMENT_FEATURES } from "@/modules/campus-core/entitlements/catalog";
+import { requireAttendanceEntitlements } from "@/modules/campus-core/entitlements/service";
 import {
   getZonedDateTimeParts,
   hasReachedLocalTime,
@@ -59,9 +62,23 @@ export async function runAttendanceNotificationScheduler(now = new Date()): Prom
 
   for (const setting of settings) {
     try {
+      let reportDeliveryAllowed = true;
+      try {
+        await requireAttendanceEntitlements({ tenantId: setting.tenantId, institutionId: null }, [
+          { featureKey: ATTENDANCE_ENTITLEMENT_FEATURES.STAFF_ATTENDANCE, operation: "READ" },
+          { featureKey: ATTENDANCE_ENTITLEMENT_FEATURES.REPORTS, operation: "WRITE" }
+        ], { branchId: setting.branchId });
+      } catch (error) {
+        if (error instanceof AppError && error.status === 403) {
+          reportDeliveryAllowed = false;
+        } else {
+          throw error;
+        }
+      }
+
       const timeZone = safeTimeZone(setting.branch.timezone);
       const local = getZonedDateTimeParts(now, timeZone);
-      const weeklyDue = setting.staffWeeklySummaryWhatsAppEnabled &&
+      const weeklyDue = reportDeliveryAllowed && setting.staffWeeklySummaryWhatsAppEnabled &&
         local.isoWeekday === setting.staffWeeklySummarySendDay &&
         hasReachedLocalTime(now, timeZone, setting.staffWeeklySummarySendTime);
       if (weeklyDue) {
@@ -76,7 +93,7 @@ export async function runAttendanceNotificationScheduler(now = new Date()): Prom
         result.weeklyQueued += weekly.queued;
       }
 
-      const monthlyDue = setting.staffMonthlySummaryWhatsAppEnabled &&
+      const monthlyDue = reportDeliveryAllowed && setting.staffMonthlySummaryWhatsAppEnabled &&
         local.day === setting.staffMonthlySummarySendDay &&
         hasReachedLocalTime(now, timeZone, setting.staffMonthlySummarySendTime);
       if (monthlyDue) {

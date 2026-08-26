@@ -99,7 +99,7 @@ describe("staff QR scan server action", () => {
       qrPayload: qrPayload(),
       actorUserId: "00000000-0000-0000-0000-000000000099",
       permission: "staffboard.attendance.correct",
-      permissions: ["staffboard.attendance.self_scan"]
+      permissions: ["staffboard.attendance.credential.self_view"]
     });
 
     expect(result.ok).toBe(false);
@@ -132,14 +132,14 @@ describe("staff QR scan server action", () => {
       error: "You have already checked in today."
     });
 
-    mocks.scanStaffAttendanceQr.mockRejectedValueOnce(new Error("FORBIDDEN_PERMISSION:staffboard.attendance.self_scan"));
+    mocks.scanStaffAttendanceQr.mockRejectedValueOnce(new Error("FORBIDDEN_PERMISSION:staffboard.attendance.credential.self_view"));
     const forbidden = await scanStaffAttendanceQrAction({ qrPayload: qrPayload() });
     expect(forbidden).toMatchObject({
       ok: false,
       code: "FORBIDDEN",
       error: "You do not have permission to perform this action."
     });
-    expect(JSON.stringify(forbidden)).not.toContain("staffboard.attendance.self_scan");
+    expect(JSON.stringify(forbidden)).not.toContain("staffboard.attendance.credential.self_view");
   });
 
   it("maps wrong-branch and missing-staff scan failures to safe messages", async () => {

@@ -237,13 +237,17 @@ describe("GradeBook MVP", () => {
   it("keeps feature control in the Administrator Portal and migration rollout additive", () => {
     const administratorForm = source("src/modules/campus-core/components/administrator-school-forms.tsx");
     const migration = source("prisma/migrations/20260810213000_add_gradebook_foundation/migration.sql");
+    const entitlementMigration = source("prisma/migrations/20260818233000_add_institution_entitlements/migration.sql");
     const marksEditor = source("src/modules/gradebook/components/gradebook-marks-editor.tsx");
     const workspace = source("src/modules/gradebook/components/gradebook-workspace.tsx");
     const queries = source("src/modules/gradebook/queries/gradebook.queries.ts");
 
-    expect(administratorForm).toContain('name="gradebookEnabled"');
-    expect(administratorForm).toContain("Pilot module access");
+    expect(administratorForm).toContain("InstitutionEntitlementForm");
+    expect(administratorForm).toContain("entitlementFormFieldName");
+    expect(administratorForm).toContain("Module access:");
     expect(migration).toContain('ADD COLUMN "gradebookEnabled" BOOLEAN NOT NULL DEFAULT false');
+    expect(entitlementMigration).toContain("institution_entitlements");
+    expect(entitlementMigration).toContain("gradebook_features");
     expect(migration).toContain('ALTER TABLE "gradebook_marks" ENABLE ROW LEVEL SECURITY');
     expect(workspace).toContain("selectedAssessmentAssignmentId");
     expect(queries).toContain("{ endsAt: { gt: now } }");

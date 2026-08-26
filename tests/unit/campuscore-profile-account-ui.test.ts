@@ -59,7 +59,7 @@ describe("CampusCore profile and account UI repair", () => {
     expect(formSource).toContain("name=\"logoUrl\"");
     expect(detailSource).toContain("institution.displayName ?? institution.name");
     expect(detailSource).toContain("Using initials fallback");
-    expect(listSource).toContain("i.displayName ?? i.name");
+    expect(listSource).toContain("institution.displayName ?? institution.name");
   });
 
   it("wires account actions without exposing password hashes in UI files", () => {
@@ -121,7 +121,7 @@ describe("CampusCore profile and account UI repair", () => {
   });
 
   it("adds list-page profile/edit links and navbar account actions", () => {
-    expect(source("src/app/(dashboard)/campus-core/institutions/page.tsx")).toContain("/campus-core/institutions/${i.id}/edit");
+    expect(source("src/app/(dashboard)/campus-core/institutions/page.tsx")).toContain("/campus-core/institutions/${institution.id}/edit");
     expect(source("src/app/(dashboard)/campus-core/branches/page.tsx")).toContain("/campus-core/branches/${b.id}/edit");
     expect(source("src/app/(dashboard)/campus-core/users/page.tsx")).toContain("/campus-core/users/${u.id}/reset-password");
     expect(source("src/components/app-shell/navbar-user-menu.tsx")).toContain("/account/change-password");

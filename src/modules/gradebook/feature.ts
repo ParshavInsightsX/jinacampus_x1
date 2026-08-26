@@ -3,6 +3,16 @@ import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { AppError } from "@/lib/errors";
 import type { TenantContext } from "@/lib/tenant/context";
+import {
+  ENTITLEMENT_MODULE_KEYS,
+  GRADEBOOK_ENTITLEMENT_FEATURES,
+  type GradebookEntitlementFeature
+} from "@/modules/campus-core/entitlements/catalog";
+import {
+  assertInstitutionEntitlement,
+  entitlementAllows,
+  loadInstitutionModuleEntitlements
+} from "@/modules/campus-core/entitlements/service";
 
 export const GRADEBOOK_SUBFEATURES = [
   "configuration",
@@ -17,6 +27,8 @@ export const GRADEBOOK_SUBFEATURES = [
 ] as const;
 
 export type GradebookSubfeature = (typeof GRADEBOOK_SUBFEATURES)[number];
+type GradebookFeatureContext = Pick<TenantContext, "tenantId"> &
+  Partial<Pick<TenantContext, "institutionId" | "activeBranchId">>;
 
 export type GradebookFeatureState = {
   enabled: boolean;
@@ -30,6 +42,18 @@ export type GradebookFeatureState = {
   analytics: boolean;
   portalResults: boolean;
 };
+
+const FEATURE_KEY_BY_SUBFEATURE = {
+  configuration: GRADEBOOK_ENTITLEMENT_FEATURES.CONFIGURATION,
+  marksEntry: GRADEBOOK_ENTITLEMENT_FEATURES.MARKS_ENTRY,
+  import: GRADEBOOK_ENTITLEMENT_FEATURES.IMPORT,
+  resultCalculation: GRADEBOOK_ENTITLEMENT_FEATURES.RESULT_CALCULATION,
+  coScholastic: GRADEBOOK_ENTITLEMENT_FEATURES.CO_SCHOLASTIC,
+  reportCards: GRADEBOOK_ENTITLEMENT_FEATURES.REPORT_CARDS,
+  publication: GRADEBOOK_ENTITLEMENT_FEATURES.PUBLICATION,
+  analytics: GRADEBOOK_ENTITLEMENT_FEATURES.ANALYTICS,
+  portalResults: GRADEBOOK_ENTITLEMENT_FEATURES.PORTAL_RESULTS
+} as const satisfies Record<GradebookSubfeature, GradebookEntitlementFeature>;
 
 const DISABLED_GRADEBOOK_FEATURE_STATE: GradebookFeatureState = {
   enabled: false,
@@ -50,7 +74,7 @@ function isPendingGradebookFeatureMigration(error: unknown) {
   return column.startsWith("tenant_settings.gradebook");
 }
 
-async function loadGradebookFeatureState(tenantId: string): Promise<GradebookFeatureState> {
+async function loadLegacyGradebookFeatureState(tenantId: string): Promise<GradebookFeatureState> {
   const baseSettings = await db.tenantSettings.findUnique({
     where: { tenantId },
     select: { gradebookEnabled: true }
@@ -92,33 +116,80 @@ async function loadGradebookFeatureState(tenantId: string): Promise<GradebookFea
   }
 }
 
-export async function isGradebookEnabled(ctx: Pick<TenantContext, "tenantId">) {
-  return (await loadGradebookFeatureState(ctx.tenantId)).enabled;
+async function loadEntitledGradebookState(ctx: GradebookFeatureContext) {
+  if (!ctx.institutionId) return null;
+  const state = await loadInstitutionModuleEntitlements({
+    ctx: { tenantId: ctx.tenantId, institutionId: ctx.institutionId },
+    moduleKey: ENTITLEMENT_MODULE_KEYS.GRADEBOOK,
+    institutionId: ctx.institutionId,
+    branchId: ctx.activeBranchId
+  });
+  if (!state.schemaAvailable) return null;
+
+  return {
+    state,
+    features: {
+      enabled: entitlementAllows(state, GRADEBOOK_ENTITLEMENT_FEATURES.MODULE, "READ"),
+      configuration: entitlementAllows(state, GRADEBOOK_ENTITLEMENT_FEATURES.CONFIGURATION, "READ"),
+      marksEntry: entitlementAllows(state, GRADEBOOK_ENTITLEMENT_FEATURES.MARKS_ENTRY, "READ"),
+      import: entitlementAllows(state, GRADEBOOK_ENTITLEMENT_FEATURES.IMPORT, "READ"),
+      resultCalculation: entitlementAllows(state, GRADEBOOK_ENTITLEMENT_FEATURES.RESULT_CALCULATION, "READ"),
+      coScholastic: entitlementAllows(state, GRADEBOOK_ENTITLEMENT_FEATURES.CO_SCHOLASTIC, "READ"),
+      reportCards: entitlementAllows(state, GRADEBOOK_ENTITLEMENT_FEATURES.REPORT_CARDS, "READ"),
+      publication: entitlementAllows(state, GRADEBOOK_ENTITLEMENT_FEATURES.PUBLICATION, "READ"),
+      analytics: entitlementAllows(state, GRADEBOOK_ENTITLEMENT_FEATURES.ANALYTICS, "READ"),
+      portalResults: entitlementAllows(state, GRADEBOOK_ENTITLEMENT_FEATURES.PORTAL_RESULTS, "READ")
+    } satisfies GradebookFeatureState
+  };
 }
 
-export async function requireGradebookEnabled(ctx: Pick<TenantContext, "tenantId">) {
-  if (!(await isGradebookEnabled(ctx))) {
+async function loadGradebookFeatureState(ctx: GradebookFeatureContext): Promise<GradebookFeatureState> {
+  const entitled = await loadEntitledGradebookState(ctx);
+  return entitled?.features ?? loadLegacyGradebookFeatureState(ctx.tenantId);
+}
+
+export async function isGradebookEnabled(ctx: GradebookFeatureContext) {
+  return (await loadGradebookFeatureState(ctx)).enabled;
+}
+
+export async function requireGradebookEnabled(
+  ctx: GradebookFeatureContext,
+  operation: "READ" | "WRITE" = "READ"
+) {
+  const entitled = await loadEntitledGradebookState(ctx);
+  if (entitled) {
+    assertInstitutionEntitlement(entitled.state, GRADEBOOK_ENTITLEMENT_FEATURES.MODULE, operation);
+    return;
+  }
+  if (!(await loadLegacyGradebookFeatureState(ctx.tenantId)).enabled) {
     throw new AppError("GRADEBOOK_NOT_ENABLED", "GRADEBOOK_NOT_ENABLED", 404);
   }
 }
 
-export async function getGradebookFeatureState(ctx: Pick<TenantContext, "tenantId">) {
-  return loadGradebookFeatureState(ctx.tenantId);
+export async function getGradebookFeatureState(ctx: GradebookFeatureContext) {
+  return loadGradebookFeatureState(ctx);
 }
 
 export async function isGradebookSubfeatureEnabled(
-  ctx: Pick<TenantContext, "tenantId">,
+  ctx: GradebookFeatureContext,
   feature: GradebookSubfeature
 ) {
-  const state = await loadGradebookFeatureState(ctx.tenantId);
+  const state = await loadGradebookFeatureState(ctx);
   return state.enabled && state[feature];
 }
 
 export async function requireGradebookSubfeature(
-  ctx: Pick<TenantContext, "tenantId">,
-  feature: GradebookSubfeature
+  ctx: GradebookFeatureContext,
+  feature: GradebookSubfeature,
+  operation: "READ" | "WRITE" = "READ"
 ) {
-  const state = await loadGradebookFeatureState(ctx.tenantId);
+  const entitled = await loadEntitledGradebookState(ctx);
+  if (entitled) {
+    assertInstitutionEntitlement(entitled.state, FEATURE_KEY_BY_SUBFEATURE[feature], operation);
+    return;
+  }
+
+  const state = await loadLegacyGradebookFeatureState(ctx.tenantId);
   if (!state.enabled) {
     throw new AppError("GRADEBOOK_NOT_ENABLED", "GRADEBOOK_NOT_ENABLED", 404);
   }

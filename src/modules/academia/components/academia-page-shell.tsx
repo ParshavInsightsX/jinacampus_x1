@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { EmptyState, NoResultsState } from "@/components/ui/empty-state";
+import { MobilePageHeader } from "@/components/app-shell/mobile-page-header";
 import {
   ResponsiveTable,
   StatusBadge,
@@ -44,18 +45,27 @@ export async function resolveSearchParam(searchParams?: RouteSearchParams) {
 }
 
 export function PageHeader({ title, description, actionLabel, actionHref }: PageHeaderProps) {
+  const action = actionLabel && actionHref ? (
+    <Link href={actionHref} className="premium-primary-button min-w-11 px-3 premium-focus">
+      {actionLabel}
+    </Link>
+  ) : undefined;
+
   return (
-    <div className="premium-glass-panel flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:justify-between sm:p-5">
-      <div className="max-w-3xl">
-        <h1 className="text-2xl font-semibold text-ink">{title}</h1>
-        <p className="mt-1 text-sm leading-6 text-slate-500">{description}</p>
+    <>
+      <MobilePageHeader title={title} description={description} action={action} />
+      <div className="premium-glass-panel hidden gap-4 p-5 lg:flex lg:items-start lg:justify-between">
+        <div className="max-w-3xl">
+          <h1 className="text-2xl font-semibold text-ink">{title}</h1>
+          <p className="mt-1 text-sm leading-6 text-slate-500">{description}</p>
+        </div>
+        {actionLabel && actionHref ? (
+          <Link href={actionHref} className="premium-primary-button premium-focus">
+            {actionLabel}
+          </Link>
+        ) : null}
       </div>
-      {actionLabel && actionHref ? (
-        <Link href={actionHref} className="premium-primary-button w-full sm:w-auto premium-focus">
-          {actionLabel}
-        </Link>
-      ) : null}
-    </div>
+    </>
   );
 }
 

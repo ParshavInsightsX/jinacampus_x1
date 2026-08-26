@@ -158,9 +158,59 @@ export const monthlyAttendancePercentageFilterSchema = z.object({
   year: z.coerce.number().int().min(2000).max(2100)
 }).strict();
 
+export const studentAttendanceCaptureStatusSchema = z.enum(["PRESENT", "ABSENT", "LEAVE"]);
+
+export const prepareStudentAttendanceSessionSchema = z.object({
+  classSectionId: idSchema,
+  attendanceDate: attendanceDateSchema,
+  sessionType: attendanceSessionTypeSchema,
+  delegationReason: optionalTrimmedString(500)
+}).strict();
+
+export const mutateStudentAttendanceEntrySchema = z.object({
+  sessionId: idSchema,
+  entryId: idSchema,
+  status: studentAttendanceCaptureStatusSchema,
+  clientMutationId: idSchema,
+  baseRecordVersion: z.coerce.number().int().min(0),
+  capturedAtClient: z.string().datetime({ offset: true }).optional()
+}).strict();
+
+export const correctStudentAttendanceSessionEntrySchema = z.object({
+  sessionId: idSchema,
+  entryId: idSchema,
+  status: studentAttendanceStatusSchema,
+  correctionReason: trimmedString(5, 500),
+  remarks: optionalTrimmedString(300)
+}).strict();
+
+export const markRemainingStudentsPresentSchema = z.object({
+  sessionId: idSchema,
+  clientMutationId: idSchema,
+  baseSessionVersion: z.coerce.number().int().min(0)
+}).strict();
+
+export const undoStudentAttendanceBulkSchema = z.object({
+  sessionId: idSchema,
+  targetBulkMutationId: idSchema,
+  clientMutationId: idSchema,
+  baseSessionVersion: z.coerce.number().int().min(0)
+}).strict();
+
+export const completeStudentAttendanceSessionSchema = z.object({
+  sessionId: idSchema,
+  expectedSessionVersion: z.coerce.number().int().min(0)
+}).strict();
 export const attendanceFilterSchema = studentAttendanceReportFilterSchema;
 export const listStudentAttendanceSchema = studentAttendanceReportFilterSchema;
 
+export type StudentAttendanceCaptureStatusInput = z.infer<typeof studentAttendanceCaptureStatusSchema>;
+export type PrepareStudentAttendanceSessionInput = z.infer<typeof prepareStudentAttendanceSessionSchema>;
+export type MutateStudentAttendanceEntryInput = z.infer<typeof mutateStudentAttendanceEntrySchema>;
+export type CorrectStudentAttendanceSessionEntryInput = z.infer<typeof correctStudentAttendanceSessionEntrySchema>;
+export type MarkRemainingStudentsPresentInput = z.infer<typeof markRemainingStudentsPresentSchema>;
+export type UndoStudentAttendanceBulkInput = z.infer<typeof undoStudentAttendanceBulkSchema>;
+export type CompleteStudentAttendanceSessionInput = z.infer<typeof completeStudentAttendanceSessionSchema>;
 export type SubmitStudentAttendanceEntryInput = z.infer<typeof submitStudentAttendanceEntrySchema>;
 export type SubmitStudentAttendanceInput = z.infer<typeof submitStudentAttendanceSchema>;
 export type CorrectStudentAttendanceInput = z.infer<typeof correctStudentAttendanceSchema>;

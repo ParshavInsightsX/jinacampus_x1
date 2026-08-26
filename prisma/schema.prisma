@@ -123,6 +123,29 @@ enum TenantPlan {
   ENTERPRISE
 }
 
+enum SubscriptionLifecycleStatus {
+  TRIAL
+  ACTIVE
+  GRACE_PERIOD
+  SUSPENDED
+  CANCELLED
+  EXPIRED
+}
+
+enum InstitutionEntitlementAccess {
+  DISABLED
+  READ_ONLY
+  FULL
+}
+
+enum InstitutionEntitlementSource {
+  PLAN
+  ADD_ON
+  TRIAL
+  MANUAL
+  SYSTEM
+}
+
 enum StudentAttendanceMode {
   DAILY
   PERIOD
@@ -206,6 +229,64 @@ enum StudentAttendanceStatus {
   ON_LEAVE
   EXCUSED
   NOT_MARKED
+}
+
+enum StudentAttendanceSessionState {
+  DRAFT
+  IN_PROGRESS
+  COMPLETED
+  REOPENED
+  LOCKED
+}
+
+enum StudentAttendanceCaptureStatus {
+  PRESENT
+  ABSENT
+  LEAVE
+}
+
+enum StudentAttendanceMutationSource {
+  ONLINE
+  BULK_PRESENT
+  BULK_UNDO
+  ADMIN_CORRECTION
+  SYSTEM
+}
+
+enum StudentAttendanceRosterState {
+  INCLUDED
+  EXCLUDED
+}
+
+enum StudentAttendanceDutyAssignmentType {
+  CO_CLASS_TEACHER
+  SUBSTITUTE_TEACHER
+  PERIOD_TEACHER
+  ATTENDANCE_OPERATOR
+}
+
+enum StudentAttendanceDutyAssignmentStatus {
+  PENDING
+  ACKNOWLEDGED
+  ACTIVE
+  COMPLETED
+  DECLINED
+  EXPIRED
+  REVOKED
+}
+
+enum StudentAttendanceDutySourceType {
+  MANUAL
+  STAFF_LEAVE
+  TIMETABLE
+  SYSTEM_ESCALATION
+}
+
+enum StudentAttendanceResponsibilitySource {
+  CLASS_TEACHER
+  DUTY_ASSIGNMENT
+  ATTENDANCE_OPERATOR
+  PRINCIPAL_OVERRIDE
 }
 
 enum AcademicCalendarEntryType {
@@ -570,8 +651,10 @@ enum StaffAttendanceStatus {
   LATE
   HALF_DAY
   ON_LEAVE
+  OFFICIAL_DUTY
   WEEK_OFF
   HOLIDAY
+  INCOMPLETE
   NOT_MARKED
 }
 
@@ -580,6 +663,136 @@ enum StaffAttendanceSource {
   MANUAL_ADMIN
   IMPORT
   BIOMETRIC
+}
+
+enum StaffAttendanceEventType {
+  CHECK_IN
+  CHECK_OUT
+  MANUAL_STATUS
+  STATUS_OVERRIDE
+  EVENT_VOID
+  CORRECTION
+}
+
+enum StaffAttendanceEventSource {
+  SUPERVISED_STATIC_QR
+  SELF_SERVICE_QR
+  MANUAL
+  LEAVE
+  CALENDAR
+  SYSTEM
+  IMPORT
+}
+
+enum StaffAttendanceEventState {
+  ACCEPTED
+  PENDING_REVIEW
+  VOIDED
+  SUPERSEDED
+}
+
+enum StaffAttendanceFlag {
+  LATE
+  EARLY_DEPARTURE
+  MISSING_CHECK_OUT
+  MANUAL_ENTRY
+  MANUAL_OVERRIDE
+  WORKED_ON_NON_WORKING_DAY
+  CROSS_BRANCH_SCAN
+  MULTIPLE_ATTENDANCE_INTERVALS
+  OUTSIDE_STANDARD_WINDOW
+  BACKDATED_ADJUSTMENT
+  POLICY_EXCEPTION
+}
+
+enum StaffAttendanceReviewState {
+  NOT_REQUIRED
+  REVIEW_REQUIRED
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum StaffAttendanceDayLifecycle {
+  OPEN
+  CALCULATED
+  REVIEW_REQUIRED
+  APPROVED
+  LOCKED
+}
+
+enum StaffAttendanceCredentialType {
+  STATIC_QR
+  ROTATING_QR
+}
+
+enum StaffAttendanceCredentialStatus {
+  ACTIVE
+  SUSPENDED
+  REVOKED
+  EXPIRED
+  SUPERSEDED
+}
+
+enum StudentIdentityCardStatus {
+  ACTIVE
+  SUPERSEDED
+  DEACTIVATED
+  EXPIRED
+}
+
+enum StaffAttendanceScanMode {
+  AUTO
+  CHECK_IN
+  CHECK_OUT
+  CHECK_IN_ONLY
+}
+
+enum StaffAttendanceCaptureMode {
+  SUPERVISED_QR
+  HYBRID
+  MANUAL_ONLY
+}
+
+enum StaffAttendanceScanSessionStatus {
+  ACTIVE
+  CLOSED
+  EXPIRED
+}
+
+enum StaffAttendanceAdjustmentType {
+  ADD_CHECK_IN
+  ADD_CHECK_OUT
+  SET_PRESENT
+  SET_ABSENT
+  SET_HALF_DAY
+  SET_ON_LEAVE
+  SET_OFFICIAL_DUTY
+  CORRECT_EVENT_TIME
+  VOID_EVENT
+  ADD_NOTE
+}
+
+enum StaffAttendanceAdjustmentStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  CANCELLED
+  APPLIED
+}
+
+enum StaffAttendancePolicyStatus {
+  DRAFT
+  PUBLISHED
+  RETIRED
+}
+
+enum StaffAttendanceOutboxStatus {
+  PENDING
+  PROCESSING
+  PUBLISHED
+  FAILED
 }
 
 enum StaffLeaveApplicationStatus {
@@ -743,6 +956,107 @@ enum StudentAttendanceNotificationMode {
   ALL_STATUSES
 }
 
+enum EducationAuthorityType {
+  NATIONAL_MINISTRY
+  CENTRAL_BOARD
+  STATE_DEPARTMENT
+  STATE_BOARD
+  OPEN_SCHOOLING_AUTHORITY
+  EDUCATION_COUNCIL
+  DISTRICT_AUTHORITY
+  LOCAL_AUTHORITY
+  OTHER
+}
+
+enum InstitutionIdentifierType {
+  UDISE
+  LEGACY_DISE
+  STATE_SCHOOL_CODE
+  BOARD_SCHOOL_CODE
+  INSTITUTION_CODE
+  OTHER
+}
+
+enum IdentifierAvailability {
+  ASSIGNED
+  PENDING_ASSIGNMENT
+  NOT_APPLICABLE
+  UNKNOWN
+}
+
+enum InstitutionAuthorizationType {
+  RECOGNITION
+  AFFILIATION
+  ACCREDITATION
+  REGISTRATION
+  NO_OBJECTION_CERTIFICATE
+  PRIOR_PERMISSION
+  MINORITY_STATUS
+  OTHER
+}
+
+enum RegulatoryRecordStatus {
+  DRAFT
+  PENDING_REVIEW
+  ACTIVE
+  EXPIRED
+  SUSPENDED
+  REVOKED
+  REJECTED
+  SUPERSEDED
+}
+
+enum RegulatoryVerificationStatus {
+  UNVERIFIED
+  SELF_DECLARED
+  DOCUMENT_VERIFIED
+  AUTHORITY_VERIFIED
+  VERIFICATION_FAILED
+}
+
+enum RegulatoryDataClassification {
+  PUBLIC
+  PUBLIC_ELIGIBLE
+  INTERNAL
+  RESTRICTED
+}
+
+enum RegulatoryPublicationStatus {
+  NOT_PUBLISHED
+  PENDING_APPROVAL
+  PUBLISHED
+  WITHDRAWN
+}
+
+enum ManagingEntityType {
+  GOVERNMENT
+  LOCAL_AUTHORITY
+  REGISTERED_SOCIETY
+  PUBLIC_TRUST
+  PRIVATE_TRUST
+  SECTION_8_COMPANY
+  OTHER
+}
+
+enum EducationStage {
+  PRE_PRIMARY
+  PRIMARY
+  UPPER_PRIMARY
+  SECONDARY
+  SENIOR_SECONDARY
+  VOCATIONAL
+  OPEN_BASIC_EDUCATION
+  OTHER
+}
+
+enum RegulatoryCompletenessStatus {
+  NOT_STARTED
+  INCOMPLETE
+  PENDING_VERIFICATION
+  COMPLETE
+  ACTION_REQUIRED
+}
+
 model Tenant {
   id           String       @id @default(uuid()) @db.Uuid
   name         String
@@ -772,6 +1086,16 @@ model Tenant {
   passkeyCredentials                  PasskeyCredential[]
   passkeyChallenges                   PasskeyChallenge[]
   tenantSettings                      TenantSettings?
+  subscription                        TenantSubscription?
+  institutionEntitlements             InstitutionEntitlement[]
+  institutionRegulatoryProfiles       InstitutionRegulatoryProfile[]
+  institutionManagingEntities         InstitutionManagingEntity[]
+  institutionManagingAssignments      InstitutionManagingEntityAssignment[]
+  institutionIdentifiers              InstitutionIdentifier[]
+  institutionAuthorizations           InstitutionAuthorization[]
+  institutionAuthorizationCoverage    InstitutionAuthorizationCoverage[]
+  institutionRegulatoryDocuments      InstitutionRegulatoryDocument[]
+  officialIdentifierClaims            OfficialIdentifierClaim[]
   attendanceSettings                  AttendanceSetting[]
   auditLogs                           AuditLog[]
   classes                             Class[]
@@ -780,12 +1104,18 @@ model Tenant {
   subjects                            Subject[]
   students                            Student[]
   studentDocuments                    StudentDocument[]
+  studentIdentityCards                StudentIdentityCard[]
   guardians                           Guardian[]
   studentGuardianLinks                StudentGuardianLink[]
   enrollments                         Enrollment[]
   studentPromotionBatches             StudentPromotionBatch[]
   studentPromotionItems               StudentPromotionItem[]
   studentAttendanceRecords            StudentAttendanceRecord[]
+  studentAttendanceSessions           StudentAttendanceSession[]
+  studentAttendanceSessionRoster      StudentAttendanceSessionRoster[]
+  studentAttendanceSessionEntries     StudentAttendanceSessionEntry[]
+  studentAttendanceMutations          StudentAttendanceMutation[]
+  studentAttendanceDutyAssignments    StudentAttendanceDutyAssignment[]
   classSectionSubjects                ClassSectionSubject[]
   gradebookAssessments                GradebookAssessment[]
   gradebookMarks                      GradebookMark[]
@@ -808,6 +1138,16 @@ model Tenant {
   gradebookJobs                       GradebookJob[]
   gradebookDomainEvents               GradebookDomainEventOutbox[]
   staffProfiles                       StaffProfile[]
+  staffProfilePhotos                  StaffProfilePhoto[]
+  staffBranchAssignments              StaffBranchAssignment[]
+  staffAttendancePolicies             StaffAttendancePolicy[]
+  staffAttendanceSchedules            StaffAttendanceSchedule[]
+  staffAttendanceScheduleAssignments  StaffAttendanceScheduleAssignment[]
+  staffAttendanceCredentials          StaffAttendanceCredential[]
+  staffAttendanceScanSessions         StaffAttendanceScanSession[]
+  staffAttendanceEvents               StaffAttendanceEvent[]
+  staffAttendanceAdjustments          StaffAttendanceAdjustment[]
+  staffAttendanceOutboxEvents         StaffAttendanceOutboxEvent[]
   staffAttendanceRecords              StaffAttendanceRecord[]
   staffAttendanceQrTokens             StaffAttendanceQrToken[]
   staffLeaveSettings                  StaffLeaveSetting[]
@@ -984,32 +1324,51 @@ model PrincipalPasswordRecoveryAttempt {
 }
 
 model Institution {
-  id            String            @id @default(uuid()) @db.Uuid
-  tenantId      String            @db.Uuid
-  name          String
-  displayName   String?
-  code          String
-  status        InstitutionStatus @default(ACTIVE)
-  board         String?
-  medium        String?
-  logoUrl       String?
-  logoObjectKey String?
-  addressLine1  String?
-  addressLine2  String?
-  city          String?
-  state         String?
-  postalCode    String?
-  country       String            @default("India")
-  createdById   String?           @db.Uuid
-  updatedById   String?           @db.Uuid
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
+  id               String            @id @default(uuid()) @db.Uuid
+  tenantId         String            @db.Uuid
+  name             String
+  legalName        String?
+  displayName      String?
+  formerLegalNames Json?
+  establishedYear  Int?
+  schoolType       String?
+  code             String
+  status           InstitutionStatus @default(ACTIVE)
+  board            String?
+  medium           String?
+  logoUrl          String?
+  logoObjectKey    String?
+  addressLine1     String?
+  addressLine2     String?
+  city             String?
+  state            String?
+  postalCode       String?
+  country          String            @default("India")
+  district         String?
+  block            String?
+  officialEmail    String?
+  officialPhone    String?
+  website          String?
+  createdById      String?           @db.Uuid
+  updatedById      String?           @db.Uuid
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
-  tenant                             Tenant                               @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  tenant                             Tenant                                @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   branches                           Branch[]
   principalPasswordResetRequests     PrincipalPasswordResetRequest[]
   academicYears                      AcademicYear[]
   academicCalendarEntries            AcademicCalendarEntry[]
+  studentAttendanceSessions          StudentAttendanceSession[]
+  studentAttendanceDutyAssignments   StudentAttendanceDutyAssignment[]
+  studentIdentityCards               StudentIdentityCard[]
+  staffBranchAssignments             StaffBranchAssignment[]
+  staffAttendancePolicies            StaffAttendancePolicy[]
+  staffAttendanceSchedules           StaffAttendanceSchedule[]
+  staffAttendanceCredentials         StaffAttendanceCredential[]
+  staffAttendanceScanSessions        StaffAttendanceScanSession[]
+  staffAttendanceEvents              StaffAttendanceEvent[]
+  staffAttendanceAdjustments         StaffAttendanceAdjustment[]
   gradebookAssessmentSchemes         GradebookAssessmentScheme[]
   gradebookExamTerms                 GradebookExamTerm[]
   gradebookGradeScales               GradebookGradeScale[]
@@ -1021,8 +1380,15 @@ model Institution {
   inAppNotificationAudienceRules     InAppNotificationAudienceRule[]
   inAppNotificationTemplates         InAppNotificationTemplate[]
   inAppNotificationSettings          InAppNotificationSetting[]
+  entitlements                       InstitutionEntitlement[]
+  regulatoryProfiles                 InstitutionRegulatoryProfile[]
+  managingEntityAssignments          InstitutionManagingEntityAssignment[]
+  regulatoryIdentifiers              InstitutionIdentifier[]
+  regulatoryAuthorizations           InstitutionAuthorization[]
+  regulatoryDocuments                InstitutionRegulatoryDocument[]
 
   @@unique([tenantId, code])
+  @@unique([tenantId, id], map: "institutions_tenant_id_id_entitlement_scope_key")
   @@index([tenantId, status])
   @@map("institutions")
 }
@@ -1048,58 +1414,375 @@ model Branch {
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
-  tenant                          Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  institution                     Institution                      @relation(fields: [institutionId], references: [id], onDelete: Restrict)
-  academicCalendarEntries         AcademicCalendarEntry[]
-  userBranchAccesses              UserBranchAccess[]
-  attendanceSetting               AttendanceSetting?
-  auditLogs                       AuditLog[]
-  classSections                   ClassSection[]
-  students                        Student[]
-  studentDocuments                StudentDocument[]
-  enrollments                     Enrollment[]
-  studentPromotionBatches         StudentPromotionBatch[]
-  studentPromotionItems           StudentPromotionItem[]
-  studentAttendanceRecords        StudentAttendanceRecord[]
-  classSectionSubjects            ClassSectionSubject[]
-  gradebookAssessments            GradebookAssessment[]
-  gradebookExamClassSections      GradebookExamClassSection[]
-  gradebookMarks                  GradebookMark[]
-  gradebookAssessmentSchemes      GradebookAssessmentScheme[]
-  gradebookExamTerms              GradebookExamTerm[]
-  gradebookGradeScales            GradebookGradeScale[]
-  gradebookCalculationRuleSets    GradebookCalculationRuleSet[]
-  gradebookExams                  GradebookExam[]
-  gradebookExamSchedules          GradebookExamSchedule[]
-  gradebookTeacherMarkAssignments GradebookTeacherMarkAssignment[]
-  gradebookJobs                   GradebookJob[]
-  gradebookDomainEvents           GradebookDomainEventOutbox[]
-  staffProfiles                   StaffProfile[]
-  staffAttendanceRecords          StaffAttendanceRecord[]
-  staffAttendanceQrTokens         StaffAttendanceQrToken[]
-  staffLeaveSetting               StaffLeaveSetting?
-  staffLeaveTypes                 StaffLeaveType[]
-  staffLeaveApprovers             StaffLeaveApprover[]
-  staffLeaveBalances              StaffLeaveBalance[]
-  staffLeaveApplications          StaffLeaveApplication[]
-  staffLeaveActions               StaffLeaveApplicationAction[]
-  staffLeaveDocuments             StaffLeaveDocument[]
-  inAppNotifications              InAppNotification[]
-  inAppNotificationAudienceRules  InAppNotificationAudienceRule[]
-  inAppNotificationSettings       InAppNotificationSetting[]
-  communicationPreferences        CommunicationPreference[]
-  notificationTemplates           NotificationTemplate[]
-  notificationOutboxItems         NotificationOutbox[]
-  whatsAppSettings                WhatsAppIntegrationSetting[]
-  GradebookMarkEntryBatch         GradebookMarkEntryBatch[]
-  GradebookResultRun              GradebookResultRun[]
-  GradebookReportCardTemplate     GradebookReportCardTemplate[]
-  GradebookReportCard             GradebookReportCard[]
+  tenant                             Tenant                                @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  institution                        Institution                           @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  academicCalendarEntries            AcademicCalendarEntry[]
+  userBranchAccesses                 UserBranchAccess[]
+  attendanceSetting                  AttendanceSetting?
+  auditLogs                          AuditLog[]
+  classSections                      ClassSection[]
+  students                           Student[]
+  studentDocuments                   StudentDocument[]
+  studentIdentityCards               StudentIdentityCard[]
+  staffProfilePhotos                 StaffProfilePhoto[]
+  enrollments                        Enrollment[]
+  studentPromotionBatches            StudentPromotionBatch[]
+  studentPromotionItems              StudentPromotionItem[]
+  studentAttendanceRecords           StudentAttendanceRecord[]
+  studentAttendanceSessions          StudentAttendanceSession[]
+  studentAttendanceDutyAssignments   StudentAttendanceDutyAssignment[]
+  classSectionSubjects               ClassSectionSubject[]
+  gradebookAssessments               GradebookAssessment[]
+  gradebookExamClassSections         GradebookExamClassSection[]
+  gradebookMarks                     GradebookMark[]
+  gradebookAssessmentSchemes         GradebookAssessmentScheme[]
+  gradebookExamTerms                 GradebookExamTerm[]
+  gradebookGradeScales               GradebookGradeScale[]
+  gradebookCalculationRuleSets       GradebookCalculationRuleSet[]
+  gradebookExams                     GradebookExam[]
+  gradebookExamSchedules             GradebookExamSchedule[]
+  gradebookTeacherMarkAssignments    GradebookTeacherMarkAssignment[]
+  gradebookJobs                      GradebookJob[]
+  gradebookDomainEvents              GradebookDomainEventOutbox[]
+  staffProfiles                      StaffProfile[]
+  staffBranchAssignments             StaffBranchAssignment[]
+  staffAttendancePolicies            StaffAttendancePolicy[]
+  staffAttendanceSchedules           StaffAttendanceSchedule[]
+  staffAttendanceScheduleAssignments StaffAttendanceScheduleAssignment[]
+  staffAttendanceScanSessions        StaffAttendanceScanSession[]
+  staffAttendanceEvents              StaffAttendanceEvent[]
+  staffAttendanceAdjustments         StaffAttendanceAdjustment[]
+  staffAttendanceRecords             StaffAttendanceRecord[]
+  staffAttendanceQrTokens            StaffAttendanceQrToken[]
+  staffLeaveSetting                  StaffLeaveSetting?
+  staffLeaveTypes                    StaffLeaveType[]
+  staffLeaveApprovers                StaffLeaveApprover[]
+  staffLeaveBalances                 StaffLeaveBalance[]
+  staffLeaveApplications             StaffLeaveApplication[]
+  staffLeaveActions                  StaffLeaveApplicationAction[]
+  staffLeaveDocuments                StaffLeaveDocument[]
+  inAppNotifications                 InAppNotification[]
+  inAppNotificationAudienceRules     InAppNotificationAudienceRule[]
+  inAppNotificationSettings          InAppNotificationSetting[]
+  communicationPreferences           CommunicationPreference[]
+  notificationTemplates              NotificationTemplate[]
+  notificationOutboxItems            NotificationOutbox[]
+  whatsAppSettings                   WhatsAppIntegrationSetting[]
+  GradebookMarkEntryBatch            GradebookMarkEntryBatch[]
+  GradebookResultRun                 GradebookResultRun[]
+  GradebookReportCardTemplate        GradebookReportCardTemplate[]
+  GradebookReportCard                GradebookReportCard[]
+  regulatoryProfiles                 InstitutionRegulatoryProfile[]
+  managingEntityAssignments          InstitutionManagingEntityAssignment[]
+  regulatoryIdentifiers              InstitutionIdentifier[]
+  regulatoryAuthorizations           InstitutionAuthorization[]
+  regulatoryDocuments                InstitutionRegulatoryDocument[]
 
   @@unique([tenantId, code])
+  @@unique([tenantId, id], map: "branches_tenant_id_id_attendance_scope_key")
+  @@unique([tenantId, institutionId, id], map: "branches_tenant_institution_id_regulatory_scope_key")
   @@index([tenantId, institutionId])
   @@index([tenantId, status])
   @@map("branches")
+}
+
+model InstitutionAuthorization {
+  id                   String                       @id @default(uuid()) @db.Uuid
+  tenantId             String                       @db.Uuid
+  institutionId        String                       @db.Uuid
+  branchId             String?                      @db.Uuid
+  authorityId          String                       @db.Uuid
+  type                 InstitutionAuthorizationType
+  authorizationNumber  String?
+  normalizedNumber     String?
+  applicationReference String?
+  categoryCode         String?
+  status               RegulatoryRecordStatus       @default(DRAFT)
+  verificationStatus   RegulatoryVerificationStatus @default(UNVERIFIED)
+  dataClassification   RegulatoryDataClassification @default(INTERNAL)
+  publicationStatus    RegulatoryPublicationStatus  @default(NOT_PUBLISHED)
+  issuedAt             DateTime?                    @db.Date
+  validFrom            DateTime?                    @db.Date
+  validUntil           DateTime?                    @db.Date
+  supersedesId         String?                      @db.Uuid
+  supersessionReason   String?
+  verifiedAt           DateTime?
+  verifiedById         String?                      @db.Uuid
+  verificationSource   String?
+  verificationNotes    String?
+  metadata             Json?
+  createdById          String?                      @db.Uuid
+  updatedById          String?                      @db.Uuid
+  createdAt            DateTime                     @default(now())
+  updatedAt            DateTime                     @default(now()) @updatedAt
+
+  tenant       Tenant                             @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "institution_authorizations_tenant_fkey")
+  institution  Institution                        @relation(fields: [tenantId, institutionId], references: [tenantId, id], onDelete: Cascade, map: "institution_authorizations_institution_fkey")
+  branch       Branch?                            @relation(fields: [tenantId, institutionId, branchId], references: [tenantId, institutionId, id], onDelete: Cascade, map: "institution_authorizations_branch_fkey")
+  authority    EducationAuthority                 @relation(fields: [authorityId], references: [id], onDelete: Restrict, map: "institution_authorizations_authority_fkey")
+  supersedes   InstitutionAuthorization?          @relation("InstitutionAuthorizationSupersession", fields: [tenantId, supersedesId], references: [tenantId, id], onDelete: Restrict, map: "institution_authorizations_supersedes_fkey")
+  supersededBy InstitutionAuthorization[]         @relation("InstitutionAuthorizationSupersession")
+  coverage     InstitutionAuthorizationCoverage[]
+  documents    InstitutionRegulatoryDocument[]
+
+  @@unique([tenantId, id], map: "institution_authorizations_tenant_id_key")
+  @@index([tenantId, institutionId, branchId], map: "institution_authorizations_scope_idx")
+  @@index([tenantId, institutionId, type, status], map: "institution_authorizations_type_status_idx")
+  @@index([authorityId, type, normalizedNumber], map: "institution_authorizations_authority_number_idx")
+  @@index([tenantId, validUntil, status], map: "institution_authorizations_expiry_idx")
+  @@map("institution_authorizations")
+}
+
+model InstitutionAuthorizationCoverage {
+  id              String         @id @default(uuid()) @db.Uuid
+  tenantId        String         @db.Uuid
+  authorizationId String         @db.Uuid
+  stage           EducationStage
+  gradeFrom       Int?
+  gradeTo         Int?
+  programmeCode   String?
+  streamCode      String?
+  mediumCode      String?
+  metadata        Json?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @default(now()) @updatedAt
+
+  tenant        Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "institution_authorization_coverage_tenant_fkey")
+  authorization InstitutionAuthorization @relation(fields: [tenantId, authorizationId], references: [tenantId, id], onDelete: Cascade, map: "institution_authorization_coverage_authorization_fkey")
+
+  @@index([tenantId, authorizationId], map: "institution_authorization_coverage_authorization_idx")
+  @@index([tenantId, stage], map: "institution_authorization_coverage_stage_idx")
+  @@map("institution_authorization_coverage")
+}
+
+model InstitutionRegulatoryDocument {
+  id                      String                       @id @default(uuid()) @db.Uuid
+  tenantId                String                       @db.Uuid
+  institutionId           String                       @db.Uuid
+  branchId                String?                      @db.Uuid
+  identifierId            String?                      @db.Uuid
+  authorizationId         String?                      @db.Uuid
+  documentTypeCode        String
+  title                   String
+  documentNumber          String?
+  storageBucket           String
+  privateObjectKey        String
+  publicRedactedObjectKey String?
+  checksumSha256          String
+  mimeType                String
+  sizeBytes               Int
+  dataClassification      RegulatoryDataClassification @default(RESTRICTED)
+  publicationStatus       RegulatoryPublicationStatus  @default(NOT_PUBLISHED)
+  issuedAt                DateTime?                    @db.Date
+  expiresAt               DateTime?                    @db.Date
+  publishedAt             DateTime?
+  publishedById           String?                      @db.Uuid
+  withdrawnAt             DateTime?
+  withdrawnById           String?                      @db.Uuid
+  uploadedById            String?                      @db.Uuid
+  deletedAt               DateTime?
+  deletedById             String?                      @db.Uuid
+  metadata                Json?
+  createdAt               DateTime                     @default(now())
+  updatedAt               DateTime                     @default(now()) @updatedAt
+
+  tenant        Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "institution_regulatory_documents_tenant_fkey")
+  institution   Institution               @relation(fields: [tenantId, institutionId], references: [tenantId, id], onDelete: Cascade, map: "institution_regulatory_documents_institution_fkey")
+  branch        Branch?                   @relation(fields: [tenantId, institutionId, branchId], references: [tenantId, institutionId, id], onDelete: Cascade, map: "institution_regulatory_documents_branch_fkey")
+  identifier    InstitutionIdentifier?    @relation(fields: [tenantId, identifierId], references: [tenantId, id], onDelete: Cascade, map: "institution_regulatory_documents_identifier_fkey")
+  authorization InstitutionAuthorization? @relation(fields: [tenantId, authorizationId], references: [tenantId, id], onDelete: Cascade, map: "institution_regulatory_documents_authorization_fkey")
+
+  @@unique([storageBucket, privateObjectKey], map: "institution_regulatory_documents_storage_key")
+  @@index([tenantId, institutionId, branchId, deletedAt], map: "institution_regulatory_documents_scope_idx")
+  @@index([tenantId, authorizationId], map: "institution_regulatory_documents_authorization_idx")
+  @@index([tenantId, identifierId], map: "institution_regulatory_documents_identifier_idx")
+  @@index([tenantId, publicationStatus], map: "institution_regulatory_documents_publication_idx")
+  @@map("institution_regulatory_documents")
+}
+
+model AuthorityRequirementProfile {
+  id             String    @id @default(uuid()) @db.Uuid
+  authorityId    String?   @db.Uuid
+  profileCode    String
+  version        Int
+  countryCode    String    @default("IN")
+  stateCode      String?
+  boardCode      String?
+  effectiveFrom  DateTime  @db.Date
+  effectiveUntil DateTime? @db.Date
+  rules          Json
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @default(now()) @updatedAt
+
+  authority EducationAuthority? @relation(fields: [authorityId], references: [id], onDelete: SetNull, map: "authority_requirement_profiles_authority_fkey")
+
+  @@unique([profileCode, version], map: "authority_requirement_profiles_code_version_key")
+  @@index([countryCode, stateCode, boardCode, isActive], map: "authority_requirement_profiles_scope_active_idx")
+  @@map("authority_requirement_profiles")
+}
+
+model OfficialIdentifierClaim {
+  id                      String   @id @default(uuid()) @db.Uuid
+  claimFingerprint        String   @unique(map: "official_identifier_claims_fingerprint_key")
+  tenantId                String   @db.Uuid
+  institutionIdentifierId String   @unique(map: "official_identifier_claims_identifier_key") @db.Uuid
+  createdAt               DateTime @default(now())
+
+  tenant     Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "official_identifier_claims_tenant_fkey")
+  identifier InstitutionIdentifier @relation(fields: [tenantId, institutionIdentifierId], references: [tenantId, id], onDelete: Cascade, map: "official_identifier_claims_identifier_fkey")
+
+  @@unique([tenantId, institutionIdentifierId], map: "official_identifier_claims_tenant_identifier_key")
+  @@index([tenantId], map: "official_identifier_claims_tenant_idx")
+  @@map("official_identifier_claims")
+}
+
+model EducationAuthority {
+  id                      String                 @id @default(uuid()) @db.Uuid
+  code                    String                 @unique(map: "education_authorities_code_key")
+  name                    String
+  shortName               String?
+  type                    EducationAuthorityType
+  countryCode             String                 @default("IN")
+  stateCode               String?
+  officialDomain          String?
+  verificationUrlTemplate String?
+  isActive                Boolean                @default(true)
+  createdAt               DateTime               @default(now())
+  updatedAt               DateTime               @default(now()) @updatedAt
+
+  identifiers         InstitutionIdentifier[]
+  authorizations      InstitutionAuthorization[]
+  requirementProfiles AuthorityRequirementProfile[]
+
+  @@index([type, stateCode, isActive], map: "education_authorities_type_state_active_idx")
+  @@map("education_authorities")
+}
+
+model InstitutionRegulatoryProfile {
+  id                 String                       @id @default(uuid()) @db.Uuid
+  tenantId           String                       @db.Uuid
+  institutionId      String                       @db.Uuid
+  branchId           String?                      @db.Uuid
+  completenessStatus RegulatoryCompletenessStatus @default(NOT_STARTED)
+  countryCode        String                       @default("IN")
+  stateCode          String?
+  boardCode          String?
+  declaredAt         DateTime?
+  declaredById       String?                      @db.Uuid
+  reviewedAt         DateTime?
+  reviewedById       String?                      @db.Uuid
+  reviewNotes        String?
+  createdById        String?                      @db.Uuid
+  updatedById        String?                      @db.Uuid
+  createdAt          DateTime                     @default(now())
+  updatedAt          DateTime                     @default(now()) @updatedAt
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "institution_regulatory_profiles_tenant_fkey")
+  institution Institution @relation(fields: [tenantId, institutionId], references: [tenantId, id], onDelete: Cascade, map: "institution_regulatory_profiles_institution_fkey")
+  branch      Branch?     @relation(fields: [tenantId, institutionId, branchId], references: [tenantId, institutionId, id], onDelete: Cascade, map: "institution_regulatory_profiles_branch_fkey")
+
+  @@index([tenantId, institutionId, branchId], map: "institution_regulatory_profiles_scope_idx")
+  @@index([tenantId, completenessStatus], map: "institution_regulatory_profiles_completeness_idx")
+  @@map("institution_regulatory_profiles")
+}
+
+model InstitutionManagingEntity {
+  id                       String             @id @default(uuid()) @db.Uuid
+  tenantId                 String             @db.Uuid
+  legalName                String
+  type                     ManagingEntityType
+  registrationNumber       String?
+  registrationAuthority    String?
+  registrationStateCode    String?
+  registrationDate         DateTime?          @db.Date
+  registeredOfficeAddress  String?
+  authorisedRepresentative String?
+  metadata                 Json?
+  createdById              String?            @db.Uuid
+  updatedById              String?            @db.Uuid
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @default(now()) @updatedAt
+
+  tenant      Tenant                                @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "institution_managing_entities_tenant_fkey")
+  assignments InstitutionManagingEntityAssignment[]
+
+  @@unique([tenantId, registrationNumber], map: "institution_managing_entities_tenant_registration_key")
+  @@unique([tenantId, id], map: "institution_managing_entities_tenant_id_key")
+  @@index([tenantId, legalName], map: "institution_managing_entities_name_idx")
+  @@index([tenantId, type], map: "institution_managing_entities_type_idx")
+  @@map("institution_managing_entities")
+}
+
+model InstitutionManagingEntityAssignment {
+  id               String    @id @default(uuid()) @db.Uuid
+  tenantId         String    @db.Uuid
+  institutionId    String    @db.Uuid
+  branchId         String?   @db.Uuid
+  managingEntityId String    @db.Uuid
+  isPrimary        Boolean   @default(true)
+  validFrom        DateTime? @db.Date
+  validUntil       DateTime? @db.Date
+  createdById      String?   @db.Uuid
+  updatedById      String?   @db.Uuid
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @default(now()) @updatedAt
+
+  tenant         Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "institution_managing_assignments_tenant_fkey")
+  institution    Institution               @relation(fields: [tenantId, institutionId], references: [tenantId, id], onDelete: Cascade, map: "institution_managing_assignments_institution_fkey")
+  branch         Branch?                   @relation(fields: [tenantId, institutionId, branchId], references: [tenantId, institutionId, id], onDelete: Cascade, map: "institution_managing_assignments_branch_fkey")
+  managingEntity InstitutionManagingEntity @relation(fields: [tenantId, managingEntityId], references: [tenantId, id], onDelete: Restrict, map: "institution_managing_assignments_entity_fkey")
+
+  @@index([tenantId, institutionId, branchId, isPrimary], map: "institution_managing_assignments_scope_idx")
+  @@index([tenantId, managingEntityId], map: "institution_managing_assignments_entity_idx")
+  @@map("institution_managing_entity_assignments")
+}
+
+model InstitutionIdentifier {
+  id                 String                       @id @default(uuid()) @db.Uuid
+  tenantId           String                       @db.Uuid
+  institutionId      String                       @db.Uuid
+  branchId           String?                      @db.Uuid
+  authorityId        String                       @db.Uuid
+  type               InstitutionIdentifierType
+  availability       IdentifierAvailability       @default(ASSIGNED)
+  value              String?
+  normalizedValue    String?
+  status             RegulatoryRecordStatus       @default(DRAFT)
+  verificationStatus RegulatoryVerificationStatus @default(UNVERIFIED)
+  dataClassification RegulatoryDataClassification @default(INTERNAL)
+  publicationStatus  RegulatoryPublicationStatus  @default(NOT_PUBLISHED)
+  isPrimary          Boolean                      @default(false)
+  issuedAt           DateTime?                    @db.Date
+  validFrom          DateTime?                    @db.Date
+  validUntil         DateTime?                    @db.Date
+  supersedesId       String?                      @db.Uuid
+  supersessionReason String?
+  verifiedAt         DateTime?
+  verifiedById       String?                      @db.Uuid
+  verificationSource String?
+  verificationNotes  String?
+  metadata           Json?
+  createdById        String?                      @db.Uuid
+  updatedById        String?                      @db.Uuid
+  createdAt          DateTime                     @default(now())
+  updatedAt          DateTime                     @default(now()) @updatedAt
+
+  tenant       Tenant                          @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "institution_identifiers_tenant_fkey")
+  institution  Institution                     @relation(fields: [tenantId, institutionId], references: [tenantId, id], onDelete: Cascade, map: "institution_identifiers_institution_fkey")
+  branch       Branch?                         @relation(fields: [tenantId, institutionId, branchId], references: [tenantId, institutionId, id], onDelete: Cascade, map: "institution_identifiers_branch_fkey")
+  authority    EducationAuthority              @relation(fields: [authorityId], references: [id], onDelete: Restrict, map: "institution_identifiers_authority_fkey")
+  supersedes   InstitutionIdentifier?          @relation("InstitutionIdentifierSupersession", fields: [tenantId, supersedesId], references: [tenantId, id], onDelete: Restrict, map: "institution_identifiers_supersedes_fkey")
+  supersededBy InstitutionIdentifier[]         @relation("InstitutionIdentifierSupersession")
+  documents    InstitutionRegulatoryDocument[]
+  claim        OfficialIdentifierClaim?
+
+  @@unique([tenantId, id], map: "institution_identifiers_tenant_id_key")
+  @@index([tenantId, institutionId, branchId], map: "institution_identifiers_scope_idx")
+  @@index([tenantId, institutionId, type, status], map: "institution_identifiers_type_status_idx")
+  @@index([authorityId, type, normalizedValue], map: "institution_identifiers_authority_value_idx")
+  @@index([tenantId, verificationStatus], map: "institution_identifiers_verification_idx")
+  @@map("institution_identifiers")
 }
 
 model AcademicYear {
@@ -1124,6 +1807,9 @@ model AcademicYear {
   sourcePromotionBatches              StudentPromotionBatch[]              @relation("StudentPromotionSourceAcademicYear")
   targetPromotionBatches              StudentPromotionBatch[]              @relation("StudentPromotionTargetAcademicYear")
   studentAttendanceRecords            StudentAttendanceRecord[]
+  studentAttendanceSessions           StudentAttendanceSession[]
+  studentAttendanceDutyAssignments    StudentAttendanceDutyAssignment[]
+  studentIdentityCards                StudentIdentityCard[]
   classSectionSubjects                ClassSectionSubject[]
   gradebookAssessments                GradebookAssessment[]
   gradebookMarks                      GradebookMark[]
@@ -1148,6 +1834,7 @@ model AcademicYear {
   GradebookReportCard                 GradebookReportCard[]
 
   @@unique([tenantId, institutionId, name])
+  @@unique([tenantId, id], map: "academic_years_tenant_id_id_student_attendance_scope_key")
   @@index([tenantId, institutionId, status])
   @@index([tenantId, institutionId, isActive])
   @@map("academic_years")
@@ -1205,43 +1892,71 @@ model User {
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
-  tenant                            Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  passwordCredential                PasswordCredential?
-  sessions                          Session[]
-  loginOtps                         LoginOtp[]
-  passkeyCredentials                PasskeyCredential[]
-  passkeyChallenges                 PasskeyChallenge[]
-  roleAssignments                   UserRoleAssignment[]
-  branchAccesses                    UserBranchAccess[]
-  principalPasswordResetRequests    PrincipalPasswordResetRequest[]
-  auditLogs                         AuditLog[]                       @relation("AuditActor")
-  classSectionsAsTeacher            ClassSection[]                   @relation("ClassSectionTeacher")
-  markedStudentAttendance           StudentAttendanceRecord[]        @relation("StudentAttendanceMarkedBy")
-  correctedStudentAttendance        StudentAttendanceRecord[]        @relation("StudentAttendanceCorrectedBy")
-  staffProfile                      StaffProfile?                    @relation("StaffProfileUser")
-  markedStaffAttendance             StaffAttendanceRecord[]          @relation("StaffAttendanceMarkedBy")
-  updatedStaffAttendance            StaffAttendanceRecord[]          @relation("StaffAttendanceUpdatedBy")
-  createdStaffQrTokens              StaffAttendanceQrToken[]         @relation("StaffAttendanceQrTokenCreatedBy")
-  deactivatedStaffQrTokens          StaffAttendanceQrToken[]         @relation("StaffAttendanceQrTokenDeactivatedBy")
-  staffLeaveApproverScopes          StaffLeaveApprover[]             @relation("StaffLeaveApproverUser")
-  actionedStaffLeave                StaffLeaveApplication[]          @relation("StaffLeaveApplicationActionedBy")
-  staffLeaveActions                 StaffLeaveApplicationAction[]    @relation("StaffLeaveActionActor")
-  legacyInAppNotifications          InAppNotification[]              @relation("LegacyInAppNotificationUser")
-  createdInAppNotifications         InAppNotification[]              @relation("InAppNotificationCreatedBy")
-  inAppNotificationRecipients       InAppNotificationRecipient[]
-  inAppNotificationAudienceRules    InAppNotificationAudienceRule[]
-  inAppNotificationPreferences      InAppNotificationPreference[]
-  createdInAppNotificationTemplates InAppNotificationTemplate[]      @relation("InAppNotificationTemplateCreatedBy")
-  createdPromotionBatches           StudentPromotionBatch[]          @relation("StudentPromotionCreatedBy")
-  reversedPromotionBatches          StudentPromotionBatch[]          @relation("StudentPromotionReversedBy")
-  reversedPromotionItems            StudentPromotionItem[]           @relation("StudentPromotionItemReversedBy")
-  classSectionSubjectsTaught        ClassSectionSubject[]            @relation("ClassSectionSubjectTeacher")
-  createdGradebookAssessments       GradebookAssessment[]            @relation("GradebookAssessmentCreatedBy")
-  publishedGradebookAssessments     GradebookAssessment[]            @relation("GradebookAssessmentPublishedBy")
-  cancelledGradebookAssessments     GradebookAssessment[]            @relation("GradebookAssessmentCancelledBy")
-  enteredGradebookMarks             GradebookMark[]                  @relation("GradebookMarkEnteredBy")
-  gradebookTeacherMarkAssignments   GradebookTeacherMarkAssignment[] @relation("GradebookTeacherMarkAssignmentTeacher")
+  tenant                               Tenant                              @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  passwordCredential                   PasswordCredential?
+  sessions                             Session[]
+  loginOtps                            LoginOtp[]
+  passkeyCredentials                   PasskeyCredential[]
+  passkeyChallenges                    PasskeyChallenge[]
+  roleAssignments                      UserRoleAssignment[]
+  branchAccesses                       UserBranchAccess[]
+  principalPasswordResetRequests       PrincipalPasswordResetRequest[]
+  auditLogs                            AuditLog[]                          @relation("AuditActor")
+  classSectionsAsTeacher               ClassSection[]                      @relation("ClassSectionTeacher")
+  markedStudentAttendance              StudentAttendanceRecord[]           @relation("StudentAttendanceMarkedBy")
+  correctedStudentAttendance           StudentAttendanceRecord[]           @relation("StudentAttendanceCorrectedBy")
+  startedStudentAttendanceSessions     StudentAttendanceSession[]          @relation("StudentAttendanceSessionStartedBy")
+  completedStudentAttendanceSessions   StudentAttendanceSession[]          @relation("StudentAttendanceSessionCompletedBy")
+  updatedStudentAttendanceEntries      StudentAttendanceSessionEntry[]     @relation("StudentAttendanceSessionEntryUpdatedBy")
+  studentAttendanceMutations           StudentAttendanceMutation[]         @relation("StudentAttendanceMutationActor")
+  responsibleStudentAttendanceSessions StudentAttendanceSession[]          @relation("StudentAttendanceSessionResponsibleUser")
+  originalStudentAttendanceSessions    StudentAttendanceSession[]          @relation("StudentAttendanceSessionOriginalClassTeacher")
+  delegatedStudentAttendanceSessions   StudentAttendanceSession[]          @relation("StudentAttendanceSessionDelegatedBy")
+  assignedStudentAttendanceDuties      StudentAttendanceDutyAssignment[]   @relation("StudentAttendanceDutyAssignedUser")
+  createdStudentAttendanceDuties       StudentAttendanceDutyAssignment[]   @relation("StudentAttendanceDutyAssignedBy")
+  issuedStudentIdentityCards           StudentIdentityCard[]               @relation("StudentIdentityCardIssuedBy")
+  deactivatedStudentIdentityCards      StudentIdentityCard[]               @relation("StudentIdentityCardDeactivatedBy")
+  printedStudentIdentityCards          StudentIdentityCard[]               @relation("StudentIdentityCardPrintedBy")
+  revokedStudentAttendanceDuties       StudentAttendanceDutyAssignment[]   @relation("StudentAttendanceDutyRevokedBy")
+  staffProfile                         StaffProfile?                       @relation("StaffProfileUser")
+  markedStaffAttendance                StaffAttendanceRecord[]             @relation("StaffAttendanceMarkedBy")
+  updatedStaffAttendance               StaffAttendanceRecord[]             @relation("StaffAttendanceUpdatedBy")
+  approvedStaffAttendance              StaffAttendanceRecord[]             @relation("StaffAttendanceApprovedBy")
+  lockedStaffAttendance                StaffAttendanceRecord[]             @relation("StaffAttendanceLockedBy")
+  createdStaffBranchAssignments        StaffBranchAssignment[]             @relation("StaffBranchAssignmentCreatedBy")
+  createdStaffAttendancePolicies       StaffAttendancePolicy[]             @relation("StaffAttendancePolicyCreatedBy")
+  publishedStaffAttendancePolicies     StaffAttendancePolicy[]             @relation("StaffAttendancePolicyPublishedBy")
+  createdStaffAttendanceSchedules      StaffAttendanceSchedule[]           @relation("StaffAttendanceScheduleCreatedBy")
+  createdStaffScheduleAssignments      StaffAttendanceScheduleAssignment[] @relation("StaffAttendanceScheduleAssignmentCreatedBy")
+  issuedStaffAttendanceCredentials     StaffAttendanceCredential[]         @relation("StaffAttendanceCredentialIssuedBy")
+  revokedStaffAttendanceCredentials    StaffAttendanceCredential[]         @relation("StaffAttendanceCredentialRevokedBy")
+  operatedStaffScanSessions            StaffAttendanceScanSession[]        @relation("StaffAttendanceScanSessionOperator")
+  closedStaffScanSessions              StaffAttendanceScanSession[]        @relation("StaffAttendanceScanSessionClosedBy")
+  recordedStaffAttendanceEvents        StaffAttendanceEvent[]              @relation("StaffAttendanceEventRecordedBy")
+  requestedStaffAdjustments            StaffAttendanceAdjustment[]         @relation("StaffAttendanceAdjustmentRequestedBy")
+  reviewedStaffAdjustments             StaffAttendanceAdjustment[]         @relation("StaffAttendanceAdjustmentReviewedBy")
+  createdStaffQrTokens                 StaffAttendanceQrToken[]            @relation("StaffAttendanceQrTokenCreatedBy")
+  deactivatedStaffQrTokens             StaffAttendanceQrToken[]            @relation("StaffAttendanceQrTokenDeactivatedBy")
+  staffLeaveApproverScopes             StaffLeaveApprover[]                @relation("StaffLeaveApproverUser")
+  actionedStaffLeave                   StaffLeaveApplication[]             @relation("StaffLeaveApplicationActionedBy")
+  staffLeaveActions                    StaffLeaveApplicationAction[]       @relation("StaffLeaveActionActor")
+  legacyInAppNotifications             InAppNotification[]                 @relation("LegacyInAppNotificationUser")
+  createdInAppNotifications            InAppNotification[]                 @relation("InAppNotificationCreatedBy")
+  inAppNotificationRecipients          InAppNotificationRecipient[]
+  inAppNotificationAudienceRules       InAppNotificationAudienceRule[]
+  inAppNotificationPreferences         InAppNotificationPreference[]
+  createdInAppNotificationTemplates    InAppNotificationTemplate[]         @relation("InAppNotificationTemplateCreatedBy")
+  createdPromotionBatches              StudentPromotionBatch[]             @relation("StudentPromotionCreatedBy")
+  reversedPromotionBatches             StudentPromotionBatch[]             @relation("StudentPromotionReversedBy")
+  reversedPromotionItems               StudentPromotionItem[]              @relation("StudentPromotionItemReversedBy")
+  classSectionSubjectsTaught           ClassSectionSubject[]               @relation("ClassSectionSubjectTeacher")
+  createdGradebookAssessments          GradebookAssessment[]               @relation("GradebookAssessmentCreatedBy")
+  publishedGradebookAssessments        GradebookAssessment[]               @relation("GradebookAssessmentPublishedBy")
+  cancelledGradebookAssessments        GradebookAssessment[]               @relation("GradebookAssessmentCancelledBy")
+  enteredGradebookMarks                GradebookMark[]                     @relation("GradebookMarkEnteredBy")
+  gradebookTeacherMarkAssignments      GradebookTeacherMarkAssignment[]    @relation("GradebookTeacherMarkAssignmentTeacher")
 
+  @@unique([tenantId, id], map: "users_tenant_id_id_attendance_scope_key")
   @@unique([tenantId, email])
   @@unique([tenantId, phone])
   @@unique([tenantId, principalId])
@@ -1493,6 +2208,55 @@ model TenantSettings {
   @@map("tenant_settings")
 }
 
+model TenantSubscription {
+  id                      String                      @id @default(uuid()) @db.Uuid
+  tenantId                String                      @unique @db.Uuid
+  planCode                String                      @default("TRIAL")
+  status                  SubscriptionLifecycleStatus @default(TRIAL)
+  startsAt                DateTime                    @default(now())
+  trialEndsAt             DateTime?
+  currentPeriodStartsAt   DateTime?
+  currentPeriodEndsAt     DateTime?
+  graceEndsAt             DateTime?
+  cancelledAt             DateTime?
+  billingProvider         String?
+  externalCustomerRef     String?
+  externalSubscriptionRef String?
+  limitsJson              Json?
+  addOnsJson              Json?
+  createdAt               DateTime                    @default(now())
+  updatedAt               DateTime                    @default(now()) @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([status, currentPeriodEndsAt])
+  @@map("tenant_subscriptions")
+}
+
+model InstitutionEntitlement {
+  id            String                       @id @default(uuid()) @db.Uuid
+  tenantId      String                       @db.Uuid
+  institutionId String                       @db.Uuid
+  moduleKey     String
+  featureKey    String
+  access        InstitutionEntitlementAccess @default(DISABLED)
+  source        InstitutionEntitlementSource @default(MANUAL)
+  startsAt      DateTime?
+  endsAt        DateTime?
+  limitsJson    Json?
+  createdAt     DateTime                     @default(now())
+  updatedAt     DateTime                     @default(now()) @updatedAt
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  institution Institution @relation(fields: [tenantId, institutionId], references: [tenantId, id], onDelete: Cascade, map: "institution_entitlements_tenant_institution_fkey")
+
+  @@unique([tenantId, institutionId, moduleKey, featureKey], map: "institution_entitlements_tenant_institution_module_feature_key")
+  @@index([tenantId, moduleKey, access], map: "institution_entitlements_tenant_module_access_idx")
+  @@index([institutionId, moduleKey, access], map: "institution_entitlements_institution_module_access_idx")
+  @@index([endsAt])
+  @@map("institution_entitlements")
+}
+
 model AttendanceSetting {
   id                                 String                            @id @default(uuid()) @db.Uuid
   tenantId                           String                            @db.Uuid
@@ -1507,6 +2271,12 @@ model AttendanceSetting {
   studentAttendanceNotificationMode  StudentAttendanceNotificationMode @default(EXCEPTION_ONLY)
   minimumAttendancePercentage        Int                               @default(75)
   staffQrAttendanceEnabled           Boolean                           @default(true)
+  staffAttendanceCaptureMode         StaffAttendanceCaptureMode        @default(SUPERVISED_QR)
+  staffSelfScanEnabled               Boolean                           @default(false)
+  staffManualAttendanceEnabled       Boolean                           @default(true)
+  staffCorrectionApprovalRequired    Boolean                           @default(true)
+  staffScanSessionValidityMinutes    Int                               @default(60)
+  staffCredentialValidityDays        Int?
   staffCheckInStartTime              String                            @default("07:30")
   staffLateAfterTime                 String                            @default("08:00")
   staffHalfDayBeforeMinutes          Int                               @default(240)
@@ -1621,22 +2391,25 @@ model ClassSection {
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
 
-  tenant                     Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  branch                     Branch                      @relation(fields: [branchId], references: [id], onDelete: Restrict)
-  academicYear               AcademicYear                @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
-  academicClass              Class                       @relation(fields: [classId], references: [id], onDelete: Restrict)
-  section                    Section                     @relation(fields: [sectionId], references: [id], onDelete: Restrict)
-  classTeacherUser           User?                       @relation("ClassSectionTeacher", fields: [classTeacherUserId], references: [id], onDelete: SetNull)
-  enrollments                Enrollment[]
-  sourcePromotionBatches     StudentPromotionBatch[]     @relation("StudentPromotionSourceClassSection")
-  targetPromotionBatches     StudentPromotionBatch[]     @relation("StudentPromotionDefaultTargetClassSection")
-  targetPromotionItems       StudentPromotionItem[]      @relation("StudentPromotionItemTargetClassSection")
-  studentAttendanceRecords   StudentAttendanceRecord[]
-  classSectionSubjects       ClassSectionSubject[]
-  gradebookAssessments       GradebookAssessment[]
-  gradebookExamClassSections GradebookExamClassSection[]
+  tenant                           Tenant                            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch                           Branch                            @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  academicYear                     AcademicYear                      @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  academicClass                    Class                             @relation(fields: [classId], references: [id], onDelete: Restrict)
+  section                          Section                           @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  classTeacherUser                 User?                             @relation("ClassSectionTeacher", fields: [classTeacherUserId], references: [id], onDelete: SetNull)
+  enrollments                      Enrollment[]
+  sourcePromotionBatches           StudentPromotionBatch[]           @relation("StudentPromotionSourceClassSection")
+  targetPromotionBatches           StudentPromotionBatch[]           @relation("StudentPromotionDefaultTargetClassSection")
+  targetPromotionItems             StudentPromotionItem[]            @relation("StudentPromotionItemTargetClassSection")
+  studentAttendanceRecords         StudentAttendanceRecord[]
+  studentAttendanceSessions        StudentAttendanceSession[]
+  studentAttendanceDutyAssignments StudentAttendanceDutyAssignment[]
+  classSectionSubjects             ClassSectionSubject[]
+  gradebookAssessments             GradebookAssessment[]
+  gradebookExamClassSections       GradebookExamClassSection[]
 
   @@unique([tenantId, branchId, academicYearId, classId, sectionId])
+  @@unique([tenantId, id], map: "class_sections_tenant_id_id_student_attendance_scope_key")
   @@index([tenantId, branchId, academicYearId, status])
   @@index([tenantId, academicYearId, classId])
   @@index([tenantId, classTeacherUserId])
@@ -1716,8 +2489,10 @@ model Student {
   enrollments                        Enrollment[]
   promotionItems                     StudentPromotionItem[]
   studentAttendanceRecords           StudentAttendanceRecord[]
+  studentAttendanceSessionRoster     StudentAttendanceSessionRoster[]
   gradebookMarks                     GradebookMark[]
   documents                          StudentDocument[]
+  identityCards                      StudentIdentityCard[]
   GradebookStudentMark               GradebookStudentMark[]
   GradebookStudentSubjectResult      GradebookStudentSubjectResult[]
   GradebookStudentOverallResult      GradebookStudentOverallResult[]
@@ -1728,6 +2503,7 @@ model Student {
   GradebookStudentResultPublication  GradebookStudentResultPublication[]
 
   @@unique([tenantId, admissionNumber])
+  @@unique([tenantId, id], map: "students_tenant_id_id_student_attendance_scope_key")
   @@index([tenantId, branchId, status])
   @@index([tenantId, branchId, category])
   @@index([tenantId, displayName])
@@ -1761,6 +2537,46 @@ model StudentDocument {
   @@index([tenantId, studentId, deletedAt])
   @@index([tenantId, branchId, type])
   @@map("student_documents")
+}
+
+model StudentIdentityCard {
+  id                 String                    @id @default(uuid()) @db.Uuid
+  tenantId           String                    @db.Uuid
+  institutionId      String                    @db.Uuid
+  branchId           String                    @db.Uuid
+  academicYearId     String                    @db.Uuid
+  studentId          String                    @db.Uuid
+  enrollmentId       String                    @db.Uuid
+  cardVersion        Int
+  status             StudentIdentityCardStatus @default(ACTIVE)
+  issuedById         String                    @db.Uuid
+  issuedAt           DateTime                  @default(now())
+  validFrom          DateTime                  @db.Date
+  validUntil         DateTime?                 @db.Date
+  deactivatedById    String?                   @db.Uuid
+  deactivatedAt      DateTime?
+  deactivationReason String?
+  printCount         Int                       @default(0)
+  lastPrintedAt      DateTime?
+  lastPrintedById    String?                   @db.Uuid
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+
+  tenant        Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  institution   Institution  @relation(fields: [tenantId, institutionId], references: [tenantId, id], onDelete: Restrict)
+  branch        Branch       @relation(fields: [tenantId, branchId], references: [tenantId, id], onDelete: Restrict)
+  academicYear  AcademicYear @relation(fields: [tenantId, academicYearId], references: [tenantId, id], onDelete: Restrict)
+  student       Student      @relation(fields: [tenantId, studentId], references: [tenantId, id], onDelete: Restrict)
+  enrollment    Enrollment   @relation(fields: [tenantId, enrollmentId], references: [tenantId, id], onDelete: Restrict)
+  issuedBy      User         @relation("StudentIdentityCardIssuedBy", fields: [tenantId, issuedById], references: [tenantId, id], onDelete: Restrict)
+  deactivatedBy User?        @relation("StudentIdentityCardDeactivatedBy", fields: [tenantId, deactivatedById], references: [tenantId, id], onDelete: Restrict)
+  lastPrintedBy User?        @relation("StudentIdentityCardPrintedBy", fields: [tenantId, lastPrintedById], references: [tenantId, id], onDelete: Restrict)
+
+  @@unique([tenantId, studentId, academicYearId, cardVersion], map: "student_identity_cards_version_key")
+  @@unique([tenantId, id], map: "student_identity_cards_tenant_id_id_key")
+  @@index([tenantId, branchId, academicYearId, status], map: "student_identity_cards_scope_status_idx")
+  @@index([tenantId, enrollmentId, status], map: "student_identity_cards_enrollment_status_idx")
+  @@map("student_identity_cards")
 }
 
 model Guardian {
@@ -1839,6 +2655,8 @@ model Enrollment {
   student                            Student                              @relation(fields: [studentId], references: [id], onDelete: Restrict)
   classSection                       ClassSection                         @relation(fields: [classSectionId], references: [id], onDelete: Restrict)
   studentAttendanceRecords           StudentAttendanceRecord[]
+  studentAttendanceSessionRoster     StudentAttendanceSessionRoster[]
+  studentAttendanceSessionEntries    StudentAttendanceSessionEntry[]
   sourcePromotionItems               StudentPromotionItem[]               @relation("StudentPromotionSourceEnrollment")
   targetPromotionItems               StudentPromotionItem[]               @relation("StudentPromotionTargetEnrollment")
   gradebookMarks                     GradebookMark[]
@@ -1850,9 +2668,11 @@ model Enrollment {
   GradebookAttendanceSummarySnapshot GradebookAttendanceSummarySnapshot[]
   GradebookReportCard                GradebookReportCard[]
   GradebookStudentResultPublication  GradebookStudentResultPublication[]
+  identityCards                      StudentIdentityCard[]
 
   @@unique([tenantId, academicYearId, studentId])
   @@unique([tenantId, academicYearId, classSectionId, rollNumber])
+  @@unique([tenantId, id], map: "enrollments_tenant_id_id_student_attendance_scope_key")
   @@index([tenantId, branchId, academicYearId, status])
   @@index([tenantId, classSectionId, status])
   @@map("enrollments")
@@ -3365,6 +4185,192 @@ model StudentAttendanceRecord {
   @@map("student_attendance_records")
 }
 
+model StudentAttendanceSession {
+  id                          String                                @id @default(uuid()) @db.Uuid
+  tenantId                    String                                @db.Uuid
+  institutionId               String                                @db.Uuid
+  branchId                    String                                @db.Uuid
+  academicYearId              String                                @db.Uuid
+  classSectionId              String                                @db.Uuid
+  attendanceDate              DateTime                              @db.Date
+  sessionType                 AttendanceSessionType                 @default(FULL_DAY)
+  state                       StudentAttendanceSessionState         @default(DRAFT)
+  sessionVersion              Int                                   @default(0)
+  rosterVersion               Int                                   @default(1)
+  startedById                 String                                @db.Uuid
+  completedById               String?                               @db.Uuid
+  responsibleUserId           String                                @db.Uuid
+  responsibilitySource        StudentAttendanceResponsibilitySource @default(CLASS_TEACHER)
+  originalClassTeacherUserId  String?                               @db.Uuid
+  delegatedByUserId           String?                               @db.Uuid
+  delegationReason            String?
+  responsibilityTransferredAt DateTime?
+  startedAt                   DateTime                              @default(now())
+  lastMutationAt              DateTime?
+  completedAt                 DateTime?
+  reopenedAt                  DateTime?
+  lockedAt                    DateTime?
+  createdAt                   DateTime                              @default(now())
+  updatedAt                   DateTime                              @updatedAt
+
+  tenant                   Tenant                            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  institution              Institution                       @relation(fields: [tenantId, institutionId], references: [tenantId, id], onDelete: Restrict)
+  branch                   Branch                            @relation(fields: [tenantId, branchId], references: [tenantId, id], onDelete: Restrict)
+  academicYear             AcademicYear                      @relation(fields: [tenantId, academicYearId], references: [tenantId, id], onDelete: Restrict)
+  classSection             ClassSection                      @relation(fields: [tenantId, classSectionId], references: [tenantId, id], onDelete: Restrict)
+  startedBy                User                              @relation("StudentAttendanceSessionStartedBy", fields: [tenantId, startedById], references: [tenantId, id], onDelete: Restrict)
+  completedBy              User?                             @relation("StudentAttendanceSessionCompletedBy", fields: [tenantId, completedById], references: [tenantId, id], onDelete: Restrict)
+  responsibleUser          User                              @relation("StudentAttendanceSessionResponsibleUser", fields: [tenantId, responsibleUserId], references: [tenantId, id], onDelete: Restrict)
+  originalClassTeacherUser User?                             @relation("StudentAttendanceSessionOriginalClassTeacher", fields: [tenantId, originalClassTeacherUserId], references: [tenantId, id], onDelete: Restrict)
+  delegatedBy              User?                             @relation("StudentAttendanceSessionDelegatedBy", fields: [tenantId, delegatedByUserId], references: [tenantId, id], onDelete: Restrict)
+  roster                   StudentAttendanceSessionRoster[]
+  entries                  StudentAttendanceSessionEntry[]
+  mutations                StudentAttendanceMutation[]
+  dutyAssignments          StudentAttendanceDutyAssignment[]
+
+  @@unique([tenantId, academicYearId, classSectionId, attendanceDate, sessionType], map: "student_attendance_session_scope_key")
+  @@unique([tenantId, id], map: "student_attendance_sessions_tenant_id_id_key")
+  @@index([tenantId, branchId, attendanceDate, state], map: "student_attendance_session_branch_date_idx")
+  @@index([tenantId, startedById, attendanceDate], map: "student_attendance_session_teacher_date_idx")
+  @@index([tenantId, responsibleUserId, attendanceDate], map: "student_attendance_session_responsible_date_idx")
+  @@map("student_attendance_sessions")
+}
+
+model StudentAttendanceDutyAssignment {
+  id               String                                @id @default(uuid()) @db.Uuid
+  tenantId         String                                @db.Uuid
+  institutionId    String                                @db.Uuid
+  branchId         String                                @db.Uuid
+  academicYearId   String                                @db.Uuid
+  classSectionId   String                                @db.Uuid
+  sessionId        String?                               @db.Uuid
+  attendanceDate   DateTime                              @db.Date
+  sessionType      AttendanceSessionType                 @default(FULL_DAY)
+  assignedUserId   String                                @db.Uuid
+  assignmentType   StudentAttendanceDutyAssignmentType
+  status           StudentAttendanceDutyAssignmentStatus @default(PENDING)
+  priority         Int                                   @default(100)
+  reasonCode       String
+  reasonText       String?
+  sourceType       StudentAttendanceDutySourceType       @default(MANUAL)
+  sourceEntityId   String?
+  assignedByUserId String                                @db.Uuid
+  revokedByUserId  String?                               @db.Uuid
+  assignedAt       DateTime                              @default(now())
+  acknowledgedAt   DateTime?
+  activatedAt      DateTime?
+  declinedAt       DateTime?
+  declineReason    String?
+  startsAt         DateTime
+  expiresAt        DateTime
+  completedAt      DateTime?
+  revokedAt        DateTime?
+  revocationReason String?
+  createdAt        DateTime                              @default(now())
+  updatedAt        DateTime                              @updatedAt
+
+  tenant         Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  institution    Institution               @relation(fields: [tenantId, institutionId], references: [tenantId, id], onDelete: Restrict)
+  branch         Branch                    @relation(fields: [tenantId, branchId], references: [tenantId, id], onDelete: Restrict)
+  academicYear   AcademicYear              @relation(fields: [tenantId, academicYearId], references: [tenantId, id], onDelete: Restrict)
+  classSection   ClassSection              @relation(fields: [tenantId, classSectionId], references: [tenantId, id], onDelete: Restrict)
+  session        StudentAttendanceSession? @relation(fields: [tenantId, sessionId], references: [tenantId, id], onDelete: Restrict)
+  assignedUser   User                      @relation("StudentAttendanceDutyAssignedUser", fields: [tenantId, assignedUserId], references: [tenantId, id], onDelete: Restrict)
+  assignedByUser User                      @relation("StudentAttendanceDutyAssignedBy", fields: [tenantId, assignedByUserId], references: [tenantId, id], onDelete: Restrict)
+  revokedByUser  User?                     @relation("StudentAttendanceDutyRevokedBy", fields: [tenantId, revokedByUserId], references: [tenantId, id], onDelete: Restrict)
+
+  @@unique([tenantId, id], map: "student_attendance_duty_assignments_tenant_id_id_key")
+  @@index([tenantId, branchId, attendanceDate, status], map: "student_attendance_duty_branch_date_status_idx")
+  @@index([tenantId, assignedUserId, attendanceDate, status], map: "student_attendance_duty_user_date_status_idx")
+  @@index([tenantId, academicYearId, classSectionId, attendanceDate], map: "student_attendance_duty_scope_idx")
+  @@index([tenantId, expiresAt, status], map: "student_attendance_duty_expiry_idx")
+  @@map("student_attendance_duty_assignments")
+}
+
+model StudentAttendanceSessionRoster {
+  id            String                       @id @default(uuid()) @db.Uuid
+  tenantId      String                       @db.Uuid
+  sessionId     String                       @db.Uuid
+  enrollmentId  String                       @db.Uuid
+  studentId     String                       @db.Uuid
+  rosterState   StudentAttendanceRosterState @default(INCLUDED)
+  position      Int
+  scholarNumber String
+  studentName   String
+  rollNumber    String?
+  createdAt     DateTime                     @default(now())
+
+  tenant     Tenant                         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  session    StudentAttendanceSession       @relation(fields: [tenantId, sessionId], references: [tenantId, id], onDelete: Cascade)
+  enrollment Enrollment                     @relation(fields: [tenantId, enrollmentId], references: [tenantId, id], onDelete: Restrict)
+  student    Student                        @relation(fields: [tenantId, studentId], references: [tenantId, id], onDelete: Restrict)
+  entry      StudentAttendanceSessionEntry?
+
+  @@unique([tenantId, sessionId, enrollmentId], map: "student_attendance_roster_session_enrollment_key")
+  @@unique([tenantId, id], map: "student_attendance_roster_tenant_id_id_key")
+  @@index([tenantId, sessionId, rosterState, position], map: "student_attendance_roster_session_position_idx")
+  @@index([tenantId, studentId], map: "student_attendance_roster_student_idx")
+  @@map("student_attendance_session_roster")
+}
+
+model StudentAttendanceSessionEntry {
+  id            String                          @id @default(uuid()) @db.Uuid
+  tenantId      String                          @db.Uuid
+  sessionId     String                          @db.Uuid
+  rosterId      String                          @db.Uuid
+  enrollmentId  String                          @db.Uuid
+  status        StudentAttendanceCaptureStatus?
+  legacyStatus  StudentAttendanceStatus?
+  recordVersion Int                             @default(0)
+  updatedById   String?                         @db.Uuid
+  markedAt      DateTime?
+  createdAt     DateTime                        @default(now())
+  updatedAt     DateTime                        @updatedAt
+
+  tenant     Tenant                         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  session    StudentAttendanceSession       @relation(fields: [tenantId, sessionId], references: [tenantId, id], onDelete: Cascade)
+  roster     StudentAttendanceSessionRoster @relation(fields: [tenantId, rosterId], references: [tenantId, id], onDelete: Cascade)
+  enrollment Enrollment                     @relation(fields: [tenantId, enrollmentId], references: [tenantId, id], onDelete: Restrict)
+  updatedBy  User?                          @relation("StudentAttendanceSessionEntryUpdatedBy", fields: [tenantId, updatedById], references: [tenantId, id], onDelete: Restrict)
+  mutations  StudentAttendanceMutation[]
+
+  @@unique([tenantId, sessionId, rosterId], map: "student_attendance_entries_session_roster_key")
+  @@unique([tenantId, rosterId], map: "student_attendance_entries_roster_key")
+  @@unique([tenantId, id], map: "student_attendance_entries_tenant_id_id_key")
+  @@index([tenantId, sessionId, status], map: "student_attendance_entries_session_status_idx")
+  @@index([tenantId, enrollmentId], map: "student_attendance_entries_enrollment_idx")
+  @@map("student_attendance_session_entries")
+}
+
+model StudentAttendanceMutation {
+  id                     String                          @id @default(uuid()) @db.Uuid
+  tenantId               String                          @db.Uuid
+  sessionId              String                          @db.Uuid
+  entryId                String                          @db.Uuid
+  actorUserId            String                          @db.Uuid
+  clientMutationId       String
+  bulkMutationId         String?
+  source                 StudentAttendanceMutationSource @default(ONLINE)
+  previousStatus         StudentAttendanceCaptureStatus?
+  newStatus              StudentAttendanceCaptureStatus?
+  baseRecordVersion      Int
+  resultingRecordVersion Int
+  capturedAtClient       DateTime?
+  appliedAt              DateTime                        @default(now())
+  metadataJson           Json?
+
+  tenant  Tenant                        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  session StudentAttendanceSession      @relation(fields: [tenantId, sessionId], references: [tenantId, id], onDelete: Cascade)
+  entry   StudentAttendanceSessionEntry @relation(fields: [tenantId, entryId], references: [tenantId, id], onDelete: Cascade)
+  actor   User                          @relation("StudentAttendanceMutationActor", fields: [tenantId, actorUserId], references: [tenantId, id], onDelete: Restrict)
+
+  @@unique([tenantId, clientMutationId], map: "student_attendance_mutations_client_key")
+  @@index([tenantId, sessionId, appliedAt], map: "student_attendance_mutations_session_time_idx")
+  @@index([tenantId, entryId, appliedAt], map: "student_attendance_mutations_entry_time_idx")
+  @@index([tenantId, bulkMutationId], map: "student_attendance_mutations_bulk_idx")
+  @@map("student_attendance_mutations")
+}
+
 model StaffProfile {
   id               String           @id @default(uuid()) @db.Uuid
   tenantId         String           @db.Uuid
@@ -3384,63 +4390,428 @@ model StaffProfile {
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
-  tenant                 Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  branch                 Branch                  @relation(fields: [branchId], references: [id], onDelete: Restrict)
-  user                   User?                   @relation("StaffProfileUser", fields: [userId], references: [id], onDelete: SetNull)
-  staffAttendanceRecords StaffAttendanceRecord[]
-  leaveBalances          StaffLeaveBalance[]
-  leaveApplications      StaffLeaveApplication[]
+  tenant                        Tenant                              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch                        Branch                              @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  user                          User?                               @relation("StaffProfileUser", fields: [userId], references: [id], onDelete: SetNull)
+  branchAssignments             StaffBranchAssignment[]
+  attendanceScheduleAssignments StaffAttendanceScheduleAssignment[]
+  attendanceCredentials         StaffAttendanceCredential[]
+  profilePhoto                  StaffProfilePhoto?
+  attendanceEvents              StaffAttendanceEvent[]
+  attendanceAdjustments         StaffAttendanceAdjustment[]
+  staffAttendanceRecords        StaffAttendanceRecord[]
+  leaveBalances                 StaffLeaveBalance[]
+  leaveApplications             StaffLeaveApplication[]
 
   @@unique([tenantId, employeeCode])
+  @@unique([tenantId, id], map: "staff_profiles_tenant_id_id_attendance_scope_key")
   @@index([tenantId, branchId])
   @@index([tenantId, staffType])
   @@index([tenantId, employmentStatus])
   @@map("staff_profiles")
 }
 
-model StaffAttendanceRecord {
-  id                 String                 @id @default(uuid()) @db.Uuid
-  tenantId           String                 @db.Uuid
-  branchId           String                 @db.Uuid
-  academicYearId     String?                @db.Uuid
-  staffId            String                 @db.Uuid
-  attendanceDate     DateTime               @db.Date
-  status             StaffAttendanceStatus  @default(NOT_MARKED)
-  checkInAt          DateTime?
-  checkOutAt         DateTime?
-  workingMinutes     Int?
-  checkInSource      StaffAttendanceSource?
-  checkOutSource     StaffAttendanceSource?
-  checkInQrTokenId   String?                @db.Uuid
-  checkOutQrTokenId  String?                @db.Uuid
-  markedById         String?                @db.Uuid
-  updatedById        String?                @db.Uuid
-  leaveApplicationId String?                @db.Uuid
-  calendarEntryId    String?                @db.Uuid
-  correctionReason   String?
-  createdAt          DateTime               @default(now())
-  updatedAt          DateTime               @updatedAt
+model StaffProfilePhoto {
+  id               String   @id @default(uuid()) @db.Uuid
+  tenantId         String   @db.Uuid
+  branchId         String   @db.Uuid
+  staffId          String   @db.Uuid
+  storageBucket    String
+  storagePath      String
+  originalFileName String
+  mimeType         String
+  sizeBytes        Int
+  checksumSha256   String
+  uploadedById     String?  @db.Uuid
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  tenant           Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  branch           Branch                  @relation(fields: [branchId], references: [id], onDelete: Restrict)
-  academicYear     AcademicYear?           @relation(fields: [academicYearId], references: [id], onDelete: SetNull)
-  staff            StaffProfile            @relation(fields: [staffId], references: [id], onDelete: Restrict)
-  checkInQrToken   StaffAttendanceQrToken? @relation("StaffAttendanceCheckInQrToken", fields: [checkInQrTokenId], references: [id], onDelete: SetNull)
-  checkOutQrToken  StaffAttendanceQrToken? @relation("StaffAttendanceCheckOutQrToken", fields: [checkOutQrTokenId], references: [id], onDelete: SetNull)
-  markedBy         User?                   @relation("StaffAttendanceMarkedBy", fields: [markedById], references: [id], onDelete: SetNull)
-  updatedBy        User?                   @relation("StaffAttendanceUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
-  leaveApplication StaffLeaveApplication?  @relation(fields: [leaveApplicationId], references: [id], onDelete: SetNull)
-  calendarEntry    AcademicCalendarEntry?  @relation(fields: [calendarEntryId], references: [id], onDelete: SetNull)
+  tenant Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch Branch       @relation(fields: [tenantId, branchId], references: [tenantId, id], onDelete: Restrict)
+  staff  StaffProfile @relation(fields: [tenantId, staffId], references: [tenantId, id], onDelete: Cascade)
+
+  @@unique([tenantId, staffId], map: "staff_profile_photos_staff_key")
+  @@unique([storageBucket, storagePath], map: "staff_profile_photos_storage_key")
+  @@index([tenantId, branchId], map: "staff_profile_photos_branch_idx")
+  @@map("staff_profile_photos")
+}
+
+model StaffAttendanceRecord {
+  id                    String                      @id @default(uuid()) @db.Uuid
+  tenantId              String                      @db.Uuid
+  branchId              String                      @db.Uuid
+  academicYearId        String?                     @db.Uuid
+  staffId               String                      @db.Uuid
+  attendanceDate        DateTime                    @db.Date
+  status                StaffAttendanceStatus       @default(NOT_MARKED)
+  flags                 StaffAttendanceFlag[]       @default([])
+  reviewState           StaffAttendanceReviewState  @default(NOT_REQUIRED)
+  lifecycle             StaffAttendanceDayLifecycle @default(OPEN)
+  checkInAt             DateTime?
+  checkOutAt            DateTime?
+  workingMinutes        Int?
+  lateMinutes           Int                         @default(0)
+  earlyDepartureMinutes Int                         @default(0)
+  checkInSource         StaffAttendanceSource?
+  checkOutSource        StaffAttendanceSource?
+  checkInQrTokenId      String?                     @db.Uuid
+  checkOutQrTokenId     String?                     @db.Uuid
+  policyId              String?                     @db.Uuid
+  scheduleId            String?                     @db.Uuid
+  markedById            String?                     @db.Uuid
+  updatedById           String?                     @db.Uuid
+  approvedById          String?                     @db.Uuid
+  approvedAt            DateTime?
+  lockedById            String?                     @db.Uuid
+  lockedAt              DateTime?
+  leaveApplicationId    String?                     @db.Uuid
+  calendarEntryId       String?                     @db.Uuid
+  correctionReason      String?
+  reviewRequiredReason  String?
+  sourceSummary         Json?
+  projectionVersion     Int                         @default(1)
+  calculationVersion    Int                         @default(1)
+  lastCalculatedAt      DateTime?
+  createdAt             DateTime                    @default(now())
+  updatedAt             DateTime                    @updatedAt
+
+  tenant           Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch           Branch                      @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  academicYear     AcademicYear?               @relation(fields: [academicYearId], references: [id], onDelete: SetNull)
+  staff            StaffProfile                @relation(fields: [staffId], references: [id], onDelete: Restrict)
+  checkInQrToken   StaffAttendanceQrToken?     @relation("StaffAttendanceCheckInQrToken", fields: [checkInQrTokenId], references: [id], onDelete: SetNull)
+  checkOutQrToken  StaffAttendanceQrToken?     @relation("StaffAttendanceCheckOutQrToken", fields: [checkOutQrTokenId], references: [id], onDelete: SetNull)
+  policy           StaffAttendancePolicy?      @relation(fields: [tenantId, policyId], references: [tenantId, id], onDelete: Restrict)
+  schedule         StaffAttendanceSchedule?    @relation(fields: [tenantId, scheduleId], references: [tenantId, id], onDelete: Restrict)
+  markedBy         User?                       @relation("StaffAttendanceMarkedBy", fields: [markedById], references: [id], onDelete: SetNull)
+  updatedBy        User?                       @relation("StaffAttendanceUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  approvedBy       User?                       @relation("StaffAttendanceApprovedBy", fields: [tenantId, approvedById], references: [tenantId, id], onDelete: Restrict)
+  lockedBy         User?                       @relation("StaffAttendanceLockedBy", fields: [tenantId, lockedById], references: [tenantId, id], onDelete: Restrict)
+  leaveApplication StaffLeaveApplication?      @relation(fields: [leaveApplicationId], references: [id], onDelete: SetNull)
+  calendarEntry    AcademicCalendarEntry?      @relation(fields: [calendarEntryId], references: [id], onDelete: SetNull)
+  events           StaffAttendanceEvent[]
+  adjustments      StaffAttendanceAdjustment[]
 
   @@unique([tenantId, branchId, staffId, attendanceDate])
+  @@unique([tenantId, id], map: "staff_attendance_records_tenant_id_id_key")
   @@index([tenantId, branchId, attendanceDate])
   @@index([tenantId, branchId, academicYearId])
   @@index([tenantId, staffId])
   @@index([tenantId, status, attendanceDate])
+  @@index([tenantId, reviewState, attendanceDate], map: "staff_attendance_review_state_idx")
+  @@index([tenantId, lifecycle, attendanceDate], map: "staff_attendance_lifecycle_idx")
   @@index([tenantId, leaveApplicationId])
   @@index([tenantId, calendarEntryId], map: "staff_attendance_calendar_entry_idx")
   @@index([leaveApplicationId])
   @@map("staff_attendance_records")
+}
+
+model StaffBranchAssignment {
+  id            String    @id @default(uuid()) @db.Uuid
+  tenantId      String    @db.Uuid
+  institutionId String    @db.Uuid
+  branchId      String    @db.Uuid
+  staffId       String    @db.Uuid
+  effectiveFrom DateTime  @db.Date
+  effectiveTo   DateTime? @db.Date
+  isPrimary     Boolean   @default(true)
+  createdById   String?   @db.Uuid
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  institution Institution  @relation(fields: [tenantId, institutionId], references: [tenantId, id], onDelete: Restrict)
+  branch      Branch       @relation(fields: [tenantId, branchId], references: [tenantId, id], onDelete: Restrict)
+  staff       StaffProfile @relation(fields: [tenantId, staffId], references: [tenantId, id], onDelete: Restrict)
+  createdBy   User?        @relation("StaffBranchAssignmentCreatedBy", fields: [tenantId, createdById], references: [tenantId, id], onDelete: Restrict)
+
+  @@unique([tenantId, staffId, branchId, effectiveFrom], map: "staff_branch_assignment_effective_key")
+  @@index([tenantId, branchId, effectiveFrom, effectiveTo], map: "staff_branch_assignment_branch_range_idx")
+  @@index([tenantId, staffId, effectiveFrom, effectiveTo], map: "staff_branch_assignment_staff_range_idx")
+  @@map("staff_branch_assignments")
+}
+
+model StaffAttendancePolicy {
+  id                         String                      @id @default(uuid()) @db.Uuid
+  tenantId                   String                      @db.Uuid
+  institutionId              String                      @db.Uuid
+  branchId                   String                      @db.Uuid
+  name                       String
+  version                    Int
+  status                     StaffAttendancePolicyStatus @default(DRAFT)
+  effectiveFrom              DateTime                    @db.Date
+  effectiveTo                DateTime?                   @db.Date
+  checkInOnly                Boolean                     @default(false)
+  autoEventInference         Boolean                     @default(true)
+  duplicateCooldownSeconds   Int                         @default(30)
+  checkInWindowStart         String                      @default("06:00")
+  checkInWindowEnd           String                      @default("11:00")
+  shiftStartTime             String                      @default("08:00")
+  shiftEndTime               String                      @default("16:00")
+  graceMinutes               Int                         @default(0)
+  halfDayMinimumMinutes      Int                         @default(240)
+  fullDayMinimumMinutes      Int                         @default(360)
+  earliestCheckOutTime       String?
+  earlyDepartureGraceMinutes Int                         @default(0)
+  multipleIntervalsAllowed   Boolean                     @default(false)
+  manualEntryCutoffTime      String                      @default("18:00")
+  backdateLimitDays          Int                         @default(7)
+  correctionApprovalRequired Boolean                     @default(true)
+  createdById                String?                     @db.Uuid
+  publishedById              String?                     @db.Uuid
+  publishedAt                DateTime?
+  createdAt                  DateTime                    @default(now())
+  updatedAt                  DateTime                    @updatedAt
+
+  tenant            Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  institution       Institution             @relation(fields: [tenantId, institutionId], references: [tenantId, id], onDelete: Restrict)
+  branch            Branch                  @relation(fields: [tenantId, branchId], references: [tenantId, id], onDelete: Restrict)
+  createdBy         User?                   @relation("StaffAttendancePolicyCreatedBy", fields: [tenantId, createdById], references: [tenantId, id], onDelete: Restrict)
+  publishedBy       User?                   @relation("StaffAttendancePolicyPublishedBy", fields: [tenantId, publishedById], references: [tenantId, id], onDelete: Restrict)
+  attendanceRecords StaffAttendanceRecord[]
+
+  @@unique([tenantId, branchId, version], map: "staff_attendance_policy_branch_version_key")
+  @@unique([tenantId, id], map: "staff_attendance_policies_tenant_id_id_key")
+  @@index([tenantId, branchId, status, effectiveFrom, effectiveTo], map: "staff_attendance_policy_effective_idx")
+  @@map("staff_attendance_policies")
+}
+
+model StaffAttendanceSchedule {
+  id                         String                      @id @default(uuid()) @db.Uuid
+  tenantId                   String                      @db.Uuid
+  institutionId              String                      @db.Uuid
+  branchId                   String                      @db.Uuid
+  name                       String
+  version                    Int                         @default(1)
+  status                     StaffAttendancePolicyStatus @default(PUBLISHED)
+  startTime                  String
+  endTime                    String
+  crossMidnight              Boolean                     @default(false)
+  workingWeekdays            Int[]                       @default([1, 2, 3, 4, 5, 6])
+  checkInWindowStart         String?
+  graceMinutes               Int                         @default(0)
+  halfDayMinimumMinutes      Int                         @default(240)
+  fullDayMinimumMinutes      Int                         @default(360)
+  earliestCheckOutTime       String?
+  expectedCheckOutTime       String?
+  earlyDepartureGraceMinutes Int                         @default(0)
+  effectiveFrom              DateTime                    @db.Date
+  effectiveTo                DateTime?                   @db.Date
+  createdById                String?                     @db.Uuid
+  createdAt                  DateTime                    @default(now())
+  updatedAt                  DateTime                    @updatedAt
+
+  tenant            Tenant                              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  institution       Institution                         @relation(fields: [tenantId, institutionId], references: [tenantId, id], onDelete: Restrict)
+  branch            Branch                              @relation(fields: [tenantId, branchId], references: [tenantId, id], onDelete: Restrict)
+  createdBy         User?                               @relation("StaffAttendanceScheduleCreatedBy", fields: [tenantId, createdById], references: [tenantId, id], onDelete: Restrict)
+  assignments       StaffAttendanceScheduleAssignment[]
+  attendanceRecords StaffAttendanceRecord[]
+
+  @@unique([tenantId, branchId, name, version], map: "staff_attendance_schedule_branch_name_version_key")
+  @@unique([tenantId, id], map: "staff_attendance_schedules_tenant_id_id_key")
+  @@index([tenantId, branchId, status, effectiveFrom, effectiveTo], map: "staff_attendance_schedule_effective_idx")
+  @@map("staff_attendance_schedules")
+}
+
+model StaffAttendanceScheduleAssignment {
+  id            String    @id @default(uuid()) @db.Uuid
+  tenantId      String    @db.Uuid
+  branchId      String    @db.Uuid
+  staffId       String    @db.Uuid
+  scheduleId    String    @db.Uuid
+  effectiveFrom DateTime  @db.Date
+  effectiveTo   DateTime? @db.Date
+  createdById   String?   @db.Uuid
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  tenant    Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch    Branch                  @relation(fields: [tenantId, branchId], references: [tenantId, id], onDelete: Restrict)
+  staff     StaffProfile            @relation(fields: [tenantId, staffId], references: [tenantId, id], onDelete: Restrict)
+  schedule  StaffAttendanceSchedule @relation(fields: [tenantId, scheduleId], references: [tenantId, id], onDelete: Restrict)
+  createdBy User?                   @relation("StaffAttendanceScheduleAssignmentCreatedBy", fields: [tenantId, createdById], references: [tenantId, id], onDelete: Restrict)
+
+  @@unique([tenantId, staffId, scheduleId, effectiveFrom], map: "staff_schedule_assignment_effective_key")
+  @@index([tenantId, branchId, effectiveFrom, effectiveTo], map: "staff_schedule_assignment_branch_range_idx")
+  @@index([tenantId, staffId, effectiveFrom, effectiveTo], map: "staff_schedule_assignment_staff_range_idx")
+  @@map("staff_attendance_schedule_assignments")
+}
+
+model StaffAttendanceCredential {
+  id                String                          @id @default(uuid()) @db.Uuid
+  tenantId          String                          @db.Uuid
+  institutionId     String                          @db.Uuid
+  staffId           String                          @db.Uuid
+  credentialType    StaffAttendanceCredentialType   @default(STATIC_QR)
+  tokenHash         String
+  keyVersion        Int                             @default(1)
+  credentialVersion Int                             @default(1)
+  status            StaffAttendanceCredentialStatus @default(ACTIVE)
+  issuedById        String?                         @db.Uuid
+  issuedAt          DateTime                        @default(now())
+  expiresAt         DateTime?
+  revokedById       String?                         @db.Uuid
+  revokedAt         DateTime?
+  revocationReason  String?
+  lastUsedAt        DateTime?
+  createdAt         DateTime                        @default(now())
+  updatedAt         DateTime                        @updatedAt
+
+  tenant      Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  institution Institution            @relation(fields: [tenantId, institutionId], references: [tenantId, id], onDelete: Restrict)
+  staff       StaffProfile           @relation(fields: [tenantId, staffId], references: [tenantId, id], onDelete: Restrict)
+  issuedBy    User?                  @relation("StaffAttendanceCredentialIssuedBy", fields: [tenantId, issuedById], references: [tenantId, id], onDelete: Restrict)
+  revokedBy   User?                  @relation("StaffAttendanceCredentialRevokedBy", fields: [tenantId, revokedById], references: [tenantId, id], onDelete: Restrict)
+  events      StaffAttendanceEvent[]
+
+  @@unique([tenantId, tokenHash], map: "staff_attendance_credential_token_key")
+  @@unique([tenantId, id], map: "staff_attendance_credentials_tenant_id_id_key")
+  @@index([tenantId, staffId, status], map: "staff_attendance_credential_staff_status_idx")
+  @@index([tenantId, institutionId, status], map: "staff_attendance_credential_institution_status_idx")
+  @@map("staff_attendance_credentials")
+}
+
+model StaffAttendanceScanSession {
+  id               String                           @id @default(uuid()) @db.Uuid
+  tenantId         String                           @db.Uuid
+  institutionId    String                           @db.Uuid
+  branchId         String                           @db.Uuid
+  operatorUserId   String                           @db.Uuid
+  mode             StaffAttendanceScanMode          @default(AUTO)
+  status           StaffAttendanceScanSessionStatus @default(ACTIVE)
+  startedAt        DateTime                         @default(now())
+  lastActivityAt   DateTime                         @default(now())
+  expiresAt        DateTime
+  closedAt         DateTime?
+  closedById       String?                          @db.Uuid
+  closeReason      String?
+  createdIpHash    String?
+  userAgentSummary String?
+  createdAt        DateTime                         @default(now())
+  updatedAt        DateTime                         @updatedAt
+
+  tenant      Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  institution Institution            @relation(fields: [tenantId, institutionId], references: [tenantId, id], onDelete: Restrict)
+  branch      Branch                 @relation(fields: [tenantId, branchId], references: [tenantId, id], onDelete: Restrict)
+  operator    User                   @relation("StaffAttendanceScanSessionOperator", fields: [tenantId, operatorUserId], references: [tenantId, id], onDelete: Restrict)
+  closedBy    User?                  @relation("StaffAttendanceScanSessionClosedBy", fields: [tenantId, closedById], references: [tenantId, id], onDelete: Restrict)
+  events      StaffAttendanceEvent[]
+
+  @@unique([tenantId, id], map: "staff_attendance_scan_sessions_tenant_id_id_key")
+  @@index([tenantId, operatorUserId, status, expiresAt], map: "staff_attendance_scan_session_operator_idx")
+  @@index([tenantId, branchId, status, expiresAt], map: "staff_attendance_scan_session_branch_idx")
+  @@map("staff_attendance_scan_sessions")
+}
+
+model StaffAttendanceEvent {
+  id                 String                     @id @default(uuid()) @db.Uuid
+  tenantId           String                     @db.Uuid
+  institutionId      String                     @db.Uuid
+  branchId           String                     @db.Uuid
+  staffId            String                     @db.Uuid
+  attendanceRecordId String                     @db.Uuid
+  attendanceDate     DateTime                   @db.Date
+  eventType          StaffAttendanceEventType
+  eventSource        StaffAttendanceEventSource
+  processingState    StaffAttendanceEventState  @default(ACCEPTED)
+  occurredAt         DateTime
+  recordedAt         DateTime                   @default(now())
+  recordedByUserId   String?                    @db.Uuid
+  scanSessionId      String?                    @db.Uuid
+  credentialId       String?                    @db.Uuid
+  clientRequestId    String
+  manualReasonCode   String?
+  manualReasonText   String?
+  supersedesEventId  String?                    @db.Uuid
+  metadata           Json?
+  createdAt          DateTime                   @default(now())
+
+  tenant             Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  institution        Institution                 @relation(fields: [tenantId, institutionId], references: [tenantId, id], onDelete: Restrict)
+  branch             Branch                      @relation(fields: [tenantId, branchId], references: [tenantId, id], onDelete: Restrict)
+  staff              StaffProfile                @relation(fields: [tenantId, staffId], references: [tenantId, id], onDelete: Restrict)
+  attendanceRecord   StaffAttendanceRecord       @relation(fields: [tenantId, attendanceRecordId], references: [tenantId, id], onDelete: Restrict)
+  recordedBy         User?                       @relation("StaffAttendanceEventRecordedBy", fields: [tenantId, recordedByUserId], references: [tenantId, id], onDelete: Restrict)
+  scanSession        StaffAttendanceScanSession? @relation(fields: [tenantId, scanSessionId], references: [tenantId, id], onDelete: Restrict)
+  credential         StaffAttendanceCredential?  @relation(fields: [tenantId, credentialId], references: [tenantId, id], onDelete: Restrict)
+  supersedes         StaffAttendanceEvent?       @relation("StaffAttendanceEventSupersession", fields: [tenantId, supersedesEventId], references: [tenantId, id], onDelete: Restrict)
+  supersededBy       StaffAttendanceEvent[]      @relation("StaffAttendanceEventSupersession")
+  targetAdjustments  StaffAttendanceAdjustment[] @relation("StaffAttendanceAdjustmentTargetEvent")
+  appliedAdjustments StaffAttendanceAdjustment[] @relation("StaffAttendanceAdjustmentAppliedEvent")
+
+  @@unique([tenantId, clientRequestId], map: "staff_attendance_event_client_request_key")
+  @@unique([tenantId, id], map: "staff_attendance_events_tenant_id_id_key")
+  @@index([tenantId, staffId, occurredAt], map: "staff_attendance_event_staff_time_idx")
+  @@index([tenantId, branchId, attendanceDate], map: "staff_attendance_event_branch_date_idx")
+  @@index([tenantId, attendanceDate, processingState], map: "staff_attendance_event_state_idx")
+  @@index([tenantId, credentialId, occurredAt], map: "staff_attendance_event_credential_idx")
+  @@map("staff_attendance_events")
+}
+
+model StaffAttendanceAdjustment {
+  id                 String                          @id @default(uuid()) @db.Uuid
+  tenantId           String                          @db.Uuid
+  institutionId      String                          @db.Uuid
+  branchId           String                          @db.Uuid
+  staffId            String                          @db.Uuid
+  attendanceRecordId String                          @db.Uuid
+  targetEventId      String?                         @db.Uuid
+  appliedEventId     String?                         @db.Uuid
+  adjustmentType     StaffAttendanceAdjustmentType
+  status             StaffAttendanceAdjustmentStatus @default(SUBMITTED)
+  reasonCode         String
+  reasonText         String
+  requestedPayload   Json
+  beforeSnapshot     Json
+  afterSnapshot      Json?
+  requestedByUserId  String                          @db.Uuid
+  requestedAt        DateTime                        @default(now())
+  reviewedByUserId   String?                         @db.Uuid
+  reviewedAt         DateTime?
+  reviewComment      String?
+  appliedAt          DateTime?
+  createdAt          DateTime                        @default(now())
+  updatedAt          DateTime                        @updatedAt
+
+  tenant           Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  institution      Institution           @relation(fields: [tenantId, institutionId], references: [tenantId, id], onDelete: Restrict)
+  branch           Branch                @relation(fields: [tenantId, branchId], references: [tenantId, id], onDelete: Restrict)
+  staff            StaffProfile          @relation(fields: [tenantId, staffId], references: [tenantId, id], onDelete: Restrict)
+  attendanceRecord StaffAttendanceRecord @relation(fields: [tenantId, attendanceRecordId], references: [tenantId, id], onDelete: Restrict)
+  targetEvent      StaffAttendanceEvent? @relation("StaffAttendanceAdjustmentTargetEvent", fields: [tenantId, targetEventId], references: [tenantId, id], onDelete: Restrict)
+  appliedEvent     StaffAttendanceEvent? @relation("StaffAttendanceAdjustmentAppliedEvent", fields: [tenantId, appliedEventId], references: [tenantId, id], onDelete: Restrict)
+  requestedBy      User                  @relation("StaffAttendanceAdjustmentRequestedBy", fields: [tenantId, requestedByUserId], references: [tenantId, id], onDelete: Restrict)
+  reviewedBy       User?                 @relation("StaffAttendanceAdjustmentReviewedBy", fields: [tenantId, reviewedByUserId], references: [tenantId, id], onDelete: Restrict)
+
+  @@index([tenantId, branchId, status, requestedAt], map: "staff_attendance_adjustment_branch_status_idx")
+  @@index([tenantId, staffId, requestedAt], map: "staff_attendance_adjustment_staff_idx")
+  @@index([tenantId, attendanceRecordId, status], map: "staff_attendance_adjustment_record_idx")
+  @@map("staff_attendance_adjustments")
+}
+
+model StaffAttendanceOutboxEvent {
+  id            String                      @id @default(uuid()) @db.Uuid
+  tenantId      String                      @db.Uuid
+  domainEventId String
+  eventType     String
+  entityType    String
+  entityId      String
+  payloadJson   Json
+  status        StaffAttendanceOutboxStatus @default(PENDING)
+  attemptCount  Int                         @default(0)
+  nextAttemptAt DateTime                    @default(now())
+  processedAt   DateTime?
+  lastError     String?
+  createdAt     DateTime                    @default(now())
+  updatedAt     DateTime                    @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, domainEventId], map: "staff_attendance_outbox_domain_event_key")
+  @@index([status, nextAttemptAt, createdAt], map: "staff_attendance_outbox_due_idx")
+  @@index([tenantId, status, createdAt], map: "staff_attendance_outbox_tenant_status_idx")
+  @@map("staff_attendance_outbox_events")
 }
 
 model StaffLeaveSetting {

@@ -84,10 +84,14 @@ export type CampusCoreFormActionState = {
   fieldErrors?: Record<string, string[]>;
 };
 
-function formError(error: unknown, fallbackMessage: string): CampusCoreFormActionState {
+function formError(
+  error: unknown,
+  fallbackMessage: string,
+  validationMessage = "Please check the highlighted fields and try again."
+): CampusCoreFormActionState {
   const result = mapActionError(error, {
     fallbackMessage,
-    validationMessage: "Please check the highlighted fields and try again."
+    validationMessage
   });
 
   return {
@@ -462,31 +466,49 @@ export async function updateTenantSettingsAction(formData: FormData) {
   redirect("/campus-core/settings?saved=tenant");
 }
 
-export async function updateAttendanceSettingsAction(formData: FormData) {
-  const input = updateAttendanceSettingsSchema.parse({
-    branchId: req(formData, "branchId"),
-    studentAutoLockEnabled: checked(formData, "studentAutoLockEnabled"),
-    studentAutoLockTime: s(formData, "studentAutoLockTime") ?? "15:00",
-    sendStudentAbsentAlert: checked(formData, "sendStudentAbsentAlert"),
-    sendStudentLateAlert: checked(formData, "sendStudentLateAlert"),
-    studentAttendanceWhatsAppEnabled: checked(formData, "studentAttendanceWhatsAppEnabled"),
-    studentAttendanceNotificationMode: s(formData, "studentAttendanceNotificationMode") ?? "EXCEPTION_ONLY",
-    minimumAttendancePercentage: Number(s(formData, "minimumAttendancePercentage") ?? 75),
-    staffQrAttendanceEnabled: checked(formData, "staffQrAttendanceEnabled"),
-    staffCheckInStartTime: s(formData, "staffCheckInStartTime") ?? "07:30",
-    staffLateAfterTime: s(formData, "staffLateAfterTime") ?? "08:00",
-    staffHalfDayBeforeMinutes: Number(s(formData, "staffHalfDayBeforeMinutes") ?? 240),
-    staffMinimumWorkingMinutes: Number(s(formData, "staffMinimumWorkingMinutes") ?? 360),
-    staffQrTokenValiditySeconds: Number(s(formData, "staffQrTokenValiditySeconds") ?? 18000),
-    staffWeeklySummaryWhatsAppEnabled: checked(formData, "staffWeeklySummaryWhatsAppEnabled"),
-    staffWeeklySummarySendDay: Number(s(formData, "staffWeeklySummarySendDay") ?? 1),
-    staffWeeklySummarySendTime: s(formData, "staffWeeklySummarySendTime") ?? "09:00",
-    staffMonthlySummaryWhatsAppEnabled: checked(formData, "staffMonthlySummaryWhatsAppEnabled"),
-    staffMonthlySummarySendDay: Number(s(formData, "staffMonthlySummarySendDay") ?? 1),
-    staffMonthlySummarySendTime: s(formData, "staffMonthlySummarySendTime") ?? "09:00"
-  });
-  const ctx = await getTenantContext();
-  await updateAttendanceSettingsService(ctx, input);
+export async function updateAttendanceSettingsAction(
+  _state: CampusCoreFormActionState,
+  formData: FormData
+): Promise<CampusCoreFormActionState> {
+  try {
+    const input = updateAttendanceSettingsSchema.parse({
+      branchId: req(formData, "branchId"),
+      studentAutoLockEnabled: checked(formData, "studentAutoLockEnabled"),
+      studentAutoLockTime: s(formData, "studentAutoLockTime") ?? "15:00",
+      sendStudentAbsentAlert: checked(formData, "sendStudentAbsentAlert"),
+      sendStudentLateAlert: checked(formData, "sendStudentLateAlert"),
+      studentAttendanceWhatsAppEnabled: checked(formData, "studentAttendanceWhatsAppEnabled"),
+      studentAttendanceNotificationMode: s(formData, "studentAttendanceNotificationMode") ?? "EXCEPTION_ONLY",
+      minimumAttendancePercentage: Number(s(formData, "minimumAttendancePercentage") ?? 75),
+      staffQrAttendanceEnabled: checked(formData, "staffQrAttendanceEnabled"),
+      staffAttendanceCaptureMode: s(formData, "staffAttendanceCaptureMode") ?? "SUPERVISED_QR",
+      staffSelfScanEnabled: false,
+      staffManualAttendanceEnabled: checked(formData, "staffManualAttendanceEnabled"),
+      staffCorrectionApprovalRequired: true,
+      staffScanSessionValidityMinutes: Number(s(formData, "staffScanSessionValidityMinutes") ?? 60),
+      staffCredentialValidityDays: Number(s(formData, "staffCredentialValidityDays") ?? 365),
+      staffCheckInStartTime: s(formData, "staffCheckInStartTime") ?? "07:30",
+      staffLateAfterTime: s(formData, "staffLateAfterTime") ?? "08:00",
+      staffHalfDayBeforeMinutes: Number(s(formData, "staffHalfDayBeforeMinutes") ?? 240),
+      staffMinimumWorkingMinutes: Number(s(formData, "staffMinimumWorkingMinutes") ?? 360),
+      staffQrTokenValiditySeconds: Number(s(formData, "staffQrTokenValiditySeconds") ?? 18000),
+      staffWeeklySummaryWhatsAppEnabled: checked(formData, "staffWeeklySummaryWhatsAppEnabled"),
+      staffWeeklySummarySendDay: Number(s(formData, "staffWeeklySummarySendDay") ?? 1),
+      staffWeeklySummarySendTime: s(formData, "staffWeeklySummarySendTime") ?? "09:00",
+      staffMonthlySummaryWhatsAppEnabled: checked(formData, "staffMonthlySummaryWhatsAppEnabled"),
+      staffMonthlySummarySendDay: Number(s(formData, "staffMonthlySummarySendDay") ?? 1),
+      staffMonthlySummarySendTime: s(formData, "staffMonthlySummarySendTime") ?? "09:00"
+    });
+    const ctx = await getTenantContext();
+    await updateAttendanceSettingsService(ctx, input);
+  } catch (error) {
+    return formError(
+      error,
+      "Unable to update attendance settings. Please try again.",
+      "Review the attendance settings and try again."
+    );
+  }
+
   revalidatePath("/campus-core/settings");
   redirect("/campus-core/settings?saved=attendance");
 }

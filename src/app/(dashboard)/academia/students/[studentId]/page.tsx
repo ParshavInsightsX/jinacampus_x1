@@ -73,10 +73,11 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
   const student = await getStudentProfileWithGuardians(ctx, studentId);
   if (!student) notFound();
 
-  const permissions = await getEffectivePermissions({ ctx, branchId: student.branchId });
+  const permissions = await getEffectivePermissions({ ctx, branchId: student.branchId, academicYearId: ctx.activeAcademicYearId });
   if (!permissions.has("academia.student.view")) return <PermissionState />;
   const canUpdate = permissions.has("academia.student.update");
   const canManageEnrollment = permissions.has("academia.enrollment.manage");
+  const canManageIdCard = permissions.has("academia.student.id_card.manage");
   const name = displayName(student);
   const profileStatus = getStudentProfileStatus(student);
   const missingProfileFields = missingStudentProfileFields(student);
@@ -100,6 +101,11 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
         <Link href="/academia/students" className="premium-secondary-button">
           Back to students
         </Link>
+        {canManageIdCard ? (
+          <Link href={"/academia/students/" + student.id + "/id-card"} className="premium-secondary-button">
+            Student ID Card
+          </Link>
+        ) : null}
         {canUpdate ? (
           <Link href={`/academia/students/${student.id}/edit`} className="premium-primary-button">
             Edit Registration

@@ -37,4 +37,17 @@ describe("CampusCore attendance notification settings UI", () => {
     expect(services).toContain('permissions.has("notifications.settings.manage")');
     expect(services).toContain("FORBIDDEN_PERMISSION:notifications.settings.manage");
   });
+
+  it("shows safe attendance save feedback and prevents repeated pending submissions", () => {
+    const route = source("src/app/(dashboard)/campus-core/settings/page.tsx");
+    const form = source("src/modules/campus-core/components/attendance-settings-form.tsx");
+
+    expect(route).toContain("AttendanceSettingsForm");
+    expect(form).toContain("useActionState");
+    expect(form).toContain("FormMessage");
+    expect(form).toContain("SubmitButton");
+    expect(form).toContain('pendingLabel="Saving attendance settings..."');
+    expect(route).toContain('type="time" name="studentAutoLockTime"');
+    expect(route).toContain('type="number" min="1" max="28" name="staffMonthlySummarySendDay"');
+  });
 });

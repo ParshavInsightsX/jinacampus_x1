@@ -13,7 +13,9 @@ const ALLOWED_STUDENT_DOCUMENT_MIME_TYPES = [
 let storageClient: SupabaseClient | null = null;
 let bucketReady: Promise<void> | null = null;
 let staffLeaveBucketReady: Promise<void> | null = null;
+let staffProfilePhotosBucketReady: Promise<void> | null = null;
 let institutionLogosBucketReady: Promise<void> | null = null;
+let institutionRegulatoryDocumentsBucketReady: Promise<void> | null = null;
 let gradebookBucketReady: Promise<void> | null = null;
 
 function getStorageClient() {
@@ -115,6 +117,53 @@ export async function ensureStaffLeaveDocumentsBucket() {
   return staffLeaveBucketReady;
 }
 
+const STAFF_PROFILE_PHOTO_MIME_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp"
+] as const;
+
+export function getStaffProfilePhotoStorageClient() {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new AppError("STAFF_PROFILE_PHOTO_STORAGE_UNAVAILABLE", "STAFF_PROFILE_PHOTO_STORAGE_UNAVAILABLE", 503);
+  }
+
+  return {
+    client: getStorageClient(),
+    bucket: env.STAFF_PROFILE_PHOTOS_BUCKET,
+    maxBytes: env.STAFF_PROFILE_PHOTO_MAX_BYTES,
+    allowedMimeTypes: STAFF_PROFILE_PHOTO_MIME_TYPES
+  };
+}
+
+export async function ensureStaffProfilePhotosBucket() {
+  if (staffProfilePhotosBucketReady) return staffProfilePhotosBucketReady;
+
+  staffProfilePhotosBucketReady = (async () => {
+    const { client, bucket, maxBytes, allowedMimeTypes } = getStaffProfilePhotoStorageClient();
+    const { data, error } = await client.storage.getBucket(bucket);
+    if (!error && data) {
+      if (data.public) {
+        throw new AppError("STAFF_PROFILE_PHOTO_BUCKET_MUST_BE_PRIVATE", "STAFF_PROFILE_PHOTO_BUCKET_MUST_BE_PRIVATE", 503);
+      }
+      return;
+    }
+
+    const { error: createError } = await client.storage.createBucket(bucket, {
+      public: false,
+      fileSizeLimit: maxBytes,
+      allowedMimeTypes: [...allowedMimeTypes]
+    });
+    if (createError && !/already exists/i.test(createError.message)) {
+      throw new AppError("STAFF_PROFILE_PHOTO_STORAGE_UNAVAILABLE", "STAFF_PROFILE_PHOTO_STORAGE_UNAVAILABLE", 503);
+    }
+  })().catch((error) => {
+    staffProfilePhotosBucketReady = null;
+    throw error;
+  });
+
+  return staffProfilePhotosBucketReady;
+}
 export function getInstitutionLogoStorageClient() {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
     throw new AppError("INSTITUTION_LOGO_STORAGE_UNAVAILABLE", "INSTITUTION_LOGO_STORAGE_UNAVAILABLE", 503);
@@ -155,6 +204,48 @@ export async function ensureInstitutionLogosBucket() {
   });
 
   return institutionLogosBucketReady;
+}
+
+export function getInstitutionRegulatoryDocumentStorageClient() {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new AppError("INSTITUTION_REGULATORY_STORAGE_UNAVAILABLE", "INSTITUTION_REGULATORY_STORAGE_UNAVAILABLE", 503);
+  }
+
+  return {
+    client: getStorageClient(),
+    bucket: env.INSTITUTION_REGULATORY_DOCUMENTS_BUCKET,
+    maxBytes: env.INSTITUTION_REGULATORY_DOCUMENT_MAX_BYTES,
+    allowedMimeTypes: ALLOWED_STUDENT_DOCUMENT_MIME_TYPES
+  };
+}
+
+export async function ensureInstitutionRegulatoryDocumentsBucket() {
+  if (institutionRegulatoryDocumentsBucketReady) return institutionRegulatoryDocumentsBucketReady;
+
+  institutionRegulatoryDocumentsBucketReady = (async () => {
+    const { client, bucket, maxBytes, allowedMimeTypes } = getInstitutionRegulatoryDocumentStorageClient();
+    const { data, error } = await client.storage.getBucket(bucket);
+    if (!error && data) {
+      if (data.public) {
+        throw new AppError("INSTITUTION_REGULATORY_BUCKET_MUST_BE_PRIVATE", "INSTITUTION_REGULATORY_BUCKET_MUST_BE_PRIVATE", 503);
+      }
+      return;
+    }
+
+    const { error: createError } = await client.storage.createBucket(bucket, {
+      public: false,
+      fileSizeLimit: maxBytes,
+      allowedMimeTypes: [...allowedMimeTypes]
+    });
+    if (createError && !/already exists/i.test(createError.message)) {
+      throw new AppError("INSTITUTION_REGULATORY_STORAGE_UNAVAILABLE", "INSTITUTION_REGULATORY_STORAGE_UNAVAILABLE", 503);
+    }
+  })().catch((error) => {
+    institutionRegulatoryDocumentsBucketReady = null;
+    throw error;
+  });
+
+  return institutionRegulatoryDocumentsBucketReady;
 }
 
 const GRADEBOOK_MIME_TYPES = [

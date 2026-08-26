@@ -15,6 +15,8 @@ import type {
   updateSchoolIdSchema,
   updateSchoolSchema
 } from "@/modules/campus-core/administrator-schemas";
+import { initializeInstitutionCommercialAccess } from "@/modules/campus-core/entitlements/provisioning";
+import { isInstitutionEntitlementSchemaAvailable } from "@/modules/campus-core/entitlements/service";
 import { PLATFORM_ADMINISTRATOR_AUDIT_EVENTS } from "@/modules/campus-core/platform-administrator-audit-events";
 import { ensureTenantSettingsRow } from "@/modules/campus-core/services/tenant-settings-compat";
 import type { changeOwnPasswordSchema } from "@/modules/campus-core/schemas";
@@ -230,6 +232,7 @@ export async function getSchoolByIdForAdministrator(
   _ctx: PlatformAdministratorContext,
   tenantId: string
 ) {
+  const commercialAccessSchemaAvailable = await isInstitutionEntitlementSchemaAvailable();
   const school = await db.tenant.findUnique({
     where: { id: tenantId },
     select: {
@@ -254,7 +257,7 @@ export async function getSchoolByIdForAdministrator(
           gradebookReportCardsEnabled: true,
           gradebookPublicationEnabled: true,
           gradebookAnalyticsEnabled: true,
-          gradebookPortalResultsEnabled: true,
+          gradebookPortalResultsEnabled: true
         }
       },
       institutions: {
@@ -295,9 +298,52 @@ export async function getSchoolByIdForAdministrator(
     }
   });
   if (!school) return null;
+
+  const [subscription, entitlements] = commercialAccessSchemaAvailable
+    ? await Promise.all([
+        db.tenantSubscription.findUnique({
+          where: { tenantId },
+          select: {
+            id: true,
+            planCode: true,
+            status: true,
+            startsAt: true,
+            trialEndsAt: true,
+            currentPeriodStartsAt: true,
+            currentPeriodEndsAt: true,
+            graceEndsAt: true
+          }
+        }),
+        db.institutionEntitlement.findMany({
+          where: {
+            tenantId,
+            moduleKey: { in: ["attendance", "gradebook"] }
+          },
+          select: {
+            institutionId: true,
+            moduleKey: true,
+            featureKey: true,
+            access: true,
+            source: true,
+            startsAt: true,
+            endsAt: true
+          },
+          orderBy: [{ moduleKey: "asc" }, { featureKey: "asc" }]
+        })
+      ])
+    : [null, []] as const;
+
   const { _count, ...schoolDetails } = school;
   return {
     ...schoolDetails,
+    commercialAccessSchemaAvailable,
+    subscription,
+    institutions: schoolDetails.institutions.map((institution) => ({
+      ...institution,
+      entitlements: entitlements
+        .filter((entitlement) => entitlement.institutionId === institution.id)
+        .map(({ institutionId: _institutionId, ...entitlement }) => entitlement)
+    })),
     dependencySummary: toSchoolDependencySummary(_count)
   };
 }
@@ -330,6 +376,11 @@ export async function createSchool(
         code: "MAIN",
         status: "ACTIVE"
       }
+    });
+    await initializeInstitutionCommercialAccess(tx, {
+      tenantId: tenant.id,
+      institutionId: institution.id,
+      planCode: tenant.plan
     });
     const branch = await tx.branch.create({
       data: {

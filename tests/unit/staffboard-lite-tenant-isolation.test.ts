@@ -139,6 +139,8 @@ function resetMocks() {
   mocks.tx.branch.findFirst.mockResolvedValue({ id: branchId });
   mocks.tx.attendanceSetting.findFirst.mockResolvedValue({
     staffQrAttendanceEnabled: true,
+    staffAttendanceCaptureMode: "HYBRID",
+    staffSelfScanEnabled: true,
     staffLateAfterTime: "08:00",
     staffHalfDayBeforeMinutes: 240,
     staffMinimumWorkingMinutes: 480
@@ -185,94 +187,20 @@ describe("StaffBoard Lite tenant isolation", () => {
     expect(mocks.tx.staffProfile.update).not.toHaveBeenCalled();
   });
 
-  it("generates staff QR tokens under the current tenant and verified branch only", async () => {
-    mocks.tx.staffAttendanceQrToken.create.mockImplementation(({ data }) => ({
-      id: qrTokenId,
-      purpose: data.purpose,
-      branchId: data.branchId,
-      validFrom: data.validFrom,
-      validUntil: data.validUntil
-    }));
-
-    const result = await generateStaffAttendanceQrToken(ctx, { purpose: "CHECK_IN" });
-
-    expect(mocks.tx.branch.findFirst).toHaveBeenCalledWith({
-      where: { id: branchId, tenantId, status: { not: "ARCHIVED" } },
-      select: { id: true }
+  it("retires shared and self-scan QR entry points before tenant data access", async () => {
+    await expect(generateStaffAttendanceQrToken(ctx, { purpose: "CHECK_IN" })).rejects.toMatchObject({
+      code: "STAFF_SHARED_QR_RETIRED",
+      status: 410
     });
-    expect(mocks.tx.attendanceSetting.findFirst).toHaveBeenCalledWith({
-      where: { tenantId, branchId },
-      select: {
-        staffQrAttendanceEnabled: true
-      }
+    await expect(scanStaffAttendanceQr(ctx, { token: "opaque-card-payload" })).rejects.toMatchObject({
+      code: "STAFF_SELF_SCAN_DISABLED",
+      status: 403
     });
-    expect(mocks.tx.staffAttendanceQrToken.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({
-        tenantId,
-        branchId,
-        createdById: actorUserId
-      })
-    }));
-    expect(JSON.stringify(result)).not.toContain("tokenHash");
+
+    expect(mocks.db.$transaction).not.toHaveBeenCalled();
+    expect(mocks.tx.staffAttendanceQrToken.findFirst).not.toHaveBeenCalled();
+    expect(mocks.tx.staffAttendanceRecord.update).not.toHaveBeenCalled();
   });
-
-  it("rejects another tenant QR token because scan lookup is tenant-scoped", async () => {
-    mocks.tx.staffProfile.findFirst.mockResolvedValue(staffProfile());
-    mocks.tx.staffAttendanceQrToken.findFirst.mockResolvedValue(null);
-
-    await expect(scanStaffAttendanceQr(ctx, { token: rawToken })).rejects.toMatchObject({
-      code: "INVALID_STAFF_QR"
-    });
-
-    expect(mocks.tx.staffProfile.findFirst).toHaveBeenCalledWith(expect.objectContaining({
-      where: {
-        tenantId,
-        userId: actorUserId,
-        employmentStatus: "ACTIVE"
-      }
-    }));
-    expect(mocks.tx.staffAttendanceQrToken.findFirst).toHaveBeenCalledWith({
-      where: {
-        tenantId,
-        tokenHash: hashStaffAttendanceQrToken(rawToken)
-      },
-      select: expect.any(Object)
-    });
-    expect(mocks.tx.staffAttendanceRecord.create).not.toHaveBeenCalled();
-  });
-
-  it("checks in only after tenant-scoped staff, QR token, and attendance record lookups", async () => {
-    mocks.tx.staffProfile.findFirst.mockResolvedValue(staffProfile());
-    mocks.tx.staffAttendanceQrToken.findFirst.mockResolvedValue(qrToken());
-    mocks.tx.staffAttendanceQrToken.update.mockResolvedValue({ id: qrTokenId });
-    mocks.tx.staffAttendanceRecord.findFirst.mockResolvedValue(null);
-    mocks.tx.staffAttendanceRecord.create.mockImplementation(({ data }) => ({
-      id: attendanceRecordId,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      ...data
-    }));
-
-    await scanStaffAttendanceQr(ctx, { token: rawToken });
-
-    expect(mocks.tx.staffAttendanceRecord.findFirst).toHaveBeenCalledWith({
-      where: {
-        tenantId,
-        branchId,
-        staffId,
-        attendanceDate
-      }
-    });
-    expect(mocks.tx.staffAttendanceRecord.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        tenantId,
-        branchId,
-        academicYearId,
-        staffId
-      })
-    });
-  });
-
   it("does not correct another tenant or inaccessible staff attendance record", async () => {
     mocks.tx.staffAttendanceRecord.findFirst.mockResolvedValue(null);
 

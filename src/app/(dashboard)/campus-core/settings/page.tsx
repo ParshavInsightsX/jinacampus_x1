@@ -5,8 +5,11 @@ import {
   getTenantSettings,
   listAttendanceSettings
 } from "@/modules/campus-core/queries";
-import { updateAttendanceSettingsAction, updateTenantSettingsAction } from "@/modules/campus-core/actions";
+import { updateTenantSettingsAction } from "@/modules/campus-core/actions";
 import { EmptyState, PermissionState } from "@/components/ui/empty-state";
+import { ATTENDANCE_ENTITLEMENT_FEATURES } from "@/modules/campus-core/entitlements/catalog";
+import { getAttendanceEntitlementState } from "@/modules/campus-core/entitlements/service";
+import { AttendanceSettingsForm } from "@/modules/campus-core/components/attendance-settings-form";
 
 type SettingsPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -21,20 +24,38 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const permissions = await getEffectivePermissions({ ctx, branchId: ctx.activeBranchId });
   if (!permissions.has("campuscore.settings.manage")) return <PermissionState />;
 
-  const canManageNotificationSettings = permissions.has("notifications.settings.manage");
   const params = searchParams ? await searchParams : {};
-  const [settings, attendanceSettings, notificationStatus] = await Promise.all([
+  const [settings, attendanceEntitlements] = await Promise.all([
     getTenantSettings(ctx),
-    listAttendanceSettings(ctx),
-    getAttendanceNotificationStatus(ctx)
+    getAttendanceEntitlementState(ctx, { branchId: ctx.activeBranchId })
   ]);
-  const templateKeys = new Set(notificationStatus.templates.map((template) => template.templateKey));
+  const attendanceSettingsReadable =
+    attendanceEntitlements.features[ATTENDANCE_ENTITLEMENT_FEATURES.SETTINGS].read;
+  const attendanceSettingsWritable =
+    attendanceEntitlements.features[ATTENDANCE_ENTITLEMENT_FEATURES.SETTINGS].write;
+  const canManageNotificationSettings =
+    attendanceSettingsWritable && permissions.has("notifications.settings.manage");
+  let attendanceSettings: Awaited<ReturnType<typeof listAttendanceSettings>> = [];
+  let notificationStatus: Awaited<ReturnType<typeof getAttendanceNotificationStatus>> | null = null;
+  if (attendanceSettingsReadable) {
+    [attendanceSettings, notificationStatus] = await Promise.all([
+      listAttendanceSettings(ctx),
+      getAttendanceNotificationStatus(ctx)
+    ]);
+  }
+  const attendanceNotificationStatus = notificationStatus ?? {
+    provider: "DRY_RUN",
+    isEnabled: false,
+    hasProviderIdentity: false,
+    templates: []
+  };
+  const templateKeys = new Set(attendanceNotificationStatus.templates.map((template) => template.templateKey));
   const hasStudentTemplate = templateKeys.has("student_daily_attendance_alert");
   const hasStaffWeeklyTemplate = templateKeys.has("staff_weekly_attendance_summary");
   const hasStaffMonthlyTemplate = templateKeys.has("staff_monthly_attendance_summary");
   const hasAllAttendanceTemplates = hasStudentTemplate && hasStaffWeeklyTemplate && hasStaffMonthlyTemplate;
-  const providerStatusLabel = notificationStatus.isEnabled && notificationStatus.hasProviderIdentity
-    ? notificationStatus.provider
+  const providerStatusLabel = attendanceNotificationStatus.isEnabled && attendanceNotificationStatus.hasProviderIdentity
+    ? attendanceNotificationStatus.provider
     : "DRY_RUN / provider not configured";
 
   return (
@@ -89,7 +110,14 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         </label>
         <button className="min-h-11 rounded-lg bg-brand-700 px-4 py-2 text-sm font-medium text-white md:col-span-2 xl:col-span-4 xl:justify-self-end">Save institution settings</button>
       </form>
-      <section className="premium-card space-y-4 p-5">
+      {attendanceSettingsReadable ? (
+        <>
+          {!attendanceSettingsWritable ? (
+            <div role="status" className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              Attendance settings are view only for this institution. Contact the JinaCampus Administrator to change module access.
+            </div>
+          ) : null}
+          <section className="premium-card space-y-4 p-5">
         <div>
           <h2 className="text-lg font-semibold text-slate-950">WhatsApp notification status</h2>
           <p className="mt-1 text-sm text-slate-500">
@@ -107,7 +135,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
           <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Live sending</p>
             <p className="mt-2 text-sm font-semibold text-slate-900">
-              {notificationStatus.isEnabled && notificationStatus.hasProviderIdentity ? "Configured" : "Disabled"}
+              {attendanceNotificationStatus.isEnabled && attendanceNotificationStatus.hasProviderIdentity ? "Configured" : "Disabled"}
             </p>
             <p className="mt-1 text-xs leading-5 text-slate-500">
               Provider credentials and secrets are not displayed in CampusCore settings.
@@ -127,23 +155,45 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
       <div className="space-y-4">
         {attendanceSettings.length ? (
           attendanceSettings.map((s) => (
-            <form key={s.id} action={updateAttendanceSettingsAction} className="premium-card grid gap-3 p-5 md:grid-cols-6">
+            <AttendanceSettingsForm key={s.id} writable={attendanceSettingsWritable}>
               <input type="hidden" name="branchId" value={s.branchId} />
               <input type="hidden" name="minimumAttendancePercentage" value={s.minimumAttendancePercentage} />
               <input type="hidden" name="staffHalfDayBeforeMinutes" value={s.staffHalfDayBeforeMinutes} />
               <input type="hidden" name="staffMinimumWorkingMinutes" value={s.staffMinimumWorkingMinutes} />
-              <div className="font-medium md:col-span-6">{s.branch.name}</div>
+              <div className="md:col-span-6">
+                <p className="font-semibold text-slate-950">{s.branch.name}</p>
+                <p className="mt-1 text-sm text-slate-500">Choose how this branch records staff attendance and which controlled fallbacks are available.</p>
+              </div>
+              <label className="text-xs font-medium text-slate-600 md:col-span-2">
+                Staff attendance method
+                <select name="staffAttendanceCaptureMode" defaultValue={s.staffAttendanceCaptureMode === "MANUAL_ONLY" ? "MANUAL_ONLY" : "SUPERVISED_QR"} className="mt-1 min-h-11 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                  <option value="SUPERVISED_QR">Staff QR Cards (recommended)</option>
+
+                  <option value="MANUAL_ONLY">Manual Attendance Only</option>
+                </select>
+                <span className="mt-1 block text-[11px] leading-4 text-slate-500">Staff QR Cards are scanned by an authorised attendance operator.</span>
+              </label>
+              <label className="text-xs font-medium text-slate-600">
+                Scanner session
+                <input type="number" min="5" max="240" name="staffScanSessionValidityMinutes" defaultValue={s.staffScanSessionValidityMinutes} className="mt-1 min-h-11 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+                <span className="mt-1 block text-[11px] leading-4 text-slate-500">Minutes before an operator session closes.</span>
+              </label>
+              <label className="text-xs font-medium text-slate-600">
+                Staff QR card validity
+                <input type="number" min="1" max="3650" name="staffCredentialValidityDays" defaultValue={s.staffCredentialValidityDays ?? 365} className="mt-1 min-h-11 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+                <span className="mt-1 block text-[11px] leading-4 text-slate-500">Days before a printed card must be reissued.</span>
+              </label>
               <label className="text-xs font-medium text-slate-600">
                 Student lock time
-                <input name="studentAutoLockTime" defaultValue={s.studentAutoLockTime} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+                <input type="time" name="studentAutoLockTime" defaultValue={s.studentAutoLockTime} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
               </label>
               <label className="text-xs font-medium text-slate-600">
                 Check-in start
-                <input name="staffCheckInStartTime" defaultValue={s.staffCheckInStartTime} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+                <input type="time" name="staffCheckInStartTime" defaultValue={s.staffCheckInStartTime} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
               </label>
               <label className="text-xs font-medium text-slate-600">
                 Late after
-                <input name="staffLateAfterTime" defaultValue={s.staffLateAfterTime} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+                <input type="time" name="staffLateAfterTime" defaultValue={s.staffLateAfterTime} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
               </label>
               <div className="text-xs font-medium text-slate-600">
                 QR validity
@@ -174,7 +224,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
               </label>
               <label className="text-xs font-medium text-slate-600">
                 Monthly report day
-                <input name="staffMonthlySummarySendDay" defaultValue={s.staffMonthlySummarySendDay} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+                <input type="number" min="1" max="28" name="staffMonthlySummarySendDay" defaultValue={s.staffMonthlySummarySendDay} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
               </label>
               <label className="text-xs font-medium text-slate-600">
                 Weekly report day
@@ -201,10 +251,19 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                 <input type="checkbox" name="sendStudentLateAlert" defaultChecked={s.sendStudentLateAlert} />
                 Send late alerts
               </label>
-              <label className="flex items-center gap-2 text-sm text-slate-600">
+              <label className="flex min-h-11 items-center gap-2 text-sm text-slate-600">
                 <input type="checkbox" name="staffQrAttendanceEnabled" defaultChecked={s.staffQrAttendanceEnabled} />
-                Staff QR enabled
+                Enable Staff QR attendance
               </label>
+              <label className="flex min-h-11 items-center gap-2 text-sm text-slate-600">
+                <input type="checkbox" name="staffManualAttendanceEnabled" defaultChecked={s.staffManualAttendanceEnabled} />
+                Allow manual attendance requests
+              </label>
+              <div className="flex min-h-11 items-center gap-2 text-sm text-slate-600">
+                <input type="hidden" name="staffCorrectionApprovalRequired" value="on" />
+                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-700">✓</span>
+                Corrections require approval
+              </div>
               {canManageNotificationSettings ? (
                 <>
                   <label className="flex items-center gap-2 text-sm text-slate-600">
@@ -229,19 +288,25 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
               )}
               <label className="text-xs font-medium text-slate-600 md:col-span-2">
                 Weekly report time
-                <input name="staffWeeklySummarySendTime" defaultValue={s.staffWeeklySummarySendTime} readOnly={!canManageNotificationSettings} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+                <input type="time" name="staffWeeklySummarySendTime" defaultValue={s.staffWeeklySummarySendTime} readOnly={!canManageNotificationSettings} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
               </label>
               <label className="text-xs font-medium text-slate-600 md:col-span-2">
                 Monthly report time
-                <input name="staffMonthlySummarySendTime" defaultValue={s.staffMonthlySummarySendTime} readOnly={!canManageNotificationSettings} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+                <input type="time" name="staffMonthlySummarySendTime" defaultValue={s.staffMonthlySummarySendTime} readOnly={!canManageNotificationSettings} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
               </label>
-              <button className="bg-brand-700 px-4 py-2 text-sm font-medium text-white md:col-span-2">Save</button>
-            </form>
+            </AttendanceSettingsForm>
           ))
         ) : (
           <EmptyState title="No branch attendance settings" description="Create a branch to initialize branch-level settings." />
         )}
       </div>
+        </>
+      ) : (
+        <PermissionState
+          title="Attendance settings not included"
+          description="General institution settings remain available. Ask the JinaCampus Administrator to enable Attendance settings for this institution."
+        />
+      )}
     </div>
   );
 }

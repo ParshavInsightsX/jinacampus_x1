@@ -64,6 +64,11 @@ export default async function InstitutionProfilePage({ params }: { params: Promi
           <Link href="/campus-core/institutions" className="premium-secondary-button">
             Back to Institutions
           </Link>
+          {permissions.has("campuscore.institution.regulatory.read") ? (
+            <Link href={`/campus-core/institutions/${institution.id}/legal-identity`} className="premium-secondary-button">
+              Legal Identity &amp; Recognition
+            </Link>
+          ) : null}
           <Link href={`/campus-core/institutions/${institution.id}/edit`} className="premium-primary-button">
             Edit
           </Link>

@@ -28,6 +28,30 @@ type NotificationBellProps = {
 };
 
 const POLL_INTERVAL_MS = 45_000;
+let unreadCountRequest: Promise<number> | null = null;
+
+async function requestUnreadNotificationCount() {
+  if (!unreadCountRequest) {
+    unreadCountRequest = (async () => {
+      const response = await fetch("/api/notifications/unread-count", {
+        credentials: "same-origin",
+        cache: "no-store"
+      });
+      const payload: unknown = await response.json();
+      if (!response.ok || typeof payload !== "object" || payload === null || !("count" in payload)) {
+        throw new Error("COUNT_UNAVAILABLE");
+      }
+      return typeof payload.count === "number" ? payload.count : 0;
+    })();
+  }
+
+  const request = unreadCountRequest;
+  try {
+    return await request;
+  } finally {
+    if (unreadCountRequest === request) unreadCountRequest = null;
+  }
+}
 
 function relativeTime(value: string) {
   const elapsed = Date.now() - new Date(value).getTime();
@@ -56,16 +80,9 @@ export function NotificationBell({ compact = false, onOpenChange }: Notification
 
   const loadCount = useCallback(async () => {
     try {
-      const response = await fetch("/api/notifications/unread-count", {
-        credentials: "same-origin",
-        cache: "no-store"
-      });
-      const payload: unknown = await response.json();
-      if (!response.ok || typeof payload !== "object" || payload === null || !("count" in payload)) {
-        throw new Error("COUNT_UNAVAILABLE");
-      }
+      const unreadCount = await requestUnreadNotificationCount();
       if (mounted.current) {
-        setCount(typeof payload.count === "number" ? payload.count : 0);
+        setCount(unreadCount);
         setError(false);
       }
     } catch {
@@ -118,7 +135,6 @@ export function NotificationBell({ compact = false, onOpenChange }: Notification
 
   useEffect(() => {
     mounted.current = true;
-    void loadCount();
     const interval = window.setInterval(() => {
       if (document.visibilityState === "visible") void loadCount();
     }, POLL_INTERVAL_MS);

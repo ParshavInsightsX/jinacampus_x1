@@ -91,7 +91,7 @@ export const createStudentSchema = z.object({
   fatherOccupation: optionalTrimmedString(120),
   motherName: trimmedString(1, 120),
   guardianName: optionalTrimmedString(120),
-  aadhaarNumber: aadhaarNumberSchema,
+  aadhaarNumber: aadhaarNumberSchema.optional(),
   familyIdNumber: optionalTrimmedString(80),
   sssmIdNumber: optionalTrimmedString(80),
   apaarIdNumber: optionalTrimmedString(80),

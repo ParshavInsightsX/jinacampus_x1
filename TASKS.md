@@ -1398,6 +1398,64 @@ Acceptance criteria:
 - External communication providers remain independent and are never reported as active by this module.
 - Feature disablement fails closed without deleting historical notification records.
 
+## Phase 10.17 - Institution Entitlements and Subscription Readiness
+
+Goal: separate institution-purchased capabilities from school-user RBAC and add granular Attendance access without introducing a billing provider.
+
+Implementation:
+
+- [x] Add additive tenant subscription lifecycle and institution entitlement models.
+- [x] Enforce same-tenant institution relations, unique capability rows, lifecycle dates, indexes, and server-only RLS.
+- [x] Backfill existing institutions with full Attendance access and preserve existing GradeBook rollout state.
+- [x] Add Platform Administrator subscription and per-institution module access forms.
+- [x] Add Disabled, View only, and Full capability states with audited mutations.
+- [x] Enforce Attendance entitlements across student attendance, staff attendance, corrections, QR, reports, mobile APIs, settings, dashboards, and navigation.
+- [x] Apply the institution entitlement model to GradeBook while retaining legacy-flag compatibility.
+- [x] Provision new institutions with Attendance enabled and unapproved modules disabled.
+- [x] Add safe entitlement errors, catalog validation, lifecycle, read-only, navigation, migration, and regression tests.
+- [x] Document subscription boundaries, usability rules, deferred billing, and release gates.
+- [ ] Apply `20260818233000_add_institution_entitlements` to an approved non-production database.
+- [ ] Run DB-backed Administrator, Principal, Teacher, Office Staff, Staff, cross-branch, cross-institution, and cross-tenant browser QA.
+- [ ] Obtain separate production migration and deployment approval.
+
+Acceptance criteria:
+
+- Subscription entitlements and user RBAC are independent and both are enforced server-side.
+- Client input cannot invent module or feature keys or select tenant/institution authority outside the Administrator route.
+- Disabled or expired access does not delete historical records.
+- Read-only access blocks mutations while retaining authorised record visibility.
+- Existing Attendance capability is preserved by migration backfill and GradeBook remains aligned with its prior rollout state.
+- No billing provider call, charge, premium dependency, or production activation is introduced.
+
+## Phase 10.18 - Student Attendance Continuity and Duty Assignment
+
+Goal: preserve one official class attendance register when the Class Teacher is unavailable by granting a bounded, auditable duty to another authorised staff member.
+
+Implementation:
+
+- [x] Add tenant-, institution-, branch-, academic-year-, class-, date-, session-, user-, and validity-scoped duty assignments.
+- [x] Add pending, acknowledged, active, completed, declined, expired, revoked, and replacement lifecycle handling.
+- [x] Store attendance-session responsibility and preserve one versioned session during authorised takeover.
+- [x] Require acknowledgement before a delegate can view or mark the assigned roster.
+- [x] Add Principal and Office Staff Attendance Coverage workflow with strict server-side permission checks.
+- [x] Limit substitute access to the existing minimal attendance roster and assigned date/class scope.
+- [x] Add in-app assignment notification, lifecycle audit events, safe errors, navigation, and focused tests.
+- [x] Document automatic leave/timetable inference, escalations, and offline continuity as deferred controlled phases.
+- [ ] Apply `20260824183000_add_student_attendance_continuity` to an approved isolated database.
+- [ ] Seed synthetic Class Teacher, substitute, attendance operator, Principal, cross-branch, cross-year, and cross-tenant fixtures.
+- [ ] Run authenticated browser/mobile role, lifecycle, concurrency, audit, and direct-request denial QA.
+- [ ] Obtain separate production migration and application deployment approval.
+
+Acceptance criteria:
+
+- Teacher absence never marks students absent and an unverifiable class remains pending.
+- Client input cannot select tenant, institution, branch, academic year, actor, role, or assignment status.
+- Pending or inactive duties cannot expose the attendance roster or authorise mutation.
+- A usable assignment grants only its class, date, session, and validity-window attendance responsibility.
+- Delegate and Class Teacher reuse one session; responsibility changes preserve entries and are versioned and audited.
+- Office Staff receive no unrelated student-profile, guardian, fee, marks, medical, or historical access.
+- Completed, revoked, declined, expired, or out-of-window assignments cannot be reused.
+
 ## Phase 11 - GradeBook MVP
 
 Goal: introduce a tenant-safe assessment and marks ledger without duplicating Academia data or disrupting existing school workflows.

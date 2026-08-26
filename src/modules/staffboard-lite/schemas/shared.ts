@@ -78,8 +78,10 @@ export const staffAttendanceStatusSchema = z.enum([
   "LATE",
   "HALF_DAY",
   "ON_LEAVE",
+  "OFFICIAL_DUTY",
   "WEEK_OFF",
   "HOLIDAY",
+  "INCOMPLETE",
   "NOT_MARKED"
 ]);
 
@@ -89,6 +91,7 @@ export const staffAttendanceCorrectionStatusSchema = z.enum([
   "LATE",
   "HALF_DAY",
   "ON_LEAVE",
+  "OFFICIAL_DUTY",
   "WEEK_OFF",
   "HOLIDAY"
 ]);

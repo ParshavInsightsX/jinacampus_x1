@@ -4,6 +4,8 @@ export const PLATFORM_ADMINISTRATOR_AUDIT_EVENTS = {
   PASSWORD_CHANGED: "platform.administrator.password_changed",
   SCHOOL_CREATED: "platform.school.created",
   SCHOOL_UPDATED: "platform.school.updated",
+  SUBSCRIPTION_UPDATED: "platform.subscription.updated",
+  INSTITUTION_ENTITLEMENTS_UPDATED: "platform.institution.entitlements_updated",
   INSTITUTION_LOGO_UPDATED: "platform.institution.logo_updated",
   SCHOOL_ID_UPDATED: "platform.school.school_id_updated",
   SCHOOL_DEACTIVATED: "platform.school.deactivated",

@@ -21,6 +21,8 @@ import { requireAuth } from "@/lib/auth/require-auth";
 import { getEffectivePermissions } from "@/lib/rbac/require-permission";
 import type { TenantContext } from "@/lib/tenant/context";
 import { getNavigationAudience } from "@/components/app-shell/navigation";
+import { ATTENDANCE_ENTITLEMENT_FEATURES } from "@/modules/campus-core/entitlements/catalog";
+import { getAttendanceEntitlementState } from "@/modules/campus-core/entitlements/service";
 import { getMobileStaffAttendanceStatus } from "@/lib/mobile-api/staff-attendance";
 import {
   DashboardAttentionPanel,
@@ -65,6 +67,10 @@ async function safeLoad<T>(enabled: boolean, load: () => Promise<T>): Promise<Pr
   } catch (reason) {
     return { status: "rejected", reason };
   }
+}
+
+function loadDashboardPair<A, B>(first: () => Promise<A>, second: () => Promise<B>) {
+  return Promise.all([first(), second()]);
 }
 
 function settledValue<T>(result: PromiseSettledResult<T | null>) {
@@ -162,7 +168,10 @@ function buildAttendanceAttentionItems(
 
 export default async function DashboardPage() {
   const ctx = await requireAuth();
-  const permissions = await getEffectivePermissions({ ctx, branchId: ctx.activeBranchId });
+  const [permissions, attendanceEntitlements] = await Promise.all([
+    getEffectivePermissions({ ctx, branchId: ctx.activeBranchId }),
+    getAttendanceEntitlementState(ctx, { branchId: ctx.activeBranchId })
+  ]);
   const dateLabel = formatDashboardDate(new Date(), ctx.timeZone);
   const branchLabel = branchContextLabel(ctx);
 
@@ -178,35 +187,42 @@ export default async function DashboardPage() {
     );
   }
 
+  const attendance = {
+    studentAttendance: attendanceEntitlements.features[ATTENDANCE_ENTITLEMENT_FEATURES.STUDENT_ATTENDANCE].read,
+    staffAttendance: attendanceEntitlements.features[ATTENDANCE_ENTITLEMENT_FEATURES.STAFF_ATTENDANCE].read,
+    marking: attendanceEntitlements.features[ATTENDANCE_ENTITLEMENT_FEATURES.MARKING].write,
+    qr: attendanceEntitlements.features[ATTENDANCE_ENTITLEMENT_FEATURES.QR].write,
+    reports: attendanceEntitlements.features[ATTENDANCE_ENTITLEMENT_FEATURES.REPORTS].read
+  };
+  const navigationFeatures = { attendance };
   const access = {
     campusCore: canViewDashboardSection(permissions, "campusCore"),
     academia: canViewDashboardSection(permissions, "academia"),
-    studentAttendance: canViewDashboardSection(permissions, "studentAttendance"),
+    studentAttendance:
+      attendance.studentAttendance && canViewDashboardSection(permissions, "studentAttendance"),
     staffBoard: canViewDashboardSection(permissions, "staffBoard"),
-    staffAttendance: canViewDashboardSection(permissions, "staffAttendance")
+    staffAttendance:
+      attendance.staffAttendance && canViewDashboardSection(permissions, "staffAttendance")
   };
-  const canViewSelfAttendance = permissions.has("staffboard.attendance.self_view");
+  const canViewSelfAttendance =
+    attendance.staffAttendance && permissions.has("staffboard.attendance.self_view");
 
-  const [
-    campusCoreResult,
-    academiaResult,
-    studentAttendanceResult,
-    staffBoardResult,
-    staffAttendanceResult,
-    studentAttendanceTrendResult,
-    staffAttendanceTrendResult,
-    selfAttendanceResult
-  ] =
-    await Promise.all([
-      safeLoad(access.campusCore, () => getCampusCoreDashboardMetrics(ctx)),
-      safeLoad(access.academia, () => getAcademiaDashboardMetrics(ctx)),
-      safeLoad(access.studentAttendance, () => getStudentAttendanceDashboardMetrics(ctx)),
-      safeLoad(access.staffBoard, () => getStaffBoardDashboardMetrics(ctx)),
-      safeLoad(access.staffAttendance, () => getStaffAttendanceDashboardMetrics(ctx)),
-      safeLoad(access.studentAttendance, () => getStudentAttendanceDashboardTrend(ctx)),
-      safeLoad(access.staffAttendance, () => getStaffAttendanceDashboardTrend(ctx)),
-      safeLoad(canViewSelfAttendance, () => getMobileStaffAttendanceStatus(ctx))
-    ]);
+  const [campusCoreResult, studentAttendanceTrendResult] = await loadDashboardPair(
+    () => safeLoad(access.campusCore, () => getCampusCoreDashboardMetrics(ctx)),
+    () => safeLoad(access.studentAttendance, () => getStudentAttendanceDashboardTrend(ctx))
+  );
+  const [academiaResult, staffAttendanceTrendResult] = await loadDashboardPair(
+    () => safeLoad(access.academia, () => getAcademiaDashboardMetrics(ctx)),
+    () => safeLoad(access.staffAttendance, () => getStaffAttendanceDashboardTrend(ctx))
+  );
+  const [studentAttendanceResult, staffBoardResult] = await loadDashboardPair(
+    () => safeLoad(access.studentAttendance, () => getStudentAttendanceDashboardMetrics(ctx)),
+    () => safeLoad(access.staffBoard, () => getStaffBoardDashboardMetrics(ctx))
+  );
+  const [staffAttendanceResult, selfAttendanceResult] = await loadDashboardPair(
+    () => safeLoad(access.staffAttendance, () => getStaffAttendanceDashboardMetrics(ctx)),
+    () => safeLoad(canViewSelfAttendance, () => getMobileStaffAttendanceStatus(ctx))
+  );
 
   const results = [
     campusCoreResult,
@@ -226,9 +242,9 @@ export default async function DashboardPage() {
   const studentAttendanceTrend = settledValue<DashboardAttendanceTrendPoint[]>(studentAttendanceTrendResult);
   const staffAttendanceTrend = settledValue<DashboardAttendanceTrendPoint[]>(staffAttendanceTrendResult);
   const selfAttendance = settledValue<Awaited<ReturnType<typeof getMobileStaffAttendanceStatus>>>(selfAttendanceResult);
-  const quickActions = getVisibleDashboardQuickActions(permissions, ctx.roleCodes ?? []);
+  const quickActions = getVisibleDashboardQuickActions(permissions, ctx.roleCodes ?? [], navigationFeatures);
   const navigationAudience = getNavigationAudience(permissions, ctx.roleCodes ?? []);
-  const adminOperations = getVisibleAdminMobileActions(permissions, ADMIN_MOBILE_OPERATIONS);
+  const adminOperations = getVisibleAdminMobileActions(permissions, ADMIN_MOBILE_OPERATIONS, navigationFeatures);
   const adminTools = getVisibleAdminMobileActions(permissions, ADMIN_MOBILE_TOOLS);
   const resolvedDateLabel = formatDashboardDate(studentAttendance?.date ?? staffAttendance?.date ?? new Date(), ctx.timeZone);
   const attentionItems = buildAttendanceAttentionItems(studentAttendance, staffAttendance);
@@ -432,7 +448,7 @@ export default async function DashboardPage() {
             ) : (
               <DashboardEmptyState
                 title="No attendance recorded yet today."
-                description="Use Scan QR when the school displays an active attendance code."
+                description="Open My Attendance to review available check-in options."
               />
             )}
           </DashboardSection>

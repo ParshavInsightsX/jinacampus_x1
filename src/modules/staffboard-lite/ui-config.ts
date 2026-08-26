@@ -1,6 +1,17 @@
 import type { PermissionCode } from "@/lib/rbac/permissions";
 
-export type StaffboardModuleKey = "staff" | "categories" | "attendance" | "qr-attendance" | "scan" | "reports" | "leave" | "leave-review";
+export type StaffboardModuleKey =
+  | "staff"
+  | "categories"
+  | "attendance"
+  | "my-attendance"
+  | "my-card"
+  | "scan"
+  | "credentials"
+  | "adjustments"
+  | "reports"
+  | "leave"
+  | "leave-review";
 
 export type StaffboardModuleCard = {
   key: StaffboardModuleKey;
@@ -32,8 +43,12 @@ export const staffboardRoutes = {
   staff: "/staffboard/staff",
   categories: "/staffboard/categories",
   attendance: "/staffboard/attendance",
+  myAttendance: "/staffboard/attendance/me",
+  myCard: "/staffboard/attendance/card",
   qr: "/staffboard/attendance/qr",
   scan: "/staffboard/attendance/scan",
+  credentials: "/staffboard/attendance/credentials",
+  adjustments: "/staffboard/attendance/adjustments",
   reports: "/staffboard/attendance/reports",
   leave: "/staffboard/leave",
   leaveReview: "/staffboard/leave/review"
@@ -55,30 +70,51 @@ export const staffboardModuleCards: readonly StaffboardModuleCard[] = [
     permissions: ["staffboard.staff.view"]
   },
   {
-    key: "qr-attendance",
-    title: "QR Attendance Console",
-    description: "Generate, regenerate, and deactivate audited five-hour branch QR codes for staff attendance.",
-    href: staffboardRoutes.qr,
-    permissions: ["staffboard.attendance.qr.generate"]
-  },
-  {
-    key: "scan",
-    title: "Scan QR",
-    description: "Staff can submit check-in and check-out by scanning the active branch QR code.",
-    href: staffboardRoutes.scan,
-    permissions: ["staffboard.attendance.self_scan"]
-  },
-  {
     key: "attendance",
-    title: "Staff Attendance",
-    description: "Review daily staff check-in and check-out records with permission-gated correction entry points.",
+    title: "Attendance Register",
+    description: "Review daily check-in, check-out, working time, status, and pending corrections.",
     href: staffboardRoutes.attendance,
     permissions: ["staffboard.attendance.view"]
   },
   {
+    key: "my-attendance",
+    title: "My Attendance",
+    description: "Review your check-in, check-out, working time, and correction requests.",
+    href: staffboardRoutes.myAttendance,
+    permissions: ["staffboard.attendance.self_view"]
+  },
+  {
+    key: "scan",
+    title: "Mark Attendance",
+    description: "Use the supervised scanner to record staff check-in or check-out.",
+    href: staffboardRoutes.scan,
+    permissions: ["staffboard.attendance.scan"]
+  },
+  {
+    key: "credentials",
+    title: "Staff QR Cards",
+    description: "Create, print, reissue, or revoke permanent staff attendance cards.",
+    href: staffboardRoutes.credentials,
+    permissions: ["staffboard.attendance.credential.manage"]
+  },
+  {
+    key: "adjustments",
+    title: "Attendance Corrections",
+    description: "Review and decide manual attendance and correction requests.",
+    href: staffboardRoutes.adjustments,
+    permissions: ["staffboard.attendance.adjustment.approve"]
+  },
+  {
+    key: "my-card",
+    title: "My Staff Card",
+    description: "Display your issued card for supervised attendance scanning.",
+    href: staffboardRoutes.myCard,
+    permissions: ["staffboard.attendance.credential.self_view"]
+  },
+  {
     key: "reports",
-    title: "Staff Attendance Reports",
-    description: "Review daily, teacher, non-teaching, late, half-day, monthly, and correction reports.",
+    title: "Attendance Reports",
+    description: "Review daily and monthly attendance, late arrivals, half days, and corrections.",
     href: staffboardRoutes.reports,
     permissions: ["staffboard.attendance.report"]
   },

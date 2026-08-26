@@ -39,6 +39,8 @@ describe("mobile browser QA pass", () => {
       "/academia/attendance/mark",
       "/academia/attendance/reports",
       "/staffboard/attendance",
+      "/staffboard/attendance/credentials",
+      "/staffboard/attendance/card",
       "/staffboard/attendance/qr",
       "/staffboard/attendance/scan",
       "/staffboard/attendance/reports"
@@ -64,10 +66,12 @@ describe("mobile browser QA pass", () => {
 
     expect(doc).toContain("Student Attendance Marking");
     expect(doc).toContain("Staff QR Scan");
-    expect(doc).toContain("Staff QR Display");
+    expect(doc).toContain("Staff QR Cards");
+    expect(doc).toContain("Student ID Cards");
     expect(doc).toContain("Staff Attendance Admin");
     expect(doc).toContain("full student-row workflow could not be tested");
-    expect(doc).toContain("successful staff self-scan workflows");
+    expect(doc).toContain("staff self-attendance camera access and the shared five-hour QR console are retired");
+    expect(doc).toContain("must not be used for the current release");
     expect(doc).toContain("Phase 10.5 adds browser-based camera scanning");
     expect(doc).toContain("Android Chrome real-device QR scan");
     expect(doc).toContain("iOS Safari real-device QR scan");

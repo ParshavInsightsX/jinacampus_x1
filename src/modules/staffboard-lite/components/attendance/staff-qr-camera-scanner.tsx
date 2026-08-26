@@ -19,6 +19,8 @@ type StaffQrCameraScannerProps = {
   disabled?: boolean;
   processing?: boolean;
   variant?: "default" | "mobile";
+  title?: string;
+  description?: string;
   onQrPayloadDetected: (qrPayload: string) => void;
 };
 
@@ -308,6 +310,8 @@ export function StaffQrCameraScanner({
   disabled,
   processing = false,
   variant = "default",
+  title = "Scan QR",
+  description = "Place the live school QR inside the square. Attendance submits automatically when the code is detected.",
   onQrPayloadDetected
 }: StaffQrCameraScannerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -678,10 +682,10 @@ export function StaffQrCameraScanner({
       <div className="flex flex-col gap-2">
         <div>
           <h2 id="staff-camera-scanner-title" className={isMobile ? "text-base font-semibold text-slate-950" : "text-lg font-semibold text-slate-950"}>
-            Scan QR
+            {title}
           </h2>
           <p className="mt-1 text-sm leading-6 text-slate-500">
-            Place the live school QR inside the square. Attendance submits automatically when the code is detected.
+            {description}
           </p>
         </div>
       </div>

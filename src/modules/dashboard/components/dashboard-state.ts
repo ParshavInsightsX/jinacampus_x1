@@ -1,5 +1,5 @@
 import type { PermissionCode } from "@/lib/rbac/permissions";
-import { getNavigationAudience, type NavigationAudience } from "@/components/app-shell/navigation";
+import { getNavigationAudience, isFeatureNavigationEnabled, type NavigationAudience, type NavigationFeatureOptions } from "@/components/app-shell/navigation";
 import { DASHBOARD_VIEW_PERMISSION } from "@/modules/dashboard/permissions";
 
 export type DashboardSectionKey = "campusCore" | "academia" | "studentAttendance" | "staffBoard" | "staffAttendance";
@@ -24,7 +24,7 @@ const sectionPermissions = {
   academia: ["academia.student.view", "academia.enrollment.manage", "academia.class.manage", "academia.guardian.manage"],
   studentAttendance: ["academia.attendance.view", "academia.attendance.report", "academia.attendance.mark"],
   staffBoard: ["staffboard.staff.view"],
-  staffAttendance: ["staffboard.attendance.view", "staffboard.attendance.report", "staffboard.attendance.qr.generate"]
+  staffAttendance: ["staffboard.attendance.view", "staffboard.attendance.report", "staffboard.attendance.scan", "staffboard.attendance.credential.manage"]
 } satisfies Record<DashboardSectionKey, readonly PermissionCode[]>;
 
 export const DASHBOARD_QUICK_ACTIONS = [
@@ -50,22 +50,29 @@ export const DASHBOARD_QUICK_ACTIONS = [
     audiences: ["admin", "teacher"]
   },
   {
-    label: "Generate Staff QR",
-    description: "Generate a time-bound QR code for staff check-in or check-out.",
-    href: "/staffboard/attendance/qr",
-    permissions: ["staffboard.attendance.qr.generate"],
+    label: "Staff QR Cards",
+    description: "Create, print, reissue, or revoke staff attendance cards.",
+    href: "/staffboard/attendance/credentials",
+    permissions: ["staffboard.attendance.credential.manage"],
+    audiences: ["admin"]
+  },
+  {
+    label: "Mark Staff Attendance",
+    description: "Open the supervised QR scanner for the active branch.",
+    href: "/staffboard/attendance/scan",
+    permissions: ["staffboard.attendance.scan"],
     audiences: ["admin", "office"]
   },
   {
-    label: "Staff Attendance",
-    description: "Review daily staff attendance and correction entry points.",
+    label: "Attendance Register",
+    description: "Review daily staff attendance and correction requests.",
     href: "/staffboard/attendance",
     permissions: ["staffboard.attendance.view"],
     audiences: ["admin", "office"]
   },
   {
-    label: "Staff Reports",
-    description: "Review staff attendance, late arrivals, and corrections.",
+    label: "Attendance Reports",
+    description: "Review daily and monthly attendance, late arrivals, and corrections.",
     href: "/staffboard/attendance/reports",
     permissions: ["staffboard.attendance.report"],
     audiences: ["admin", "office"]
@@ -78,10 +85,10 @@ export const DASHBOARD_QUICK_ACTIONS = [
     audiences: ["admin"]
   },
   {
-    label: "Scan QR",
-    description: "Open the staff-facing QR scan page.",
-    href: "/staffboard/attendance/scan",
-    permissions: ["staffboard.attendance.self_scan"],
+    label: "My Staff Card",
+    description: "Display your card for an authorised attendance operator.",
+    href: "/staffboard/attendance/card",
+    permissions: ["staffboard.attendance.credential.self_view"],
     audiences: ["office", "teacher", "staff"]
   },
   {
@@ -122,20 +129,32 @@ export function canViewDashboardSection(
 
 export function getVisibleDashboardQuickActions(
   permissions: ReadonlySet<PermissionCode>,
-  roleCodes: readonly string[] = []
+  roleCodes: readonly string[] = [],
+  features: NavigationFeatureOptions = {}
 ) {
   const audience = getNavigationAudience(permissions, roleCodes);
-  return DASHBOARD_QUICK_ACTIONS.filter((action) =>
+  const visibleActions = DASHBOARD_QUICK_ACTIONS.filter((action) =>
+    isFeatureNavigationEnabled(action.href, features) &&
     action.audiences.some((actionAudience) => actionAudience === audience) &&
     action.permissions.every((permission) => permissions.has(permission))
   );
+  const uniqueActions = new Map<string, DashboardQuickAction>();
+
+  for (const action of visibleActions) {
+    if (!uniqueActions.has(action.href)) uniqueActions.set(action.href, action);
+  }
+
+  return Array.from(uniqueActions.values());
 }
 
 export function getVisibleAdminMobileActions(
   permissions: ReadonlySet<PermissionCode>,
-  actions: readonly AdminMobileAction[]
+  actions: readonly AdminMobileAction[],
+  features: NavigationFeatureOptions = {}
 ) {
-  return actions.filter((action) => permissions.has(action.permission));
+  return actions.filter(
+    (action) => permissions.has(action.permission) && isFeatureNavigationEnabled(action.href, features)
+  );
 }
 
 export function formatDashboardDate(date: string | Date, timeZone = "Asia/Kolkata") {

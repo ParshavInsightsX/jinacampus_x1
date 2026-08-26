@@ -24,7 +24,8 @@ describe("mobile UI foundation", () => {
       "/academia/attendance",
       "/academia/attendance/reports",
       "/staffboard/attendance",
-      "/staffboard/attendance/qr",
+      "/staffboard/attendance/credentials",
+      "/staffboard/attendance/card",
       "/staffboard/attendance/scan",
       "/staffboard/attendance/reports"
     ]));
@@ -70,21 +71,22 @@ describe("mobile UI foundation", () => {
     expect(selectSource).toContain("min-h-11");
   });
 
-  it("keeps staff QR scan and display mobile-safe without camera dependency", () => {
-    const scanFormSource = readProjectFile("src/modules/staffboard-lite/components/attendance/staff-qr-scan-form.tsx");
+  it("keeps staff cards and supervised scanning mobile-safe", () => {
+    const operatorScanner = readProjectFile("src/modules/staffboard-lite/components/attendance/staff-attendance-operator-scanner.tsx");
     const tokenInputSource = readProjectFile("src/modules/staffboard-lite/components/attendance/staff-qr-manual-token-input.tsx");
-    const displaySource = readProjectFile("src/modules/staffboard-lite/components/attendance/staff-qr-display.tsx");
-    const displayRouteSource = readProjectFile("src/app/(dashboard)/staffboard/attendance/qr/page.tsx");
+    const identityCard = readProjectFile("src/modules/staffboard-lite/components/attendance/staff-identity-card.tsx");
+    const legacyRoute = readProjectFile("src/app/(dashboard)/staffboard/attendance/qr/page.tsx");
 
     expect(tokenInputSource).toContain("min-h-36");
-    expect(scanFormSource).toContain("premium-primary-button w-full");
-    expect(displaySource).toContain("QRCodeSVG");
-    expect(displaySource).toContain("max-w-[280px]");
-    expect(`${scanFormSource}\n${tokenInputSource}`).not.toMatch(/html5-qrcode|qr-scanner|zxing|navigator\.mediaDevices/);
-    expect(`${displaySource}\n${displayRouteSource}`).not.toMatch(/coming soon/i);
-    expect(`${displaySource}\n${displayRouteSource}`).not.toMatch(/tokenHash|rawToken/i);
+    expect(operatorScanner).toContain("StaffQrCameraScanner");
+    expect(operatorScanner).toContain("recordSupervisedStaffQrScanAction");
+    expect(operatorScanner).toContain("StaffQrManualTokenInput");
+    expect(identityCard).toContain("QRCodeSVG");
+    expect(identityCard).toContain("identity-card-digital-only");
+    expect(legacyRoute).toContain('redirect("/staffboard/attendance/credentials")');
+    expect(legacyRoute).toContain('redirect("/staffboard/attendance/card")');
+    expect(`${operatorScanner}\n${tokenInputSource}\n${identityCard}`).not.toMatch(/tokenHash|rawToken/i);
   });
-
   it("uses responsive table wrappers for report and admin tables", () => {
     const academiaShell = readProjectFile("src/modules/academia/components/academia-page-shell.tsx");
     const staffShell = readProjectFile("src/modules/staffboard-lite/components/staffboard-page-shell.tsx");
@@ -95,9 +97,10 @@ describe("mobile UI foundation", () => {
     expect(academiaShell).toContain("ResponsiveTable");
     expect(staffShell).toContain("ResponsiveTable");
     expect(tablePrimitives).toContain('data-mobile-table-shell="true"');
-    expect(tablePrimitives).toContain("Scroll sideways to view all columns.");
+    expect(tablePrimitives).not.toContain("Scroll sideways to view all columns.");
     expect(staffReportFilters).toContain("premium-primary-button");
     expect(studentReportPage).toContain("premium-primary-button");
+    expect(studentReportPage).toContain("DailySummaryMobileList");
   });
 
   it("keeps protected mobile-priority routes on server-side auth paths", () => {

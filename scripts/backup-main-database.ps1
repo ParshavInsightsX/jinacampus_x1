@@ -13,7 +13,6 @@ if ([string]::IsNullOrWhiteSpace($EnvironmentFile)) { $EnvironmentFile = Join-Pa
 $expectedEnvironmentFile = [IO.Path]::GetFullPath((Join-Path $root ".env"))
 $backupRoot = [IO.Path]::GetFullPath((Join-Path $env:LOCALAPPDATA "JinaCampus\backups\main"))
 $dumpEnvFile = $null
-$restoreEnvFile = $null
 $restoreContainer = $null
 
 function Import-MainEnvironment([string]$Path) {
@@ -82,7 +81,6 @@ try {
   $backupPath = Join-Path $backupRoot $backupName
   $manifestPath = "$backupPath.sha256.json"
   $dumpEnvFile = Join-Path $backupRoot ".pg-dump-$([Guid]::NewGuid().ToString('N')).env"
-  $restoreEnvFile = Join-Path $backupRoot ".pg-restore-$([Guid]::NewGuid().ToString('N')).env"
 
   $runtimeBase = ($env:DATABASE_URL -split "\?", 2)[0]
   $pgDumpUrl = $runtimeBase -replace ":6543/", ":5432/"
@@ -117,22 +115,13 @@ try {
     "pg_restore", "--list", "/backup/$backupName"
   ) | Out-Null
 
-  $restorePasswordBytes = New-Object byte[] 36
-  $rng = [Security.Cryptography.RandomNumberGenerator]::Create()
-  try { $rng.GetBytes($restorePasswordBytes) } finally { $rng.Dispose() }
-  $restorePassword = [Convert]::ToBase64String($restorePasswordBytes)
-  [IO.File]::WriteAllText(
-    $restoreEnvFile,
-    "POSTGRES_PASSWORD=$restorePassword$([Environment]::NewLine)",
-    [Text.UTF8Encoding]::new($false)
-  )
-
   $restoreStartedAt = [DateTime]::UtcNow
   $restoreStopwatch = [Diagnostics.Stopwatch]::StartNew()
   $restoreContainer = "jinacampus-main-restore-$([Guid]::NewGuid().ToString('N').Substring(0, 10))"
   Invoke-Docker @(
     "run", "--detach", "--name", $restoreContainer,
-    "--env-file", $restoreEnvFile,
+    "--network", "none",
+    "--env", "POSTGRES_HOST_AUTH_METHOD=trust",
     "--mount", "type=bind,source=$backupRoot,target=/backup,readonly",
     $postgresImage
   ) | Out-Null
@@ -212,7 +201,7 @@ try {
 }
 finally {
   if ($restoreContainer) { & docker rm --force $restoreContainer 2>$null | Out-Null }
-  foreach ($path in @($dumpEnvFile, $restoreEnvFile)) {
+  foreach ($path in @($dumpEnvFile)) {
     if ($path -and (Test-Path -LiteralPath $path)) { Remove-Item -LiteralPath $path -Force }
   }
 }

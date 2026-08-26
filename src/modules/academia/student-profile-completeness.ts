@@ -27,7 +27,6 @@ export function missingStudentProfileFields(student: StudentProfileCompletenessS
     ["Date of birth", Boolean(student.dateOfBirth)],
     ["Father's name", hasText(student.fatherName)],
     ["Mother's name", hasText(student.motherName)],
-    ["Aadhaar reference", hasText(student.aadhaarMasked) || hasText(student.aadhaarNumber)],
     ["Religion", hasText(student.religion)],
     ["Caste", hasText(student.caste)],
     ["Category", hasText(student.category)],

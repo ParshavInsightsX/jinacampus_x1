@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
+import { dateOnlyInTimeZone } from "@/lib/dates/time-zone";
 import { AppError, notFound } from "@/lib/errors";
 import { writeAuditLog } from "@/lib/audit/audit-log";
 import { requirePermission } from "@/lib/rbac/require-permission";
@@ -145,6 +146,11 @@ export async function createStaffProfile(ctx: TenantContext, input: unknown) {
 
   return db.$transaction(async (tx) => {
     await ensureActiveBranch(tx, ctx, data.branchId);
+    const attendanceBranch = await tx.branch.findFirst({
+      where: { id: data.branchId, tenantId: ctx.tenantId, status: "ACTIVE" },
+      select: { institutionId: true, timezone: true }
+    });
+    if (!attendanceBranch) throw notFound("BRANCH_NOT_FOUND");
 
     const existing = await tx.staffProfile.findFirst({
       where: { tenantId: ctx.tenantId, employeeCode: data.employeeCode },
@@ -180,6 +186,17 @@ export async function createStaffProfile(ctx: TenantContext, input: unknown) {
         userId: loginAccount?.user.id
       },
       select: staffProfileSelect
+    });
+    await tx.staffBranchAssignment.create({
+      data: {
+        tenantId: ctx.tenantId,
+        institutionId: attendanceBranch.institutionId,
+        branchId: staffProfile.branchId,
+        staffId: staffProfile.id,
+        effectiveFrom: profileData.joiningDate ?? dateOnlyInTimeZone(new Date(), attendanceBranch.timezone),
+        isPrimary: true,
+        createdById: ctx.userId
+      }
     });
     await reconcileAcademicCalendarForStaffProfile(tx, ctx, staffProfile.id);
     await writeAuditLog({
@@ -589,11 +606,54 @@ export async function updateStaffProfile(ctx: TenantContext, input: unknown) {
       if (duplicatePhone) throw conflict("STAFF_LOGIN_PHONE_EXISTS");
     }
 
+    const attendanceTransferBranch = data.branchId && data.branchId !== before.branchId
+      ? await tx.branch.findFirst({
+          where: { id: nextBranchId, tenantId: ctx.tenantId, status: "ACTIVE" },
+          select: { institutionId: true, timezone: true }
+        })
+      : null;
+    if ((data.branchId && data.branchId !== before.branchId) && !attendanceTransferBranch) {
+      throw notFound("BRANCH_NOT_FOUND");
+    }
+
     const after = await tx.staffProfile.update({
       where: { id: staffId },
       data,
       select: staffProfileSelect
     });
+
+    if (data.branchId && data.branchId !== before.branchId && attendanceTransferBranch) {
+      const effectiveFrom = dateOnlyInTimeZone(new Date(), attendanceTransferBranch.timezone);
+      await tx.staffBranchAssignment.updateMany({
+        where: {
+          tenantId: ctx.tenantId,
+          staffId,
+          effectiveFrom: { lt: effectiveFrom },
+          OR: [{ effectiveTo: null }, { effectiveTo: { gt: effectiveFrom } }]
+        },
+        data: { effectiveTo: effectiveFrom, isPrimary: false }
+      });
+      await tx.staffBranchAssignment.upsert({
+        where: {
+          tenantId_staffId_branchId_effectiveFrom: {
+            tenantId: ctx.tenantId,
+            staffId,
+            branchId: nextBranchId,
+            effectiveFrom
+          }
+        },
+        update: { effectiveTo: null, isPrimary: true },
+        create: {
+          tenantId: ctx.tenantId,
+          institutionId: attendanceTransferBranch.institutionId,
+          branchId: nextBranchId,
+          staffId,
+          effectiveFrom,
+          isPrimary: true,
+          createdById: ctx.userId
+        }
+      });
+    }
 
     if (before.user && linkedUserBranchChanged) {
       const existingBranchAccess = await tx.userBranchAccess.findUnique({

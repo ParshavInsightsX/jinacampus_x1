@@ -20,6 +20,7 @@ const mocks = vi.hoisted(() => {
     passwordCredential: { create: vi.fn() },
     role: { findFirst: vi.fn() },
     session: { updateMany: vi.fn() },
+    staffBranchAssignment: { create: vi.fn(), updateMany: vi.fn(), upsert: vi.fn() },
     staffAttendanceRecord: { createMany: vi.fn(), findMany: vi.fn(), updateMany: vi.fn() },
     staffProfile: {
       findFirst: vi.fn(),

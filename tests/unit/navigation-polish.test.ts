@@ -51,10 +51,12 @@ describe("navigation polish", () => {
 
     expect(staffboardItems).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ title: "Staff Attendance", href: "/staffboard/attendance" }),
-        expect.objectContaining({ title: "QR Console", href: "/staffboard/attendance/qr" }),
-        expect.objectContaining({ title: "Scan QR", href: "/staffboard/attendance/scan" }),
-        expect.objectContaining({ title: "Staff Reports", href: "/staffboard/attendance/reports" })
+        expect.objectContaining({ title: "Attendance Register", href: "/staffboard/attendance" }),
+        expect.objectContaining({ title: "Mark Attendance", href: "/staffboard/attendance/scan" }),
+        expect.objectContaining({ title: "Staff QR Cards", href: "/staffboard/attendance/credentials" }),
+        expect.objectContaining({ title: "Attendance Corrections", href: "/staffboard/attendance/adjustments" }),
+        expect.objectContaining({ title: "My Staff Card", href: "/staffboard/attendance/card" }),
+        expect.objectContaining({ title: "Attendance Reports", href: "/staffboard/attendance/reports" })
       ])
     );
     for (const path of [
@@ -101,7 +103,7 @@ describe("navigation polish", () => {
     const groups = getVisibleNavigationGroups(allPermissionSet());
 
     expect(getActiveNavHref(groups, "/staffboard/attendance")).toBe("/staffboard/attendance");
-    expect(getActiveNavHref(groups, "/staffboard/attendance/qr")).toBe("/staffboard/attendance/qr");
+    expect(getActiveNavHref(groups, "/staffboard/attendance/card")).toBe("/staffboard/attendance/card");
     expect(getActiveNavHref(groups, "/staffboard/attendance/scan")).toBe("/staffboard/attendance/scan");
     expect(getActiveNavHref(groups, "/staffboard/attendance/reports")).toBe("/staffboard/attendance/reports");
     expect(getActiveNavHref(groups, "/staffboard/staff/staff-1/edit")).toBe("/staffboard/staff");
@@ -114,7 +116,7 @@ describe("navigation polish", () => {
 
     expect(
       items.filter((item) => isNavItemActive(item, "/staffboard/attendance/scan", activeHref)).map((item) => item.title)
-    ).toEqual(["Scan QR"]);
+    ).toEqual(["Mark Attendance"]);
   });
 
   it("keeps dashboard quick actions on real MVP routes", () => {
@@ -122,22 +124,24 @@ describe("navigation polish", () => {
       "/academia/students",
       "/academia/attendance/mark",
       "/academia/attendance/reports",
-      "/staffboard/attendance/qr",
+      "/staffboard/attendance/credentials",
+      "/staffboard/attendance/scan",
       "/staffboard/attendance",
       "/staffboard/attendance/reports",
       "/staffboard/staff",
-      "/staffboard/attendance/scan",
+      "/staffboard/attendance/card",
       "/staffboard/attendance/me"
     ]);
     expect(DASHBOARD_QUICK_ACTIONS.map((action) => action.label)).toEqual([
       "Manage Students",
       "Mark Student Attendance",
       "Student Reports",
-      "Generate Staff QR",
-      "Staff Attendance",
-      "Staff Reports",
+      "Staff QR Cards",
+      "Mark Staff Attendance",
+      "Attendance Register",
+      "Attendance Reports",
       "Manage Staff",
-      "Scan QR",
+      "My Staff Card",
       "My Attendance"
     ]);
   });
@@ -151,20 +155,22 @@ describe("navigation polish", () => {
       "academia.attendance.report",
       "staffboard.staff.view",
       "staffboard.attendance.qr.generate",
+      "staffboard.attendance.scan",
+      "staffboard.attendance.credential.manage",
       "staffboard.attendance.view",
       "staffboard.attendance.report",
-      "staffboard.attendance.self_scan"
+      "staffboard.attendance.credential.self_view"
     ]);
     const teacherPermissions = new Set<PermissionCode>([
       "campuscore.tenant.view",
       "academia.attendance.view",
       "academia.attendance.mark",
       "academia.attendance.report",
-      "staffboard.attendance.self_scan"
+      "staffboard.attendance.credential.self_view"
     ]);
     const staffPermissions = new Set<PermissionCode>([
       "campuscore.tenant.view",
-      "staffboard.attendance.self_scan"
+      "staffboard.attendance.credential.self_view"
     ]);
 
     expect(getNavigationAudience(adminPermissions)).toBe("admin");
@@ -174,17 +180,18 @@ describe("navigation polish", () => {
       "Manage Students",
       "Mark Student Attendance",
       "Student Reports",
-      "Generate Staff QR",
-      "Staff Attendance",
-      "Staff Reports",
+      "Staff QR Cards",
+      "Mark Staff Attendance",
+      "Attendance Register",
+      "Attendance Reports",
       "Manage Staff"
     ]);
     expect(getVisibleDashboardQuickActions(teacherPermissions).map((action) => action.label)).toEqual([
       "Mark Student Attendance",
       "Student Reports",
-      "Scan QR"
+      "My Staff Card"
     ]);
-    expect(getVisibleDashboardQuickActions(staffPermissions).map((action) => action.label)).toEqual(["Scan QR"]);
+    expect(getVisibleDashboardQuickActions(staffPermissions).map((action) => action.label)).toEqual(["My Staff Card"]);
   });
 
   it("builds role-focused mobile shortcuts without fake routes", () => {
@@ -193,38 +200,38 @@ describe("navigation polish", () => {
       "academia.attendance.view",
       "academia.attendance.mark",
       "academia.attendance.report",
-      "staffboard.attendance.self_scan"
+      "staffboard.attendance.credential.self_view"
     ]);
     const staffPermissions = new Set<PermissionCode>([
       "campuscore.tenant.view",
-      "staffboard.attendance.self_scan"
+      "staffboard.attendance.credential.self_view"
     ]);
 
     expect(getPrimaryMobileNavigationItems(teacherPermissions).map((item) => item.title)).toEqual([
       "Home",
       "Attendance",
-      "Scan QR",
+      "My Staff Card",
       "Reports"
     ]);
     expect(getPrimaryMobileNavigationItems(staffPermissions).map((item) => item.title)).toEqual([
       "Home",
-      "Scan QR"
+      "My Staff Card"
     ]);
     expect(MOBILE_NAVIGATION_SHORTCUTS.map((item) => item.href)).not.toEqual(
       expect.arrayContaining(["/feedesk"])
     );
   });
 
-  it("filters StaffBoard admin links away from self-scan-only staff", () => {
-    const groups = getVisibleNavigationGroups(new Set<PermissionCode>(["staffboard.attendance.self_scan"]));
+  it("filters StaffBoard admin links away from own-card-only staff", () => {
+    const groups = getVisibleNavigationGroups(new Set<PermissionCode>(["staffboard.attendance.credential.self_view"]));
     const staffboardItems = groups.find((group) => group.title === "StaffBoard Lite")?.items ?? [];
 
     expect(staffboardItems.map((item) => item.href)).toEqual([
       "/staffboard",
-      "/staffboard/attendance/scan"
+      "/staffboard/attendance/card"
     ]);
     expect(staffboardItems.map((item) => item.title)).not.toEqual(
-      expect.arrayContaining(["Staff Attendance", "QR Console", "Staff Reports"])
+      expect.arrayContaining(["Attendance Register", "Staff QR Cards", "Attendance Reports"])
     );
   });
 
@@ -261,15 +268,15 @@ describe("navigation polish", () => {
     ]);
   });
 
-  it("keeps the desktop launcher and mobile drawer scrollable for long role menus", () => {
+  it("keeps the desktop launcher and mobile module sheet scrollable for long role menus", () => {
     const dockSource = readProjectFile("src/components/app-shell/desktop-navigation-dock.tsx");
-    const drawerSource = readProjectFile("src/components/app-shell/mobile-navigation-drawer.tsx");
+    const sheetSource = readProjectFile("src/components/app-shell/mobile-module-sheet.tsx");
     const globalStyles = readProjectFile("src/app/globals.css");
 
     expect(dockSource).toContain('data-desktop-module-launcher="true"');
     expect(dockSource).toContain("max-h-[min(30rem,calc(100vh-14rem))]");
     expect(dockSource).toContain("overflow-y-auto");
-    expect(drawerSource).toContain("min-h-0 flex-1 overflow-y-auto");
+    expect(sheetSource).toContain("min-h-0 flex-1 overflow-y-auto");
     expect(globalStyles).toContain(".premium-nav-scroll");
     expect(globalStyles).toContain("scrollbar-width: thin");
   });
@@ -315,7 +322,8 @@ describe("navigation polish", () => {
       expect.arrayContaining([
         "/campus-core/settings",
         "/campus-core/audit-logs",
-        "/staffboard/attendance/qr",
+        "/staffboard/attendance/credentials",
+        "/staffboard/attendance/card",
         "/staffboard/attendance/scan",
         "/staffboard/attendance/reports"
       ])

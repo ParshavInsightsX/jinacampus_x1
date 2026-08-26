@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { EmptyState, NoResultsState } from "@/components/ui/empty-state";
+import { MobilePageHeader } from "@/components/app-shell/mobile-page-header";
 import {
   ResponsiveTable,
   StatusBadge,
@@ -43,22 +44,25 @@ export async function resolveSearchParam(searchParams?: RouteSearchParams) {
 
 export function PageHeader({ title, description, actionLabel }: PageHeaderProps) {
   return (
-    <div className="premium-glass-panel flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:justify-between sm:p-5">
-      <div className="max-w-3xl">
-        <h1 className="text-2xl font-semibold text-ink">{title}</h1>
-        <p className="mt-1 text-sm leading-6 text-slate-500">{description}</p>
+    <>
+      <MobilePageHeader title={title} description={description} />
+      <div className="premium-glass-panel hidden gap-4 p-5 lg:flex lg:items-start lg:justify-between">
+        <div className="max-w-3xl">
+          <h1 className="text-2xl font-semibold text-ink">{title}</h1>
+          <p className="mt-1 text-sm leading-6 text-slate-500">{description}</p>
+        </div>
+        {actionLabel ? (
+          <button
+            type="button"
+            disabled
+            className="premium-primary-button opacity-70 premium-focus"
+            title="This create workflow is not available on this page yet."
+          >
+            {actionLabel}
+          </button>
+        ) : null}
       </div>
-      {actionLabel ? (
-        <button
-          type="button"
-          disabled
-          className="premium-primary-button w-full opacity-70 sm:w-auto premium-focus"
-          title="This create workflow is not available on this page yet."
-        >
-          {actionLabel}
-        </button>
-      ) : null}
-    </div>
+    </>
   );
 }
 

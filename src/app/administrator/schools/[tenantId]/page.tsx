@@ -59,6 +59,8 @@ export default async function AdministratorSchoolDetailPage({ params }: { params
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <InfoRow label="Support Email" value={school.supportEmail} />
           <InfoRow label="Legal Name" value={school.legalName} />
+          <InfoRow label="Subscription Plan" value={school.commercialAccessSchemaAvailable ? school.subscription?.planCode ?? "Not configured" : "Database update required"} />
+          <InfoRow label="Subscription Status" value={school.commercialAccessSchemaAvailable ? school.subscription?.status ?? "Not configured" : "Setup pending"} />
           <InfoRow label="Created" value={formatDate(school.createdAt)} />
           <InfoRow label="Updated" value={formatDate(school.updatedAt)} />
         </section>
@@ -79,6 +81,12 @@ export default async function AdministratorSchoolDetailPage({ params }: { params
                     </p>
                     <p className="mt-1 text-sm text-slate-500">Code: {institution.code} · Status: {institution.status}</p>
                     <p className="mt-1 text-sm text-slate-500">Logo: {institution.logoUrl ? "Configured" : "Fallback initials"}</p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Attendance: {school.commercialAccessSchemaAvailable ? institution.entitlements.find((entry) => entry.moduleKey === "attendance" && entry.featureKey === "module")?.access ?? "Not configured" : "Setup pending"}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      GradeBook: {school.commercialAccessSchemaAvailable ? institution.entitlements.find((entry) => entry.moduleKey === "gradebook" && entry.featureKey === "module")?.access ?? "Not configured" : "Setup pending"}
+                    </p>
                   </div>
                 </div>
               ))}

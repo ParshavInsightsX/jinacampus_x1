@@ -81,11 +81,12 @@ const actionIconByLabel = {
   "Manage Students": <UsersRound className="h-5 w-5" aria-hidden="true" />,
   "Mark Student Attendance": <ClipboardCheck className="h-5 w-5" aria-hidden="true" />,
   "Student Reports": <BarChart3 className="h-5 w-5" aria-hidden="true" />,
-  "Generate Staff QR": <QrCode className="h-5 w-5" aria-hidden="true" />,
-  "Staff Attendance": <BriefcaseBusiness className="h-5 w-5" aria-hidden="true" />,
-  "Staff Reports": <BarChart3 className="h-5 w-5" aria-hidden="true" />,
   "Manage Staff": <BriefcaseBusiness className="h-5 w-5" aria-hidden="true" />,
-  "Scan QR": <QrCode className="h-5 w-5" aria-hidden="true" />,
+  "Mark Staff Attendance": <QrCode className="h-5 w-5" aria-hidden="true" />,
+  "My Staff Card": <QrCode className="h-5 w-5" aria-hidden="true" />,
+  "Staff QR Cards": <QrCode className="h-5 w-5" aria-hidden="true" />,
+  "Attendance Register": <BriefcaseBusiness className="h-5 w-5" aria-hidden="true" />,
+  "Attendance Reports": <BriefcaseBusiness className="h-5 w-5" aria-hidden="true" />,
   "My Attendance": <ClipboardCheck className="h-5 w-5" aria-hidden="true" />
 } satisfies Partial<Record<DashboardQuickAction["label"], ReactNode>>;
 
@@ -272,7 +273,7 @@ export function MobileDashboard({
               }
             />
           ) : (
-            <MobileEmptyState title="No attendance recorded yet today" description="Use Scan QR when the school displays an active attendance code." />
+            <MobileEmptyState title="No attendance recorded yet today" description="Open My Attendance to review available check-in options." />
           )}
         </section>
       ) : null}

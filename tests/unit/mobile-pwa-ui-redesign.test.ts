@@ -14,24 +14,28 @@ function source(path: string) {
 }
 
 describe("mobile web/PWA UI redesign", () => {
-  it("keeps mobile chrome separate from the desktop-only bottom dock", () => {
+  it("uses a compact mobile command bar, floating dock, and bottom-sheet navigation", () => {
     const layout = source("src/app/(dashboard)/layout.tsx");
     const appChrome = source("src/components/app-shell/app-chrome.tsx");
     const appNavbar = source("src/components/app-shell/app-navbar.tsx");
     const desktopDock = source("src/components/app-shell/desktop-navigation-dock.tsx");
-    const mobileDrawer = source("src/components/app-shell/mobile-navigation-drawer.tsx");
+    const mobileModuleSheet = source("src/components/app-shell/mobile-module-sheet.tsx");
+    const mobileContextSheet = source("src/components/app-shell/mobile-context-sheet.tsx");
     const mobileBottomNav = source("src/components/app-shell/mobile-bottom-nav.tsx");
 
     expect(layout).not.toContain("DesktopShell");
-    expect(layout).toContain("AppChrome");
-    expect(appChrome).toContain("AppNavbar");
-    expect(appChrome).toContain("DesktopNavigationDock");
+    expect(layout).toContain('data-adaptive-app-shell="jinaglass-mobile-1.0"');
+    expect(appChrome).toContain("ConnectivityBanner");
+    expect(appChrome).toContain("MobileModuleSheet");
     expect(appNavbar).toContain('data-app-navbar="true"');
+    expect(appNavbar).toContain("MobileContextSheet");
     expect(desktopDock).toContain("hidden justify-center");
     expect(desktopDock).toContain("lg:flex");
-    expect(mobileDrawer).toContain('data-mobile-navigation-drawer="true"');
-    expect(mobileBottomNav).toContain('data-mobile-navigation="true"');
-    expect(mobileBottomNav).toContain("pb-[env(safe-area-inset-bottom)]");
+    expect(mobileModuleSheet).toContain('data-mobile-module-sheet="true"');
+    expect(mobileContextSheet).toContain('data-mobile-context-overlay="true"');
+    expect(mobileBottomNav).toContain('data-mobile-dock="true"');
+    expect(mobileBottomNav).toContain("pb-[calc(0.5rem+env(safe-area-inset-bottom))]");
+    expect(mobileBottomNav).toContain("data-mobile-dock-field-focused");
   });
 
   it("keeps mobile bottom navigation role and permission aware", () => {
@@ -50,7 +54,7 @@ describe("mobile web/PWA UI redesign", () => {
     ]);
     const staffPermissions = new Set<PermissionCode>([
       "campuscore.tenant.view",
-      "staffboard.attendance.self_scan",
+      "staffboard.attendance.credential.self_view",
       "staffboard.attendance.self_view",
     ]);
     const officePermissions = new Set<PermissionCode>([
@@ -58,7 +62,8 @@ describe("mobile web/PWA UI redesign", () => {
       "staffboard.staff.view",
       "staffboard.attendance.view",
       "staffboard.attendance.report",
-      "staffboard.attendance.self_scan",
+      "staffboard.attendance.scan",
+      "staffboard.attendance.credential.self_view",
       "staffboard.attendance.self_view",
     ]);
 
@@ -78,7 +83,7 @@ describe("mobile web/PWA UI redesign", () => {
     ]);
     expect(getMobileBottomNavigationItems(staffPermissions).map((item) => item.title)).toEqual([
       "Home",
-      "Scan QR",
+      "My Staff Card",
       "My Attendance",
       "Profile",
       "More",
@@ -87,7 +92,7 @@ describe("mobile web/PWA UI redesign", () => {
     expect(getMobileBottomNavigationItems(officePermissions, ["OFFICE_STAFF"]).map((item) => item.title)).toEqual([
       "Home",
       "Attendance",
-      "Scan QR",
+      "Mark Attendance",
       "My Attendance",
       "More",
     ]);
@@ -96,7 +101,7 @@ describe("mobile web/PWA UI redesign", () => {
   it("keeps self-only staff permissions out of branch-wide attendance metrics", () => {
     const selfOnlyPermissions = new Set<PermissionCode>([
       "campuscore.tenant.view",
-      "staffboard.attendance.self_scan",
+      "staffboard.attendance.credential.self_view",
       "staffboard.attendance.self_view",
     ]);
 
@@ -121,37 +126,66 @@ describe("mobile web/PWA UI redesign", () => {
     expect(stickyAction).toContain("env(safe-area-inset-bottom)");
   });
 
-  it("makes the Staff QR scanner page mobile-first while preserving secure server gating", () => {
+  it("makes supervised Staff QR scanning mobile-first while preserving server gating", () => {
     const scanPage = source("src/app/(dashboard)/staffboard/attendance/scan/page.tsx");
-    const scanForm = source("src/modules/staffboard-lite/components/attendance/staff-qr-scan-form.tsx");
+    const operatorScanner = source("src/modules/staffboard-lite/components/attendance/staff-attendance-operator-scanner.tsx");
     const scanner = source("src/modules/staffboard-lite/components/attendance/staff-qr-camera-scanner.tsx");
 
     expect(scanPage).toContain('data-mobile-qr-scan-page="true"');
     expect(scanPage).toContain('data-desktop-qr-scan-page="true"');
-    expect(scanPage).toContain('staffboard.attendance.self_scan');
-    expect(scanPage).toContain('StaffQrScanForm variant="mobile"');
-    expect(scanForm).toContain('variant?: "default" | "mobile"');
+    expect(scanPage).toContain('permissions.has("staffboard.attendance.scan")');
+    expect(scanPage).toContain("StaffAttendanceOperatorScanner");
+    expect(scanPage).toContain("Staff cannot scan their own attendance");
+    expect(operatorScanner).toContain("StaffQrCameraScanner");
+    expect(operatorScanner).toContain("recordSupervisedStaffQrScanAction");
+    expect(operatorScanner).toContain("StaffQrManualTokenInput");
     expect(scanner).toContain('data-qr-scan-frame="true"');
     expect(scanner).toContain("aspect-square");
-    expect(scanner).toContain("Place the live school QR inside the square");
     expect(scanner).toContain("Start Camera");
     expect(scanner).toContain("Upload QR image/photo");
     expect(scanner).toContain("Camera requires a secure HTTPS connection");
   });
 
-  it("uses mobile cards for dense CampusCore lists and avoids sensitive output", () => {
+  it("uses accessible mobile sheets and truthful connectivity states", () => {
+    const moduleSheet = source("src/components/app-shell/mobile-module-sheet.tsx");
+    const contextSheet = source("src/components/app-shell/mobile-context-sheet.tsx");
+    const filterSheet = source("src/components/mobile/mobile-filter-sheet.tsx");
+    const connectivity = source("src/components/app-shell/connectivity-banner.tsx");
+    const combinedSheets = `${moduleSheet}\n${contextSheet}\n${filterSheet}`;
+
+    expect(combinedSheets).toContain('role="dialog"');
+    expect(combinedSheets).toContain('aria-modal="true"');
+    expect(combinedSheets).toContain('event.key === "Escape"');
+    expect(combinedSheets).toContain('event.key !== "Tab"');
+    expect(combinedSheets).toContain('document.body.style.overflow = "hidden"');
+    expect(moduleSheet).toContain("returnFocusRef.current?.focus()");
+    expect(connectivity).toContain('data-connectivity-banner="offline"');
+    expect(connectivity).toContain("Server-verified actions are unavailable");
+    expect(connectivity).not.toMatch(/saved offline|sync later/i);
+  });
+
+  it("uses mobile records for priority directories and attendance reports", () => {
     const combined = [
       source("src/app/(dashboard)/campus-core/users/page.tsx"),
       source("src/app/(dashboard)/campus-core/branches/page.tsx"),
       source("src/app/(dashboard)/campus-core/academic-years/page.tsx"),
-      source("src/components/app-shell/mobile-bottom-nav.tsx"),
-      source("src/modules/dashboard/components/mobile-dashboard.tsx"),
+      source("src/app/(dashboard)/campus-core/institutions/page.tsx"),
+      source("src/app/(dashboard)/campus-core/roles/page.tsx"),
+      source("src/app/(dashboard)/campus-core/audit-logs/page.tsx"),
+      source("src/app/(dashboard)/academia/students/page.tsx"),
+      source("src/app/(dashboard)/staffboard/staff/page.tsx"),
+      source("src/app/(dashboard)/academia/attendance/reports/page.tsx"),
+      source("src/modules/academia/components/attendance/mobile-attendance-report-lists.tsx"),
+      source("src/components/mobile/mobile-data-list.tsx")
     ].join("\n");
 
     expect(combined).toContain('data-mobile-user-cards="true"');
     expect(combined).toContain('data-mobile-branch-cards="true"');
     expect(combined).toContain('data-mobile-academic-year-cards="true"');
+    expect(combined).toContain('data-mobile-data-list="true"');
+    expect(combined).toContain("DailySummaryMobileList");
+    expect(combined).toContain("MonthlyPercentageMobileList");
     expect(combined).toContain("hidden md:block");
-    expect(combined).not.toMatch(/passwordHash|tokenHash|rawToken|FeeDesk|GradeBook|payroll|biometric/i);
+    expect(combined).not.toMatch(/passwordHash|tokenHash|rawToken|FeeDesk|SchoolCast|payroll|biometric/i);
   });
 });

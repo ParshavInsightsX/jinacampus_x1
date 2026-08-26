@@ -8,7 +8,8 @@ import {
   createUserAction,
   removeUserBranchAction,
   removeUserRoleAction,
-  requestPasswordRecoveryAction
+  requestPasswordRecoveryAction,
+  updateAttendanceSettingsAction
 } from "@/modules/campus-core/actions";
 import type { TenantContext } from "@/lib/tenant/context";
 
@@ -24,6 +25,8 @@ const mocks = vi.hoisted(() => {
   const removeUserRoleService = vi.fn();
   const requestPasswordRecoveryService = vi.fn();
   const revalidatePath = vi.fn();
+  const redirect = vi.fn();
+  const updateAttendanceSettingsService = vi.fn();
 
   return {
     adminResetUserPasswordService,
@@ -36,12 +39,15 @@ const mocks = vi.hoisted(() => {
     removeUserBranchService,
     removeUserRoleService,
     requestPasswordRecoveryService,
-    revalidatePath
+    revalidatePath,
+    redirect,
+    updateAttendanceSettingsService
   };
 });
 
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 vi.mock("next/headers", () => ({ headers: mocks.headers }));
+vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 vi.mock("@/lib/tenant/context", () => ({ getTenantContext: mocks.getTenantContext }));
 vi.mock("@/modules/campus-core/services", () => ({
   activateAcademicYearService: vi.fn(),
@@ -57,7 +63,7 @@ vi.mock("@/modules/campus-core/services", () => ({
   removeUserBranchService: mocks.removeUserBranchService,
   removeUserRoleService: mocks.removeUserRoleService,
   requestPasswordRecoveryService: mocks.requestPasswordRecoveryService,
-  updateAttendanceSettingsService: vi.fn(),
+  updateAttendanceSettingsService: mocks.updateAttendanceSettingsService,
   updateBranchService: vi.fn(),
   updateInstitutionService: vi.fn(),
   updateTenantSettingsService: vi.fn(),
@@ -88,6 +94,8 @@ function resetMocks() {
   mocks.removeUserRoleService.mockReset();
   mocks.requestPasswordRecoveryService.mockReset();
   mocks.revalidatePath.mockReset();
+  mocks.redirect.mockReset();
+  mocks.updateAttendanceSettingsService.mockReset();
 }
 
 function userFormData() {
@@ -279,5 +287,38 @@ describe("CampusCore account server actions", () => {
     expect(result.ok).toBe(true);
     expect(result.message).toContain("If this account is eligible for password recovery");
     expect(JSON.stringify(result)).not.toContain("DATABASE_URL");
+  });
+
+  it("attendance settings action returns validation errors without calling tenant or database services", async () => {
+    const formData = new FormData();
+    formData.set("branchId", "00000000-0000-0000-0000-000000000003");
+    formData.set("staffScanSessionValidityMinutes", "1");
+
+    const result = await updateAttendanceSettingsAction({ ok: false }, formData);
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toBe("Review the attendance settings and try again.");
+    expect(result.fieldErrors?.staffScanSessionValidityMinutes).toEqual(expect.any(Array));
+    expect(mocks.getTenantContext).not.toHaveBeenCalled();
+    expect(mocks.updateAttendanceSettingsService).not.toHaveBeenCalled();
+    expect(mocks.redirect).not.toHaveBeenCalled();
+  });
+
+  it("attendance settings action preserves the successful save and redirect flow", async () => {
+    const formData = new FormData();
+    formData.set("branchId", "00000000-0000-0000-0000-000000000003");
+
+    await updateAttendanceSettingsAction({ ok: false }, formData);
+
+    expect(mocks.updateAttendanceSettingsService).toHaveBeenCalledWith(
+      ctx,
+      expect.objectContaining({
+        branchId: "00000000-0000-0000-0000-000000000003",
+        staffScanSessionValidityMinutes: 60,
+        staffQrTokenValiditySeconds: 18000
+      })
+    );
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/campus-core/settings");
+    expect(mocks.redirect).toHaveBeenCalledWith("/campus-core/settings?saved=attendance");
   });
 });

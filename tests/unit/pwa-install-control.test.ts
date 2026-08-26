@@ -39,13 +39,13 @@ describe("authenticated PWA installation control", () => {
     expect(source).not.toMatch(/serviceWorker|tokenHash|tenantId|permissionCodes/i);
   });
 
-  it("exposes the install control from the authenticated mobile navigation drawer", () => {
-    const drawer = readProjectFile("src/components/app-shell/mobile-navigation-drawer.tsx");
-    const navbar = readProjectFile("src/components/app-shell/app-navbar.tsx");
+  it("exposes the install control from the authenticated mobile module sheet", () => {
+    const moduleSheet = readProjectFile("src/components/app-shell/mobile-module-sheet.tsx");
+    const appChrome = readProjectFile("src/components/app-shell/app-chrome.tsx");
 
-    expect(drawer).toContain("PwaInstallControl");
-    expect(drawer).toContain("<PwaInstallControl />");
-    expect(navbar).toContain("PwaInstallProvider");
-    expect(navbar).toContain("<PwaInstallProvider>");
+    expect(moduleSheet).toContain("PwaInstallControl");
+    expect(moduleSheet).toContain("<PwaInstallControl />");
+    expect(appChrome).toContain("PwaInstallProvider");
+    expect(appChrome).toContain("<PwaInstallProvider>");
   });
 });

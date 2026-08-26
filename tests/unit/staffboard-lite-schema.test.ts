@@ -41,8 +41,10 @@ describe("StaffBoard Lite Prisma schema", () => {
       "LATE",
       "HALF_DAY",
       "ON_LEAVE",
+      "OFFICIAL_DUTY",
       "WEEK_OFF",
       "HOLIDAY",
+      "INCOMPLETE",
       "NOT_MARKED"
     ]);
     expect(getEnumValues("StaffAttendanceSource")).toEqual(["QR_SCAN", "MANUAL_ADMIN", "IMPORT", "BIOMETRIC"]);

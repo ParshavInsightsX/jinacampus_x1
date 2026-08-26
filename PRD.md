@@ -681,3 +681,12 @@ JinaCampus includes an authenticated notification inbox backed by PostgreSQL. It
 The notification core is independent from SchoolCast and from external WhatsApp, email, SMS, browser-push, or native-push providers. The browser never supplies tenant or actor authority. Recipient resolution, role scope, branch scope, feature controls, and lifecycle mutations are enforced server-side. Polling is the release baseline; realtime and push remain disabled until separately approved.
 
 See docs/in-app-notification-system.md for the implemented contract and release gates.
+## 15. Institution Entitlements and Subscription Readiness
+
+JinaCampus separates commercial access from user authorization. Institution entitlements determine whether a subscribed capability is available; tenant-scoped RBAC determines which authenticated school users may use that capability. Both controls are enforced on the server.
+
+Current entitlement states are Disabled, View only, and Full access. Subscription lifecycle states cover trial, active, grace period, suspended, cancelled, and expired access. Access changes preserve historical institutional data and audit evidence.
+
+The first supported catalogs are Attendance and GradeBook. Attendance includes student and staff attendance, marking, correction, QR, reports, exception automation, settings, and approval-oriented controls. GradeBook retains its controlled pilot restrictions. Future modules must register code-defined entitlements and adopt the same server enforcement from inception.
+
+This release is billing-provider independent. Provider references, limits, and add-ons are reserved server-side foundations; payments, metering, automatic plan enforcement, and self-service plan changes remain deferred until separately approved. See `docs/institution-entitlements-and-subscriptions.md`.

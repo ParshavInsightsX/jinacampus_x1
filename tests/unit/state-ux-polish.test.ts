@@ -85,8 +85,8 @@ describe("empty loading and error state polish", () => {
     expect(staffReports).toContain("NoResultsState");
     expect(staffAdmin).toContain("NoResultsState");
     expect(studentReports).toContain("No daily attendance found");
-    expect(staffReports).toContain("No monthly staff attendance rows");
-    expect(staffAdmin).toContain("No staff attendance rows found");
+    expect(staffReports).toContain("No monthly attendance records");
+    expect(staffAdmin).toContain("No staff attendance found");
   });
 
   it("uses safe dashboard permission and route error states without a route-group loading trap", () => {

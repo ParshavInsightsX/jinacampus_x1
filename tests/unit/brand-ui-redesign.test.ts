@@ -86,7 +86,7 @@ describe("JinaCampus brand and UI redesign", () => {
     expect(navbar).toContain("<BrandLogo");
     expect(dashboardLayout).not.toContain("DesktopShell");
     expect(dashboardLayout).toContain("getMobileBottomNavigationItems(");
-    expect(dashboardLayout).toContain("{ gradebookEnabled }");
+    expect(dashboardLayout).toContain("const navigationFeatures = { gradebookEnabled, attendance }");
     expect(mobile).toContain("items: readonly MobileBottomNavItem[]");
     expect(mobile).toContain('aria-label="Mobile primary navigation"');
     expect(navigation).toContain("PermissionCode");

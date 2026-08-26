@@ -10,17 +10,19 @@ describe("Prisma runtime database URL", () => {
     const url = new URL(result!);
     expect(url.searchParams.get("pgbouncer")).toBe("true");
     expect(url.searchParams.get("connection_limit")).toBe("3");
+    expect(url.searchParams.get("pool_timeout")).toBe("30");
     expect(url.searchParams.get("sslmode")).toBe("require");
   });
 
   it("preserves explicitly configured pooler values", () => {
     const result = getPrismaRuntimeDatabaseUrl(
-      "postgresql://user:password@pooler.example.com:6543/postgres?pgbouncer=true&connection_limit=3"
+      "postgresql://user:password@pooler.example.com:6543/postgres?pgbouncer=true&connection_limit=3&pool_timeout=20"
     );
 
     const url = new URL(result!);
     expect(url.searchParams.get("pgbouncer")).toBe("true");
     expect(url.searchParams.get("connection_limit")).toBe("3");
+    expect(url.searchParams.get("pool_timeout")).toBe("20");
   });
 
   it("does not alter direct or session-mode connections", () => {

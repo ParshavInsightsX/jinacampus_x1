@@ -6,6 +6,8 @@ export const STAFF_ATTENDANCE_STATUS_OPTIONS = [
   "ON_LEAVE",
   "WEEK_OFF",
   "HOLIDAY",
+  "OFFICIAL_DUTY",
+  "INCOMPLETE",
   "NOT_MARKED"
 ] as const;
 
@@ -16,7 +18,8 @@ export const STAFF_ATTENDANCE_CORRECTION_STATUS_OPTIONS = [
   "HALF_DAY",
   "ON_LEAVE",
   "WEEK_OFF",
-  "HOLIDAY"
+  "HOLIDAY",
+  "OFFICIAL_DUTY"
 ] as const;
 
 export const STAFF_TYPE_FILTER_OPTIONS = [
@@ -33,7 +36,25 @@ export const STAFF_TYPE_FILTER_OPTIONS = [
   "OTHER"
 ] as const;
 
+const STAFF_ATTENDANCE_LABELS: Readonly<Record<string, string>> = {
+  LATE: "Late Arrival",
+  HOLIDAY: "Paid Holiday",
+  WEEK_OFF: "Weekly Off",
+  ON_LEAVE: "On Leave",
+  OFFICIAL_DUTY: "Official Duty",
+  HALF_DAY: "Half Day",
+  NOT_MARKED: "Not Marked",
+  INCOMPLETE: "Incomplete Attendance",
+  SUPERVISED_STATIC_QR: "Staff QR Card",
+  SELF_SERVICE_DYNAMIC_QR: "Self Check-In QR",
+  APPROVED_MANUAL: "Approved Manual Entry",
+  LEAVE_SYNC: "Approved Leave",
+  CALENDAR_SYNC: "School Calendar"
+};
+
 export function formatStaffAttendanceLabel(value: string) {
+  const knownLabel = STAFF_ATTENDANCE_LABELS[value];
+  if (knownLabel) return knownLabel;
   return value
     .split("_")
     .map((part) => {

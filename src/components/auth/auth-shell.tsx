@@ -2,6 +2,7 @@ import Image from "next/image";
 import type { ReactNode } from "react";
 
 import { BrandLogo } from "@/components/brand/brand-logo";
+import { LegalLinks } from "@/components/legal/legal-links";
 import { JINACAMPUS_BRAND } from "@/config/brand";
 
 export type AuthShellVariant = "school" | "attendance" | "administrator" | "recovery";
@@ -85,8 +86,9 @@ export function AuthShell({
           </p>
         </section>
 
-        <div className="auth-panel-enter flex min-w-0 items-center justify-center lg:justify-end">
+        <div className="auth-panel-enter flex min-w-0 flex-col items-center justify-center lg:justify-end">
           {children}
+          <LegalLinks tone="dark" className="mt-4" />
         </div>
       </div>
     </main>

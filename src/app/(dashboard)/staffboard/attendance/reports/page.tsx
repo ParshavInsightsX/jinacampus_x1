@@ -1,7 +1,11 @@
 import Link from "next/link";
-import { forbidden } from "@/lib/errors";
+import { MobilePageHeader } from "@/components/app-shell/mobile-page-header";
+import { PermissionState } from "@/components/ui/empty-state";
 import { safeTimeZone } from "@/lib/dates/time-zone";
 import { requireAuth } from "@/lib/auth/require-auth";
+import { getEffectivePermissions } from "@/lib/rbac/require-permission";
+import { ATTENDANCE_ENTITLEMENT_FEATURES } from "@/modules/campus-core/entitlements/catalog";
+import { requireAttendanceEntitlements } from "@/modules/campus-core/entitlements/service";
 import { StaffAttendanceReportFilters } from "@/modules/staffboard-lite/components/attendance/staff-attendance-report-filters";
 import {
   StaffCorrectionReportTable,
@@ -13,13 +17,12 @@ import {
   monthStartIndiaDateString,
   todayIndiaDateString
 } from "@/modules/staffboard-lite/components/attendance/staff-attendance-report-state";
+import { StaffAttendanceWorkspaceNav } from "@/modules/staffboard-lite/components/attendance/staff-attendance-workspace-nav";
 import { PageHeader, type RouteSearchParams } from "@/modules/staffboard-lite/components/staffboard-page-shell";
 import { getStaffAttendanceReportsPageData } from "@/modules/staffboard-lite/queries";
 import { staffboardRoutes } from "@/modules/staffboard-lite/ui-config";
 
-type StaffAttendanceReportsPageProps = {
-  searchParams?: RouteSearchParams;
-};
+type StaffAttendanceReportsPageProps = { searchParams?: RouteSearchParams };
 
 function searchParamValue(value: string | string[] | undefined) {
   const rawValue = Array.isArray(value) ? value[0] : value;
@@ -48,28 +51,55 @@ async function reportFilters(searchParams: RouteSearchParams | undefined, timeZo
 
 export default async function StaffAttendanceReportsPage({ searchParams }: StaffAttendanceReportsPageProps) {
   const ctx = await requireAuth();
+  await requireAttendanceEntitlements(
+    ctx,
+    [
+      { featureKey: ATTENDANCE_ENTITLEMENT_FEATURES.STAFF_ATTENDANCE, operation: "READ" },
+      { featureKey: ATTENDANCE_ENTITLEMENT_FEATURES.REPORTS, operation: "READ" }
+    ],
+    { branchId: ctx.activeBranchId }
+  );
+  const activePermissions = await getEffectivePermissions({ ctx, branchId: ctx.activeBranchId });
+  if (!activePermissions.has("staffboard.attendance.report")) return <PermissionState />;
   const filters = await reportFilters(searchParams, safeTimeZone(ctx.timeZone));
-  const data = await getStaffAttendanceReportsPageData(ctx, filters);
-  if (!data.selectedBranchId) {
-    throw forbidden("FORBIDDEN_STAFF_ATTENDANCE_REPORT_ACCESS");
+  if (filters.branchId && !ctx.accessibleBranchIds.includes(filters.branchId)) {
+    return <PermissionState />;
   }
-  const timeZone = safeTimeZone(data.branchOptions.find((branch) => branch.id === data.selectedBranchId)?.timezone ?? ctx.timeZone);
+  const data = await getStaffAttendanceReportsPageData(ctx, filters);
+  if (!data.selectedBranchId) return <PermissionState />;
+  const permissions = await getEffectivePermissions({ ctx, branchId: data.selectedBranchId });
+  const timeZone = safeTimeZone(
+    data.branchOptions.find((branch) => branch.id === data.selectedBranchId)?.timezone ?? ctx.timeZone
+  );
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div className="attendance-page-wash space-y-5 rounded-lg p-1 sm:p-2">
+      <div className="lg:hidden">
+        <MobilePageHeader
+          eyebrow="Staff Attendance"
+          title="Attendance Reports"
+          description="Review daily, monthly, late-arrival, half-day, and correction records."
+        />
+      </div>
+      <div className="hidden lg:flex lg:items-start lg:justify-between lg:gap-4">
         <PageHeader
           title="Staff Attendance Reports"
-          description="Review staff attendance, late arrivals, half-days, monthly summaries, and manual corrections."
+          description="Review branch-scoped daily and monthly attendance, working time, exceptions, and approved corrections."
         />
-        <Link
-          href={staffboardRoutes.attendance}
-          className="premium-secondary-button w-full sm:w-auto premium-focus"
-        >
-          Daily Attendance
+        <Link href={staffboardRoutes.attendance} className="premium-secondary-button premium-focus">
+          Attendance Register
         </Link>
       </div>
-
+      <StaffAttendanceWorkspaceNav
+        active="reports"
+        canViewRegister={permissions.has("staffboard.attendance.view")}
+        canScan={permissions.has("staffboard.attendance.scan")}
+        canManageCredentials={permissions.has("staffboard.attendance.credential.manage")}
+        canViewCard={permissions.has("staffboard.attendance.credential.self_view")}
+        canReviewAdjustments={permissions.has("staffboard.attendance.adjustment.approve")}
+        canViewReports
+        canViewMine={permissions.has("staffboard.attendance.self_view")}
+      />
       <StaffAttendanceReportFilters
         branchOptions={data.branchOptions}
         selectedBranchId={data.selectedBranchId}
@@ -83,58 +113,51 @@ export default async function StaffAttendanceReportsPage({ searchParams }: Staff
         month={Number(filters.month)}
         year={Number(filters.year)}
       />
-
       <NamedStaffAttendanceRowsTable
-        title="Daily Staff Attendance"
-        description="Staff attendance records for the selected report date."
-        emptyTitle="No daily staff attendance records"
-        emptyDescription="Check-in, check-out, and manual attendance records for the selected date will appear here."
+        title="Daily Attendance"
+        description="Staff attendance records for the selected date."
+        emptyTitle="No daily attendance records"
+        emptyDescription="Recorded check-in, check-out, approved manual attendance, and leave or calendar statuses will appear here."
         rows={data.dailyRows}
         timeZone={timeZone}
       />
-
       <div className="grid min-w-0 gap-6 xl:grid-cols-2">
         <NamedStaffAttendanceRowsTable
-          title="Teacher Attendance Report"
-          description="Date-range attendance records for teaching staff only."
-          emptyTitle="No teacher attendance records"
+          title="Teaching Staff Attendance"
+          description="Date-range attendance records for teachers."
+          emptyTitle="No teaching staff attendance"
           emptyDescription="Teacher attendance records for the selected date range will appear here."
           rows={data.teacherRows}
           timeZone={timeZone}
         />
-
         <NamedStaffAttendanceRowsTable
-          title="Non-teaching Staff Attendance Report"
-          description="Date-range attendance records for admin, accountant, driver, helper, security, and other non-teaching staff."
-          emptyTitle="No non-teaching staff attendance records"
-          emptyDescription="Non-teaching staff records for the selected date range will appear here."
+          title="Other Staff Attendance"
+          description="Date-range attendance records for non-teaching staff."
+          emptyTitle="No other staff attendance"
+          emptyDescription="Non-teaching staff attendance records for the selected date range will appear here."
           rows={data.nonTeachingRows}
           timeZone={timeZone}
         />
       </div>
-
       <div className="grid min-w-0 gap-6 xl:grid-cols-2">
         <NamedStaffAttendanceRowsTable
           title="Late Arrival Report"
-          description="Staff attendance records marked LATE for the selected date range."
+          description="Attendance records marked Late Arrival in the selected date range."
           emptyTitle="No late arrivals"
-          emptyDescription="Late staff attendance records for the selected filters will appear here."
+          emptyDescription="Late-arrival records for the selected filters will appear here."
           rows={data.lateRows}
           timeZone={timeZone}
         />
-
         <NamedStaffAttendanceRowsTable
-          title="Half-day Report"
-          description="Staff attendance records marked HALF_DAY for the selected date range."
+          title="Half Day Report"
+          description="Attendance records marked Half Day in the selected date range."
           emptyTitle="No half-day records"
-          emptyDescription="Half-day staff attendance records for the selected filters will appear here."
+          emptyDescription="Half-day records for the selected filters will appear here."
           rows={data.halfDayRows}
           timeZone={timeZone}
         />
       </div>
-
       <StaffMonthlySummaryTable rows={data.monthlyRows} />
-
       <StaffCorrectionReportTable rows={data.correctionRows} timeZone={timeZone} />
     </div>
   );

@@ -25,6 +25,12 @@
   --jc-color-error: #c63c4d;
   --jc-color-info: #1769aa;
   --jc-radius-control: 0.5rem;
+  --jc-mobile-dock-clearance: 6.5rem;
+  --jc-surface-glass: rgba(255, 255, 255, 0.78);
+  --jc-surface-overlay: rgba(255, 255, 255, 0.96);
+  --jc-motion-immediate: 100ms;
+  --jc-motion-enter: 280ms;
+  --jc-motion-sheet: 320ms;
   --jc-shadow-surface: 0 6px 18px rgba(11, 22, 56, 0.07);
   --jc-shadow-elevated: 0 14px 32px rgba(11, 22, 56, 0.09);
   --jc-motion-fast: 160ms;
@@ -479,5 +485,619 @@ button { @apply min-h-11 rounded-lg touch-manipulation transition; }
   .desktop-dock-item:hover + .desktop-dock-item,
   .desktop-dock-item:focus-within + .desktop-dock-item {
     transform: none;
+  }
+}
+
+@layer components {
+  .attendance-glass-panel {
+    @apply rounded-lg border border-white/80 bg-white/60 shadow-elevated backdrop-blur-xl;
+    box-shadow:
+      0 18px 44px rgba(11, 22, 56, 0.09),
+      inset 0 1px 0 rgba(255, 255, 255, 0.92);
+  }
+
+  .attendance-glass-bar {
+    @apply rounded-lg border border-white/80 bg-slate-50/60 shadow-soft backdrop-blur-xl;
+    box-shadow:
+      0 10px 28px rgba(11, 22, 56, 0.07),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  }
+
+  .attendance-glass-inset {
+    @apply rounded-lg border border-slate-200/80 bg-white/50;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .attendance-page-wash {
+    background:
+      linear-gradient(145deg, rgba(36, 87, 230, 0.055), rgba(18, 184, 166, 0.035) 46%, rgba(255, 255, 255, 0.18));
+  }
+}
+
+@layer components {
+  .mobile-shell-content,
+  .mobile-shell-footer {
+    padding-bottom: calc(var(--jc-mobile-dock-clearance) + env(safe-area-inset-bottom));
+    scroll-padding-bottom: calc(var(--jc-mobile-dock-clearance) + env(safe-area-inset-bottom));
+  }
+
+  .mobile-dock-surface {
+    border: 1px solid rgba(255, 255, 255, 0.88);
+    border-radius: 1.875rem;
+    background: var(--jc-surface-glass);
+    box-shadow:
+      0 16px 42px rgba(3, 15, 46, 0.18),
+      inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(18px) saturate(1.12);
+    -webkit-backdrop-filter: blur(18px) saturate(1.12);
+    transition:
+      padding var(--jc-motion-standard) var(--jc-ease),
+      background-color var(--jc-motion-standard) var(--jc-ease),
+      box-shadow var(--jc-motion-standard) var(--jc-ease);
+  }
+
+  .mobile-sheet-surface {
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    border-bottom: 0;
+    border-radius: 1.5rem 1.5rem 0 0;
+    background: var(--jc-surface-overlay);
+    box-shadow:
+      0 -16px 56px rgba(3, 15, 46, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(20px) saturate(1.08);
+    -webkit-backdrop-filter: blur(20px) saturate(1.08);
+    animation: jc-mobile-sheet-enter var(--jc-motion-sheet) var(--jc-ease) both;
+  }
+
+  .mobile-content-surface {
+    @apply rounded-lg border border-campus-border bg-white shadow-soft;
+  }
+}
+
+@keyframes jc-mobile-sheet-enter {
+  from {
+    opacity: 0;
+    transform: translateY(1.25rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .mobile-dock-surface,
+  .mobile-sheet-surface {
+    background: #ffffff;
+  }
+}
+
+@media (min-width: 1024px) {
+  .mobile-shell-content,
+  .mobile-shell-footer {
+    scroll-padding-bottom: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-dock-surface {
+    transition: none;
+  }
+
+  .mobile-sheet-surface {
+    animation: none;
+  }
+}
+
+
+@layer components {
+  .identity-card-pair {
+    min-width: 0;
+  }
+
+  .identity-card-side {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 85.6 / 53.98;
+    overflow: hidden;
+    border: 1px solid rgba(148, 163, 184, 0.55);
+    border-radius: 8px;
+    background: #ffffff;
+    color: #0f172a;
+    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.14);
+  }
+
+  .identity-card-brand,
+  .identity-card-back-header {
+    display: flex;
+    min-height: 4.25rem;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: #0f2d64;
+    color: #ffffff;
+  }
+
+  .identity-card-school-name {
+    overflow-wrap: anywhere;
+    font-size: 0.9rem;
+    font-weight: 800;
+    line-height: 1.15;
+  }
+
+  .identity-card-subtitle {
+    margin-top: 0.2rem;
+    color: #bae6fd;
+    font-size: 0.64rem;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .identity-card-body {
+    display: grid;
+    grid-template-columns: minmax(5.5rem, 32%) 1fr;
+    gap: 0.85rem;
+    padding: 0.85rem 1rem 0.6rem;
+  }
+
+  .identity-card-photo {
+    display: flex;
+    aspect-ratio: 3 / 4;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 2px solid #dbeafe;
+    border-radius: 6px;
+    background: #f8fafc;
+  }
+
+  .identity-card-details {
+    display: grid;
+    align-content: start;
+    gap: 0.28rem;
+    min-width: 0;
+  }
+
+  .identity-card-details > div:not(.identity-card-name-row) {
+    display: grid;
+    grid-template-columns: minmax(5rem, 42%) 1fr;
+    gap: 0.35rem;
+    min-width: 0;
+    font-size: 0.67rem;
+    line-height: 1.25;
+  }
+
+  .identity-card-details dt {
+    color: #64748b;
+    font-weight: 650;
+  }
+
+  .identity-card-details dd {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-weight: 750;
+  }
+
+  .identity-card-name-row dd {
+    margin-bottom: 0.3rem;
+    overflow-wrap: anywhere;
+    color: #0f2d64;
+    font-size: 1rem;
+    font-weight: 850;
+    line-height: 1.12;
+  }
+
+  .identity-card-footer {
+    position: absolute;
+    right: 1rem;
+    bottom: 0.65rem;
+    left: 1rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1.15fr;
+    gap: 0.5rem;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 0.45rem;
+  }
+
+  .identity-card-footer div {
+    display: grid;
+    gap: 0.08rem;
+    font-size: 0.58rem;
+  }
+
+  .identity-card-footer span {
+    color: #64748b;
+  }
+
+  .identity-card-footer strong {
+    font-size: 0.61rem;
+  }
+
+  .identity-card-signature {
+    align-content: end;
+    border-top: 1px solid #64748b;
+    padding-top: 0.2rem;
+    text-align: center;
+  }
+
+  .identity-card-back {
+    background: #f8fafc;
+  }
+
+  .identity-card-back-header {
+    min-height: 3.5rem;
+    justify-content: space-between;
+  }
+
+  .identity-card-version {
+    display: inline-flex;
+    min-height: 1.75rem;
+    align-items: center;
+    border: 1px solid rgba(186, 230, 253, 0.55);
+    border-radius: 999px;
+    padding: 0 0.55rem;
+    color: #e0f2fe;
+    font-size: 0.65rem;
+    font-weight: 800;
+  }
+
+  .identity-card-back-body {
+    display: grid;
+    grid-template-columns: minmax(8.5rem, 43%) 1fr;
+    gap: 0.8rem;
+    align-items: center;
+    padding: 0.65rem 0.85rem 1.9rem;
+  }
+
+  .identity-card-qr {
+    display: flex;
+    aspect-ratio: 1;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #ffffff;
+    padding: 0.35rem;
+  }
+
+  .identity-card-qr svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .identity-card-rules {
+    min-width: 0;
+    font-size: 0.61rem;
+    line-height: 1.3;
+  }
+
+  .identity-card-rules ol {
+    margin-top: 0.3rem;
+    list-style: decimal;
+    padding-left: 1rem;
+  }
+
+  .identity-card-rules li + li {
+    margin-top: 0.2rem;
+  }
+
+  .identity-card-contact {
+    position: absolute;
+    right: 0.85rem;
+    bottom: 0.5rem;
+    left: 0.85rem;
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    border-top: 1px solid #cbd5e1;
+    padding-top: 0.32rem;
+    color: #475569;
+    font-size: 0.55rem;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .identity-card-side {
+    aspect-ratio: auto;
+  }
+
+  .identity-card-front,
+  .identity-card-back {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+  }
+
+  .identity-card-brand,
+  .identity-card-back-header {
+    min-height: 0;
+    gap: 0.6rem;
+    padding: 0.65rem 0.75rem;
+  }
+
+  .identity-card-brand > :first-child {
+    width: 2.5rem !important;
+    height: 2.5rem !important;
+  }
+
+  .identity-card-body {
+    grid-template-columns: 4.5rem minmax(0, 1fr);
+    gap: 0.65rem;
+    padding: 0.75rem;
+  }
+
+  .identity-card-photo {
+    width: 4.5rem;
+  }
+
+  .identity-card-details > div:not(.identity-card-name-row) {
+    grid-template-columns: minmax(4.25rem, 42%) minmax(0, 1fr);
+    gap: 0.3rem;
+    font-size: 0.58rem;
+  }
+
+  .identity-card-name-row dd {
+    font-size: 0.9rem;
+  }
+
+  .identity-card-footer {
+    position: static;
+    margin: auto 0.75rem 0.75rem;
+    gap: 0.35rem;
+  }
+
+  .identity-card-back-body {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+
+  .identity-card-qr {
+    width: min(9.5rem, 100%);
+  }
+
+  .identity-card-rules {
+    width: 100%;
+  }
+
+  .identity-card-contact {
+    position: static;
+    flex-wrap: wrap;
+    margin: auto 0.75rem 0.75rem;
+  }
+
+  .student-identity-card-back-body {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .identity-card-print-area,
+  .identity-card-print-area * {
+    visibility: visible !important;
+  }
+
+  .identity-card-print-area {
+    position: absolute !important;
+    inset: 0 auto auto 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+  }
+
+  .identity-card-print-area .identity-card-pair {
+    display: block !important;
+  }
+
+  .identity-card-print-area .identity-card-side {
+    width: 85.6mm !important;
+    height: 53.98mm !important;
+    margin: 0 auto !important;
+    break-after: page;
+    box-shadow: none !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .identity-card-print-area .identity-card-brand,
+  .identity-card-print-area .identity-card-back-header {
+    min-height: 11.5mm;
+    gap: 2mm;
+    padding: 2mm 3mm;
+  }
+
+  .identity-card-print-area .identity-card-brand > :first-child {
+    width: 9.5mm !important;
+    height: 9.5mm !important;
+    border-radius: 2mm;
+    padding: 0.8mm;
+  }
+
+  .identity-card-print-area .identity-card-school-name {
+    font-size: 8pt;
+    line-height: 1.1;
+  }
+
+  .identity-card-print-area .identity-card-subtitle {
+    margin-top: 0.5mm;
+    font-size: 4.8pt;
+  }
+
+  .identity-card-print-area .identity-card-body {
+    grid-template-columns: 18mm minmax(0, 1fr);
+    gap: 2.5mm;
+    padding: 2.2mm 3mm 1.5mm;
+  }
+
+  .identity-card-print-area .identity-card-photo {
+    width: 18mm;
+    border-width: 0.5mm;
+    border-radius: 1.5mm;
+  }
+
+  .identity-card-print-area .identity-card-details {
+    gap: 0.65mm;
+  }
+
+  .identity-card-print-area .identity-card-details > div:not(.identity-card-name-row) {
+    grid-template-columns: 16mm minmax(0, 1fr);
+    gap: 1mm;
+    font-size: 5pt;
+    line-height: 1.15;
+  }
+
+  .identity-card-print-area .identity-card-name-row dd {
+    margin-bottom: 0.6mm;
+    font-size: 8pt;
+    line-height: 1.05;
+  }
+
+  .identity-card-print-area .identity-card-footer {
+    right: 3mm;
+    bottom: 1.8mm;
+    left: 3mm;
+    gap: 1.5mm;
+    padding-top: 0.8mm;
+  }
+
+  .identity-card-print-area .identity-card-footer div {
+    gap: 0.2mm;
+    font-size: 4.4pt;
+  }
+
+  .identity-card-print-area .identity-card-footer strong {
+    font-size: 4.8pt;
+  }
+
+  .identity-card-print-area .identity-card-signature {
+    padding-top: 0.5mm;
+  }
+
+  .identity-card-print-area .identity-card-back-header {
+    min-height: 10mm;
+  }
+
+  .identity-card-print-area .identity-card-version {
+    min-height: 5mm;
+    padding: 0 1.5mm;
+    font-size: 4.8pt;
+  }
+
+  .identity-card-print-area .identity-card-back-body {
+    grid-template-columns: 29mm minmax(0, 1fr);
+    gap: 2.5mm;
+    padding: 2mm 3mm 7mm;
+  }
+
+  .identity-card-print-area .identity-card-qr {
+    width: 29mm;
+    border-radius: 1.5mm;
+    padding: 1mm;
+  }
+
+  .identity-card-print-area .identity-card-rules {
+    font-size: 4.7pt;
+    line-height: 1.22;
+  }
+
+  .identity-card-print-area .identity-card-rules ol {
+    margin-top: 0.8mm;
+    padding-left: 3.5mm;
+  }
+
+  .identity-card-print-area .identity-card-rules li + li {
+    margin-top: 0.5mm;
+  }
+
+  .identity-card-print-area .identity-card-contact {
+    right: 3mm;
+    bottom: 1.5mm;
+    left: 3mm;
+    gap: 1.5mm;
+    padding-top: 0.8mm;
+    font-size: 4.2pt;
+  }
+
+  .identity-card-print-area .student-identity-card-back-body {
+    gap: 2.5mm;
+    padding: 2.5mm 3mm 7mm;
+  }
+
+  .identity-card-print-area .student-identity-card-back-body dl {
+    gap: 1.2mm;
+  }
+
+  .identity-card-print-area .student-identity-card-back-body dt {
+    font-size: 4.4pt;
+  }
+
+  .identity-card-print-area .student-identity-card-back-body dd {
+    font-size: 5pt;
+    line-height: 1.15;
+  }
+  .identity-card-print-area .identity-card-side:last-child {
+    break-after: auto;
+  }
+
+  .identity-card-digital-only,
+  .identity-card-digital-only * {
+    display: none !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}
+
+
+@layer components {
+  .student-identity-card-back-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+    gap: 0.9rem;
+    padding: 0.9rem 1rem 1.9rem;
+  }
+
+  .student-identity-card-back-body dl {
+    display: grid;
+    align-content: start;
+    gap: 0.55rem;
+  }
+
+  .student-identity-card-back-body dl > div {
+    display: grid;
+    gap: 0.1rem;
+    min-width: 0;
+  }
+
+  .student-identity-card-back-body dt {
+    color: #64748b;
+    font-size: 0.58rem;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .student-identity-card-back-body dd {
+    overflow-wrap: anywhere;
+    color: #0f172a;
+    font-size: 0.68rem;
+    font-weight: 750;
+    line-height: 1.25;
   }
 }

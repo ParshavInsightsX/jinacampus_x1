@@ -88,9 +88,7 @@ export function ResponsiveTable({
 }: ResponsiveTableProps) {
   return (
     <div className="premium-card motion-slide-up min-w-0 overflow-hidden">
-      <div className="border-b border-campus-border bg-surface-muted px-4 py-2 text-xs font-medium text-slate-500 md:hidden">
-        Scroll sideways to view all columns.
-      </div>
+
       <div className="max-w-full overflow-x-auto overscroll-x-contain" data-mobile-table-shell="true" data-responsive-table="true" tabIndex={0}>
         <table className={`w-full ${minWidthClass} text-left text-sm`}>
           {caption ? <caption className="sr-only">{caption}</caption> : null}

@@ -418,7 +418,7 @@ export async function createStudentAction(
         fatherOccupation: stringValue(formData, "fatherOccupation"),
         motherName: requiredStringValue(formData, "motherName"),
         guardianName: stringValue(formData, "guardianName"),
-        aadhaarNumber: requiredStringValue(formData, "aadhaarNumber"),
+        aadhaarNumber: stringValue(formData, "aadhaarNumber"),
         familyIdNumber: stringValue(formData, "familyIdNumber"),
         sssmIdNumber: stringValue(formData, "sssmIdNumber"),
         apaarIdNumber: stringValue(formData, "apaarIdNumber"),

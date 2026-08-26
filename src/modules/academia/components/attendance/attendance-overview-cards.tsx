@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, CalendarCheck2, ClipboardCheck, FileText, LockKeyhole } from "lucide-react";
+import { AlertTriangle, CalendarCheck2, ClipboardCheck, FileText, LockKeyhole, UsersRound } from "lucide-react";
 import { academiaAttendanceRoutes } from "@/modules/academia/ui-config";
 
 export const attendanceOverviewItems = [
@@ -8,6 +8,12 @@ export const attendanceOverviewItems = [
     description: "Open the daily full-day class-section attendance workflow.",
     href: academiaAttendanceRoutes.mark,
     icon: ClipboardCheck
+  },
+  {
+    title: "Attendance Coverage",
+    description: "Assign temporary attendance duty and review classes that still need coverage.",
+    href: academiaAttendanceRoutes.coverage,
+    icon: UsersRound
   },
   {
     title: "Today's Attendance Status",

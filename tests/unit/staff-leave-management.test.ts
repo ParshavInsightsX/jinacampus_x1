@@ -116,7 +116,7 @@ describe("Staff Leave management", () => {
     const schema = source("prisma/schema.prisma");
     const service = source("src/modules/staffboard-lite/services/staff-leave.service.ts");
     const documentService = source("src/modules/staffboard-lite/services/staff-leave-document.service.ts");
-    const qrService = source("src/modules/staffboard-lite/services/staff-qr.service.ts");
+    const scannerService = source("src/modules/staffboard-lite/services/staff-attendance-scanner.service.ts");
     const correctionService = source("src/modules/staffboard-lite/services/staff-attendance.service.ts");
 
     expect(schema).toContain("model StaffLeaveApplication");
@@ -133,7 +133,7 @@ describe("Staff Leave management", () => {
     expect(documentService).toContain("createSignedUrl");
     expect(documentService).toContain("hasPrincipalRole");
     expect(documentService).toContain("staffLeaveApprover.findFirst");
-    expect(qrService).toContain("STAFF_ON_APPROVED_LEAVE");
+    expect(scannerService).toContain("STAFF_ATTENDANCE_MANAGED_BY_LEAVE");
     expect(correctionService).toContain("STAFF_ATTENDANCE_MANAGED_BY_LEAVE");
   });
 

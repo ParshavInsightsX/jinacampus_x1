@@ -49,21 +49,21 @@ describe("StaffBoard Lite attendance reports UI", () => {
 
     for (const column of [
       "Date",
-      "Employee Code",
-      "Staff Name",
-      "Staff Type",
+      "Employee",
+      "Staff Member",
+      "Category",
       "Department",
       "Status",
-      "Check-in",
-      "Check-out",
-      "Working Minutes",
+      "Check-In",
+      "Check-Out",
+      "Working Time",
       "Source",
-      "Correction Reason"
+      "Correction Note"
     ]) {
       expect(tableSource).toContain(column);
     }
-    expect(tableSource).toContain("Monthly Staff Attendance Summary");
-    expect(tableSource).toContain("Manual Correction Report");
+    expect(tableSource).toContain("Monthly Attendance Report");
+    expect(tableSource).toContain("Attendance Correction History");
     expect(tableSource).toContain("NoResultsState");
   });
 

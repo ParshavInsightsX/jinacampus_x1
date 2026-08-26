@@ -23,7 +23,7 @@ describe("StaffBoard Lite attendance admin UI", () => {
     expect(routeSource).toContain("StaffAttendanceFilters");
     expect(routeSource).toContain("StaffAttendanceSummaryCards");
     expect(routeSource).toContain("StaffAttendanceTable");
-    expect(routeSource).toContain("staffboard.attendance.correct");
+    expect(routeSource).toContain("staffboard.attendance.adjustment.request");
     expect(routeSource).toContain("PermissionState");
     expect(routeSource).not.toContain("FORBIDDEN_STAFF_ATTENDANCE_ACCESS");
     expect(routeSource).not.toContain("StaffboardComingSoon");
@@ -50,7 +50,7 @@ describe("StaffBoard Lite attendance admin UI", () => {
     expect(summarySource).toContain("Late");
     expect(summarySource).toContain("Half Day");
     expect(summarySource).toContain("Absent / Not Marked");
-    expect(summarySource).toContain("On Leave / Holiday");
+    expect(summarySource).toContain("On Leave / Paid Holiday");
   });
 
   it("renders table columns and permission-gated correction behavior", () => {
@@ -64,29 +64,27 @@ describe("StaffBoard Lite attendance admin UI", () => {
     );
 
     for (const column of [
-      "Employee Code",
-      "Staff Name",
-      "Staff Type",
-      "Department",
+      "Employee",
+      "Staff Member",
+      "Category",
       "Status",
-      "Check-in Time",
-      "Check-out Time",
-      "Working Minutes",
-      "Source",
-      "Correction Reason",
+      "Check-In",
+      "Check-Out",
+      "Working Time",
+      "Review",
       "Actions"
     ]) {
       expect(tableSource).toContain(column);
     }
     expect(tableSource).toContain("canCorrect");
-    expect(tableSource).toContain("View only");
-    expect(tableSource).toContain("No record yet");
+    expect(tableSource).toContain("View Only");
+    expect(tableSource).toContain("Use Manual Entry");
     expect(tableSource).toContain("selectedDate");
     expect(tableSource).toContain("employeeCode={row.employeeCode}");
     expect(tableSource).toContain("staffName={row.staffName}");
     expect(tableSource).toContain("workingMinutes={row.workingMinutes}");
     expect(tableSource).toContain("correctionReason={row.correctionReason}");
-    expect(correctionSource).toContain("correctStaffAttendanceAction");
+    expect(correctionSource).toContain("requestStaffAttendanceAdjustmentAction");
     expect(correctionSource).toContain("Correction reason");
   });
 
@@ -97,24 +95,23 @@ describe("StaffBoard Lite attendance admin UI", () => {
     );
 
     for (const label of [
-      "Employee",
-      "Date",
-      "Current status",
-      "Check-in",
-      "Check-out",
-      "Working minutes",
-      "Existing reason",
-      "Status",
+      "Staff",
+      "Date and Status",
+      "Recorded Time",
+      "Previous Note",
+      "Requested change",
+      "Attendance time",
+      "Reason category",
       "Correction reason"
     ]) {
       expect(correctionSource).toContain(label);
     }
 
     expect(correctionSource).toContain('type="datetime-local"');
-    expect(correctionSource).toContain("Corrections are audit logged and should be used only after verification.");
-    expect(correctionSource).toContain("Save correction");
-    expect(correctionSource).toContain("Cancel");
-    expect(correctionSource).toContain("Saving...");
+    expect(correctionSource).toContain("Your request will not change attendance until another authorised user verifies and approves it.");
+    expect(correctionSource).toContain("Send for Approval");
+    expect(correctionSource).toContain("Request Correction");
+    expect(correctionSource).toContain("Sending...");
   });
 
   it("keeps NOT_MARKED visible for filtering but unavailable for correction submission", () => {
@@ -137,7 +134,7 @@ describe("StaffBoard Lite attendance admin UI", () => {
   });
 
   it("maps correction UI errors safely", () => {
-    expect(staffAttendanceCorrectionErrorMessage("FORBIDDEN", "FORBIDDEN_PERMISSION:staffboard.attendance.correct")).toContain("permission");
+    expect(staffAttendanceCorrectionErrorMessage("FORBIDDEN", "FORBIDDEN_PERMISSION:staffboard.attendance.adjustment.request")).toContain("permission");
     expect(staffAttendanceCorrectionErrorMessage("STAFF_ATTENDANCE_RECORD_NOT_FOUND", "tenantId tokenHash")).not.toMatch(/tenantId|tokenHash/);
     expect(staffAttendanceCorrectionErrorMessage("STAFF_ATTENDANCE_CHECK_OUT_BEFORE_CHECK_IN", "raw")).toBe(
       "Check-out time must be after check-in time."

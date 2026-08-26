@@ -11,6 +11,9 @@ import {
 import { writeAuditLog } from "@/lib/audit/audit-log";
 import { CAMPUS_CORE_AUDIT_EVENTS } from "@/modules/campus-core/audit-events";
 import { ensureAttendanceNotificationTemplates } from "@/modules/notifications/services/notification-template.service";
+import { ATTENDANCE_ENTITLEMENT_FEATURES } from "@/modules/campus-core/entitlements/catalog";
+import { requireAttendanceEntitlements } from "@/modules/campus-core/entitlements/service";
+import { initializeInstitutionCommercialAccess } from "@/modules/campus-core/entitlements/provisioning";
 import { requestPrincipalPasswordRecovery } from "@/modules/campus-core/principal-password-recovery.service";
 import { ensureTenantSettingsRow } from "@/modules/campus-core/services/tenant-settings-compat";
 import type {
@@ -201,6 +204,10 @@ export async function createInstitutionService(ctx: TenantContext, input: z.infe
         country: input.country,
         createdById: ctx.userId
       }
+    });
+    await initializeInstitutionCommercialAccess(tx, {
+      tenantId: ctx.tenantId,
+      institutionId: institution.id
     });
     await writeAuditLog({ ctx, action: CAMPUS_CORE_AUDIT_EVENTS.INSTITUTION_CREATED, entityType: "Institution", entityId: institution.id, after: institution }, tx);
     return institution;
@@ -937,6 +944,9 @@ export async function updateTenantSettingsService(ctx: TenantContext, input: z.i
 
 export async function updateAttendanceSettingsService(ctx: TenantContext, input: z.infer<typeof updateAttendanceSettingsSchema>) {
   await requirePermission({ ctx, permission: "campuscore.settings.manage", branchId: input.branchId });
+  await requireAttendanceEntitlements(ctx, [
+    { featureKey: ATTENDANCE_ENTITLEMENT_FEATURES.SETTINGS, operation: "WRITE" }
+  ], { branchId: input.branchId });
   const existingNotificationSettings = await db.attendanceSetting.findFirst({
     where: { tenantId: ctx.tenantId, branchId: input.branchId },
     select: {

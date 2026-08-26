@@ -17,6 +17,8 @@ import {
   type RouteSearchParams
 } from "@/modules/academia/components/academia-page-shell";
 import { EmptyState, ErrorState, NoResultsState, PermissionState, PrerequisiteState } from "@/components/ui/empty-state";
+import { MobileDataList, MobileDataRow } from "@/components/mobile/mobile-data-list";
+import { MobileFilterSheet } from "@/components/mobile/mobile-filter-sheet";
 
 type BranchOption = {
   id: string;
@@ -53,6 +55,17 @@ async function resolveStudentFilters(searchParams?: RouteSearchParams): Promise<
   };
 }
 
+function studentInitials(value: string) {
+  const initials = value
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part.charAt(0))
+    .join("")
+    .toUpperCase();
+  return initials || "ST";
+}
+
 function StudentsFilterBar({
   branchOptions,
   classSectionOptions,
@@ -67,65 +80,72 @@ function StudentsFilterBar({
   const searchId = "students-search";
   const branchId = selectedBranchId ?? "";
   const selectedStatus = filters.status ?? "ACTIVE";
+  const activeFilterCount = [
+    filters.search,
+    filters.classSectionId,
+    selectedStatus !== "ACTIVE" ? selectedStatus : undefined
+  ].filter(Boolean).length;
 
   return (
-    <form method="get" role="search" aria-label="Filter students" className="premium-card p-3">
-      <div className="grid gap-3 md:grid-cols-4 md:items-end">
-        <div>
-          <label htmlFor="students-branch-filter" className="text-sm font-medium text-slate-700">
-            Branch
-          </label>
-          <select id="students-branch-filter" name="branchId" defaultValue={branchId} disabled={!branchOptions.length} className="mt-2 min-h-11 w-full min-w-0">
-            {!branchOptions.length ? <option value="">No branch access</option> : null}
-            {branchOptions.map((branch) => (
-              <option key={branch.id} value={branch.id}>{branch.name}</option>
-            ))}
-          </select>
+    <MobileFilterSheet title="Student filters" activeCount={activeFilterCount}>
+      <form method="get" role="search" aria-label="Filter students" className="premium-card p-3">
+        <div className="grid gap-3 md:grid-cols-4 md:items-end">
+          <div>
+            <label htmlFor="students-branch-filter" className="text-sm font-medium text-slate-700">
+              Branch
+            </label>
+            <select id="students-branch-filter" name="branchId" defaultValue={branchId} disabled={!branchOptions.length} className="mt-2 min-h-11 w-full min-w-0">
+              {!branchOptions.length ? <option value="">No branch access</option> : null}
+              {branchOptions.map((branch) => (
+                <option key={branch.id} value={branch.id}>{branch.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="students-class-section-filter" className="text-sm font-medium text-slate-700">
+              Class Section
+            </label>
+            <select id="students-class-section-filter" name="classSectionId" defaultValue={filters.classSectionId ?? ""} disabled={!classSectionOptions.length} className="mt-2 min-h-11 w-full min-w-0">
+              <option value="">{classSectionOptions.length ? "All active class sections" : "No class sections available"}</option>
+              {classSectionOptions.map((classSection) => (
+                <option key={classSection.id} value={classSection.id}>{classSection.displayName}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="students-status-filter" className="text-sm font-medium text-slate-700">
+              Status
+            </label>
+            <select id="students-status-filter" name="status" defaultValue={selectedStatus} className="mt-2 min-h-11 w-full min-w-0">
+              {studentStatusOptions.map((status) => (
+                <option key={status.value} value={status.value}>{status.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor={searchId} className="text-sm font-medium text-slate-700">
+              Search Students
+            </label>
+            <input
+              id={searchId}
+              name="search"
+              type="search"
+              defaultValue={filters.search}
+              placeholder="Name or admission number"
+              className="mt-2 min-h-11 w-full min-w-0"
+            />
+          </div>
         </div>
-        <div>
-          <label htmlFor="students-class-section-filter" className="text-sm font-medium text-slate-700">
-            Class Section
-          </label>
-          <select id="students-class-section-filter" name="classSectionId" defaultValue={filters.classSectionId ?? ""} disabled={!classSectionOptions.length} className="mt-2 min-h-11 w-full min-w-0">
-            <option value="">{classSectionOptions.length ? "All active class sections" : "No class sections available"}</option>
-            {classSectionOptions.map((classSection) => (
-              <option key={classSection.id} value={classSection.id}>{classSection.displayName}</option>
-            ))}
-          </select>
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:justify-end">
+          <button type="submit" className="premium-primary-button">
+            Apply Filters
+          </button>
+          <Link href="/academia/students" className="premium-secondary-button">
+            Clear filters
+          </Link>
         </div>
-        <div>
-          <label htmlFor="students-status-filter" className="text-sm font-medium text-slate-700">
-            Status
-          </label>
-          <select id="students-status-filter" name="status" defaultValue={selectedStatus} className="mt-2 min-h-11 w-full min-w-0">
-            {studentStatusOptions.map((status) => (
-              <option key={status.value} value={status.value}>{status.label}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label htmlFor={searchId} className="text-sm font-medium text-slate-700">
-            Search Students
-          </label>
-          <input
-            id={searchId}
-            name="search"
-            type="search"
-            defaultValue={filters.search}
-            placeholder="Search by name or admission no."
-            className="mt-2 min-h-11 w-full min-w-0"
-          />
-        </div>
-      </div>
-      <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:justify-end">
-        <button type="submit" className="premium-primary-button">
-          Apply Filters
-        </button>
-        <Link href="/academia/students" className="premium-secondary-button">
-          Clear filters
-        </Link>
-      </div>
-    </form>
+      </form>
+    </MobileFilterSheet>
   );
 }
 
@@ -172,10 +192,10 @@ export default async function StudentsPage({ searchParams }: { searchParams?: Ro
   return (
     <div className="space-y-6">
       <PageHeader title={config.title} description={config.description} />
-      <div className="flex flex-col justify-end gap-2 sm:flex-row">
-          <Link href="/academia/students/bulk" className="premium-secondary-button w-full sm:w-auto">
-            Import / Export
-          </Link>
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:justify-end">
+        <Link href="/academia/students/bulk" className="premium-secondary-button w-full sm:w-auto">
+          Import / Export
+        </Link>
         {canCreateStudents ? (
           <Link href="/academia/students/create" className="premium-primary-button w-full sm:w-auto">
             Register Student
@@ -189,72 +209,82 @@ export default async function StudentsPage({ searchParams }: { searchParams?: Ro
         selectedBranchId={selectedBranchId}
       />
       {students.length ? (
-        <TableShell columns={studentColumns}>
-          {students.map((student) => (
-            <tr key={student.id}>
-              <td className="whitespace-nowrap px-4 py-3 font-medium text-slate-900">{student.admissionNumber}</td>
-              <td className="whitespace-nowrap px-4 py-3">{student.displayName}</td>
-              <td className="whitespace-nowrap px-4 py-3">{student.currentClassSection}</td>
-              <td className="whitespace-nowrap px-4 py-3">{student.guardianContact ?? "-"}</td>
-              <td className="whitespace-nowrap px-4 py-3">{student.category ?? "-"}</td>
-              <td className="whitespace-nowrap px-4 py-3"><ProfileReadinessPill value={student.profileStatus} /></td>
-              <td className="whitespace-nowrap px-4 py-3"><StatusPill value={student.status} /></td>
-              <td className="whitespace-nowrap px-4 py-3">
-                <div className="flex flex-wrap gap-2">
-                  <TableActionLink
-                    href={`/academia/students/${student.id}`}
-                    ariaLabel={`View student ${student.displayName ?? student.admissionNumber}`}
-                  >
-                    View
-                  </TableActionLink>
-                  {canUpdateStudents ? (
-                  <TableActionLink
-                    href={`/academia/students/${student.id}/edit`}
-                    ariaLabel={`Edit student ${student.displayName ?? student.admissionNumber}`}
-                  >
-                    Edit
-                  </TableActionLink>
-                  ) : null}
-                </div>
-              </td>
-            </tr>
-          ))}
-        </TableShell>
+        <>
+          <MobileDataList label="Students" className="motion-slide-up">
+            {students.map((student) => (
+              <MobileDataRow
+                key={student.id}
+                title={student.displayName}
+                subtitle={`${student.admissionNumber} · ${student.currentClassSection}`}
+                leading={(
+                  <span className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-50 text-xs font-bold text-brand-700">
+                    {studentInitials(student.displayName)}
+                  </span>
+                )}
+                status={<StatusPill value={student.status} />}
+                details={[
+                  { label: "Class section", value: student.currentClassSection },
+                  { label: "Guardian contact", value: student.guardianContact ?? "Not added" },
+                  { label: "Category", value: student.category ?? "Not added" },
+                  { label: "Profile", value: <ProfileReadinessPill value={student.profileStatus} /> }
+                ]}
+                actions={(
+                  <>
+                    <TableActionLink href={`/academia/students/${student.id}`} ariaLabel={`View student ${student.displayName ?? student.admissionNumber}`}>
+                      View
+                    </TableActionLink>
+                    {canUpdateStudents ? (
+                      <TableActionLink href={`/academia/students/${student.id}/edit`} ariaLabel={`Edit student ${student.displayName ?? student.admissionNumber}`}>
+                        Edit
+                      </TableActionLink>
+                    ) : null}
+                  </>
+                )}
+              />
+            ))}
+          </MobileDataList>
+          <div className="hidden md:block">
+            <TableShell columns={studentColumns}>
+              {students.map((student) => (
+                <tr key={student.id}>
+                  <td className="whitespace-nowrap px-4 py-3 font-medium text-slate-900">{student.admissionNumber}</td>
+                  <td className="whitespace-nowrap px-4 py-3">{student.displayName}</td>
+                  <td className="whitespace-nowrap px-4 py-3">{student.currentClassSection}</td>
+                  <td className="whitespace-nowrap px-4 py-3">{student.guardianContact ?? "-"}</td>
+                  <td className="whitespace-nowrap px-4 py-3">{student.category ?? "-"}</td>
+                  <td className="whitespace-nowrap px-4 py-3"><ProfileReadinessPill value={student.profileStatus} /></td>
+                  <td className="whitespace-nowrap px-4 py-3"><StatusPill value={student.status} /></td>
+                  <td className="whitespace-nowrap px-4 py-3">
+                    <div className="flex flex-wrap gap-2">
+                      <TableActionLink href={`/academia/students/${student.id}`} ariaLabel={`View student ${student.displayName ?? student.admissionNumber}`}>
+                        View
+                      </TableActionLink>
+                      {canUpdateStudents ? (
+                        <TableActionLink href={`/academia/students/${student.id}/edit`} ariaLabel={`Edit student ${student.displayName ?? student.admissionNumber}`}>
+                          Edit
+                        </TableActionLink>
+                      ) : null}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </TableShell>
+          </div>
+        </>
       ) : !branchOptions.length ? (
-        <PrerequisiteState
-          title="No branch access"
-          description="Ask an administrator to assign branch access before viewing class-wise student details."
-        />
+        <PrerequisiteState title="No branch access" description="Ask an administrator to assign branch access before viewing class-wise student details." />
       ) : !ctx.activeAcademicYearId ? (
-        <PrerequisiteState
-          title="No active academic year"
-          description="Set an active academic year before viewing class-wise student details."
-        />
+        <PrerequisiteState title="No active academic year" description="Set an active academic year before viewing class-wise student details." />
       ) : !classSectionOptions.length ? (
-        <PrerequisiteState
-          title="No class sections available"
-          description="Create class sections for the active academic year before viewing class-wise student details."
-        />
+        <PrerequisiteState title="No class sections available" description="Create class sections for the active academic year before viewing class-wise student details." />
       ) : !selectedClassSectionExists ? (
-        <PrerequisiteState
-          title="Selected class-section is not available"
-          description="Choose an active class-section from the filter list."
-        />
+        <PrerequisiteState title="Selected class-section is not available" description="Choose an active class-section from the filter list." />
       ) : filters.search ? (
-        <NoResultsState
-          title="No students match your filters"
-          description="Try a different name, admission number, status, or class-section."
-        />
+        <NoResultsState title="No students match your filters" description="Try a different name, admission number, status, or class-section." />
       ) : filters.classSectionId ? (
-        <NoResultsState
-          title="No students are enrolled in this class-section yet"
-          description="Enroll active students in this class-section for the active academic year, then return to this page."
-        />
+        <NoResultsState title="No students are enrolled in this class-section yet" description="Enroll active students in this class-section for the active academic year, then return to this page." />
       ) : (
-        <EmptyState
-          title="No active student enrollments found"
-          description="Create student profiles and active enrollments before viewing class-wise student details."
-        />
+        <EmptyState title="No active student enrollments found" description="Create student profiles and active enrollments before viewing class-wise student details." />
       )}
     </div>
   );

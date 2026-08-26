@@ -63,17 +63,15 @@ export function getAvailableSchoolWorkspaces(
 
   if (
     hasAnyPermission(permissions, [
-      "staffboard.attendance.self_scan",
+      "staffboard.attendance.credential.self_view",
       "staffboard.attendance.self_view"
     ])
   ) {
     workspaces.push({
       id: "self-attendance",
       title: "My Attendance",
-      description: "Scan the school QR or review your own attendance record.",
-      href: permissions.has("staffboard.attendance.self_scan")
-        ? "/staffboard/attendance/scan"
-        : "/staffboard/attendance/me"
+      description: "Review your own attendance record and display your supervised attendance card.",
+      href: "/staffboard/attendance/me"
     });
   }
 

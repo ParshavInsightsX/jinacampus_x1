@@ -5,6 +5,8 @@ import {
   SCHOOL_OPERATIONAL_ROLE_CODES
 } from "@/lib/rbac/roles";
 import type { TenantContext } from "@/lib/tenant/context";
+import { ATTENDANCE_ENTITLEMENT_FEATURES } from "@/modules/campus-core/entitlements/catalog";
+import { requireAttendanceEntitlements } from "@/modules/campus-core/entitlements/service";
 
 const defaultListTake = 100;
 
@@ -333,6 +335,9 @@ export async function getTenantSettings(ctx: TenantContext) {
 export async function listAttendanceSettings(ctx: TenantContext) {
   await requirePermission({ ctx, permission: "campuscore.settings.manage" });
   if (!hasBranchScope(ctx)) return [];
+  await requireAttendanceEntitlements(ctx, [
+    { featureKey: ATTENDANCE_ENTITLEMENT_FEATURES.SETTINGS, operation: "READ" }
+  ], { branchId: ctx.activeBranchId });
 
   return db.attendanceSetting.findMany({
     where: {
@@ -350,6 +355,12 @@ export async function listAttendanceSettings(ctx: TenantContext) {
       studentAttendanceNotificationMode: true,
       minimumAttendancePercentage: true,
       staffQrAttendanceEnabled: true,
+      staffAttendanceCaptureMode: true,
+      staffSelfScanEnabled: true,
+      staffManualAttendanceEnabled: true,
+      staffCorrectionApprovalRequired: true,
+      staffScanSessionValidityMinutes: true,
+      staffCredentialValidityDays: true,
       staffCheckInStartTime: true,
       staffLateAfterTime: true,
       staffHalfDayBeforeMinutes: true,
@@ -370,6 +381,9 @@ export async function listAttendanceSettings(ctx: TenantContext) {
 
 export async function getAttendanceNotificationStatus(ctx: TenantContext) {
   await requirePermission({ ctx, permission: "campuscore.settings.manage" });
+  await requireAttendanceEntitlements(ctx, [
+    { featureKey: ATTENDANCE_ENTITLEMENT_FEATURES.SETTINGS, operation: "READ" }
+  ], { branchId: ctx.activeBranchId });
   const scopedBranches = ctx.accessibleBranchIds;
 
   const [integrations, templates] = await Promise.all([

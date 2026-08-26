@@ -228,7 +228,7 @@ describe("GradeBook implementation-ready MVP foundation", () => {
       userId
     });
     expect(mocks.getEffectivePermissions).toHaveBeenCalledWith({ ctx, branchId, academicYearId });
-    expect(mocks.requireGradebookSubfeature).toHaveBeenCalledWith(ctx, "marksEntry");
+    expect(mocks.requireGradebookSubfeature).toHaveBeenCalledWith(ctx, "marksEntry", "READ");
   });
 
   it("denies missing or unauthorised branch context before reading permissions", async () => {

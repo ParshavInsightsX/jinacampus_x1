@@ -5,6 +5,7 @@ export const ACADEMIA_PERMISSIONS = [
   "academia.student.view",
   "academia.student.create",
   "academia.student.update",
+  "academia.student.id_card.manage",
   "academia.guardian.manage",
   "academia.enrollment.manage",
   "academia.promotion.manage",
@@ -13,6 +14,7 @@ export const ACADEMIA_PERMISSIONS = [
   "academia.attendance.update",
   "academia.attendance.correct",
   "academia.attendance.lock",
+  "academia.attendance.coverage.manage",
   "academia.attendance.report"
 ] as const;
 

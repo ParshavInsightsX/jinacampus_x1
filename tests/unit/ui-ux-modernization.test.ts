@@ -89,7 +89,7 @@ describe("Base MVP UI/UX modernization", () => {
     ].join("\n");
 
     expect(combined).toContain('data-responsive-table="true"');
-    expect(combined).toContain("Scroll sideways to view all columns.");
+    expect(combined).not.toContain("Scroll sideways to view all columns.");
     expect(combined).toContain("rounded-lg");
     expect(combined).toContain("premium-card");
     expect(combined).toContain("statusDotClassNames");

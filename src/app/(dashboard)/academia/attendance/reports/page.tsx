@@ -1,8 +1,19 @@
 import Link from "next/link";
 import { NoResultsState } from "@/components/ui/empty-state";
+import { MobileFilterSheet } from "@/components/mobile/mobile-filter-sheet";
+import {
+  AbsentStudentsMobileList,
+  ClassStatusMobileList,
+  DailySummaryMobileList,
+  LateStudentsMobileList,
+  MonthlyPercentageMobileList,
+  StudentHistoryMobileList
+} from "@/modules/academia/components/attendance/mobile-attendance-report-lists";
 import { StatusBadge, formatEnumLabel } from "@/components/ui/table-primitives";
 import { forbidden } from "@/lib/errors";
 import { requireAuth } from "@/lib/auth/require-auth";
+import { ATTENDANCE_ENTITLEMENT_FEATURES } from "@/modules/campus-core/entitlements/catalog";
+import { requireAttendanceEntitlements } from "@/modules/campus-core/entitlements/service";
 import { getEffectivePermissions } from "@/lib/rbac/require-permission";
 import {
   formatDateTime,
@@ -80,6 +91,10 @@ function ReportSection({
 
 export default async function StudentAttendanceReportsPage({ searchParams }: { searchParams?: RouteSearchParams }) {
   const ctx = await requireAuth();
+  await requireAttendanceEntitlements(ctx, [
+    { featureKey: ATTENDANCE_ENTITLEMENT_FEATURES.STUDENT_ATTENDANCE, operation: "READ" },
+    { featureKey: ATTENDANCE_ENTITLEMENT_FEATURES.REPORTS, operation: "READ" }
+  ], { branchId: ctx.activeBranchId });
   const permissions = await getEffectivePermissions({
     ctx,
     branchId: ctx.activeBranchId,
@@ -159,7 +174,8 @@ export default async function StudentAttendanceReportsPage({ searchParams }: { s
         </Link>
       </div>
 
-      <form method="get" className="premium-card p-4" aria-label="Student attendance report filters">
+      <MobileFilterSheet title="Attendance report filters">
+        <form method="get" className="premium-card p-4" aria-label="Student attendance report filters">
         <div className="border-b border-slate-100 pb-4">
           <h2 className="text-sm font-semibold text-slate-950">Report filters</h2>
           <p className="mt-1 text-sm leading-6 text-slate-500">
@@ -266,7 +282,8 @@ export default async function StudentAttendanceReportsPage({ searchParams }: { s
             Apply Filters
           </button>
         </div>
-      </form>
+        </form>
+      </MobileFilterSheet>
 
       <ReportSection
         title="Daily Summary"
@@ -275,7 +292,9 @@ export default async function StudentAttendanceReportsPage({ searchParams }: { s
         emptyDescription="Marked attendance records for the selected date and class-section will appear here."
         rowCount={dailySummary.length}
       >
-        <TableShell columns={["Class Section", "Total Marked", "Present", "Absent", "Late", "Half Day", "On Leave", "Excused", "Locked"]}>
+        <DailySummaryMobileList rows={dailySummary} />
+        <div className="hidden md:block">
+          <TableShell columns={["Class Section", "Total Marked", "Present", "Absent", "Late", "Half Day", "On Leave", "Excused", "Locked"]}>
           {dailySummary.map((summary) => (
             <tr key={summary.classSectionId}>
               <td className="whitespace-nowrap px-4 py-3 font-medium text-slate-900">{summary.classSectionName}</td>
@@ -290,6 +309,7 @@ export default async function StudentAttendanceReportsPage({ searchParams }: { s
             </tr>
           ))}
         </TableShell>
+        </div>
       </ReportSection>
 
       <div className="grid min-w-0 gap-6 xl:grid-cols-2">
@@ -300,7 +320,9 @@ export default async function StudentAttendanceReportsPage({ searchParams }: { s
           emptyDescription="Absent records for the selected filters will appear here."
           rowCount={absentStudents.length}
         >
-          <TableShell columns={["Admission No.", "Student Name", "Class Section", "Status", "Remarks"]}>
+          <AbsentStudentsMobileList rows={absentStudents} />
+          <div className="hidden md:block">
+            <TableShell columns={["Admission No.", "Student Name", "Class Section", "Status", "Remarks"]}>
             {absentStudents.map((record) => (
               <tr key={record.attendanceRecordId}>
                 <td className="whitespace-nowrap px-4 py-3">{record.admissionNo}</td>
@@ -311,6 +333,7 @@ export default async function StudentAttendanceReportsPage({ searchParams }: { s
               </tr>
             ))}
           </TableShell>
+        </div>
         </ReportSection>
 
         <ReportSection
@@ -320,7 +343,9 @@ export default async function StudentAttendanceReportsPage({ searchParams }: { s
           emptyDescription="Late records for the selected filters will appear here."
           rowCount={lateStudents.length}
         >
-          <TableShell columns={["Admission No.", "Student Name", "Class Section", "Remarks"]}>
+          <LateStudentsMobileList rows={lateStudents} />
+          <div className="hidden md:block">
+            <TableShell columns={["Admission No.", "Student Name", "Class Section", "Remarks"]}>
             {lateStudents.map((record) => (
               <tr key={record.attendanceRecordId}>
                 <td className="whitespace-nowrap px-4 py-3">{record.admissionNo}</td>
@@ -330,6 +355,7 @@ export default async function StudentAttendanceReportsPage({ searchParams }: { s
               </tr>
             ))}
           </TableShell>
+        </div>
         </ReportSection>
       </div>
 
@@ -340,7 +366,9 @@ export default async function StudentAttendanceReportsPage({ searchParams }: { s
         emptyDescription="Active class-sections for your reporting scope will appear here."
         rowCount={classSectionStatuses.length}
       >
-        <TableShell columns={["Class Section", "Class Teacher", "Active Students", "Marked", "Pending", "Status"]}>
+        <ClassStatusMobileList rows={classSectionStatuses} />
+        <div className="hidden md:block">
+          <TableShell columns={["Class Section", "Class Teacher", "Active Students", "Marked", "Pending", "Status"]}>
           {classSectionStatuses.map((record) => (
             <tr key={record.classSectionId}>
               <td className="whitespace-nowrap px-4 py-3 font-medium text-slate-900">{record.classSectionName}</td>
@@ -354,6 +382,7 @@ export default async function StudentAttendanceReportsPage({ searchParams }: { s
             </tr>
           ))}
         </TableShell>
+        </div>
       </ReportSection>
 
       <ReportSection
@@ -363,7 +392,9 @@ export default async function StudentAttendanceReportsPage({ searchParams }: { s
         emptyDescription={studentId ? "No records matched this student and date range." : "Enter a student ID in the filters to load history."}
         rowCount={studentHistory.length}
       >
-        <TableShell columns={["Date", "Class Section", "Status", "Remarks", "Locked"]}>
+        <StudentHistoryMobileList rows={studentHistory} />
+        <div className="hidden md:block">
+          <TableShell columns={["Date", "Class Section", "Status", "Remarks", "Locked"]}>
           {studentHistory.map((record) => (
             <tr key={record.attendanceRecordId}>
               <td className="whitespace-nowrap px-4 py-3">{formatDateTime(record.attendanceDate)}</td>
@@ -374,6 +405,7 @@ export default async function StudentAttendanceReportsPage({ searchParams }: { s
             </tr>
           ))}
         </TableShell>
+        </div>
       </ReportSection>
 
       <ReportSection
@@ -383,7 +415,9 @@ export default async function StudentAttendanceReportsPage({ searchParams }: { s
         emptyDescription="Select a class-section with marked attendance records for the selected month."
         rowCount={monthlyPercentages.length}
       >
-        <TableShell columns={["Roll No.", "Admission No.", "Student Name", "Present Equivalent", "Marked Days", "Absent", "Late", "Half Day", "Percentage"]}>
+        <MonthlyPercentageMobileList rows={monthlyPercentages} />
+        <div className="hidden md:block">
+          <TableShell columns={["Roll No.", "Admission No.", "Student Name", "Present Equivalent", "Marked Days", "Absent", "Late", "Half Day", "Percentage"]}>
           {monthlyPercentages.map((record) => (
             <tr key={record.studentId}>
               <td className="whitespace-nowrap px-4 py-3">{record.rollNumber ?? "-"}</td>
@@ -398,6 +432,7 @@ export default async function StudentAttendanceReportsPage({ searchParams }: { s
             </tr>
           ))}
         </TableShell>
+        </div>
       </ReportSection>
     </div>
   );

@@ -7,6 +7,8 @@ export * from "./student.schema";
 export * from "./student-registration.schema";
 export * from "./student-import.schema";
 export * from "./student-document.schema";
+export * from "./student-identity-card.schema";
 export * from "./student-promotion.schema";
 export * from "./student-attendance.schema";
+export * from "./student-attendance-duty.schema";
 export * from "./subject.schema";

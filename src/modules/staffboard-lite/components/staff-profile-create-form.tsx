@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { PasswordInput } from "@/components/forms/password-input";
+import { DataCollectionNotice } from "@/components/legal/data-collection-notice";
 import { FormField, FormMessage, getFieldError } from "@/components/ui/form-primitives";
 import { SubmitButton } from "@/components/ui/submit-button";
 import {
@@ -52,6 +53,9 @@ export function StaffProfileCreateForm({
     <form action={formAction} className="premium-card grid gap-3 p-4 md:grid-cols-4">
       <div className="md:col-span-4">
         <FormMessage state={state} />
+      </div>
+      <div className="md:col-span-4">
+        <DataCollectionNotice audience="staff" />
       </div>
       <FormField id="create-staff-branch" label="Branch" required helpText="Only accessible branches are available." error={fieldError(state, "branchId")}>
         <select id="create-staff-branch" name="branchId" required defaultValue={defaultBranchId} disabled={!branchOptions.length} className="min-h-11 w-full">

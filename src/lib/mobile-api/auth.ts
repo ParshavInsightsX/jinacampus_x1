@@ -100,22 +100,21 @@ async function buildMobileUserPayload(ctx: TenantContext, user: {
   lastName: string | null;
   displayName: string | null;
 }, roles: RoleLabel[]): Promise<MobileUserPayload> {
-  const [canScanStaffQr, canMarkStudentAttendance] = await Promise.all([
+  const [canViewMyAttendance, canMarkStudentAttendance] = await Promise.all([
     ctx.activeBranchId
-      ? hasPermission(ctx, "staffboard.attendance.self_scan", ctx.activeBranchId, ctx.activeAcademicYearId)
+      ? hasPermission(ctx, "staffboard.attendance.self_view", ctx.activeBranchId, ctx.activeAcademicYearId)
       : Promise.resolve(false),
     ctx.activeBranchId && ctx.activeAcademicYearId
       ? hasPermission(ctx, "academia.attendance.mark", ctx.activeBranchId, ctx.activeAcademicYearId)
       : Promise.resolve(false)
   ]);
-
   return {
     name: displayName(user),
     email: user.email,
     roles: uniqueRoles(roles),
     capabilities: {
-      canScanStaffQr,
-      canViewMyAttendance: canScanStaffQr,
+      canScanStaffQr: false,
+      canViewMyAttendance,
       canMarkStudentAttendance
     },
     institution: {

@@ -124,7 +124,7 @@ describe("Academic and institutional calendar", () => {
     const service = source("src/modules/campus-core/calendar/calendar-service.ts");
     const navigation = source("src/components/app-shell/navigation.ts");
     const studentService = source("src/modules/academia/services/student-attendance.service.ts");
-    const qrService = source("src/modules/staffboard-lite/services/staff-qr.service.ts");
+    const scannerService = source("src/modules/staffboard-lite/services/staff-attendance-scanner.service.ts");
     const correctionService = source("src/modules/staffboard-lite/services/staff-attendance.service.ts");
 
     expect(schema).toContain("model AcademicCalendarEntry");
@@ -137,7 +137,8 @@ describe("Academic and institutional calendar", () => {
     expect(service).toContain("CALENDAR_STAFF_LEAVE_CONFLICT");
     expect(service).toContain("CALENDAR_ENTRY_CREATED");
     expect(studentService).toContain("STUDENT_ATTENDANCE_HOLIDAY");
-    expect(qrService).toContain("STAFF_ATTENDANCE_HOLIDAY");
+    expect(scannerService).toContain("findApplicableCalendarEntry");
+    expect(scannerService).toContain("WORKED_ON_NON_WORKING_DAY");
     expect(correctionService).toContain("STAFF_ATTENDANCE_MANAGED_BY_CALENDAR");
     expect(navigation).toContain('href: "/campus-core/calendar"');
     expect(navigation).toContain('permissions: ["campuscore.calendar.manage"]');

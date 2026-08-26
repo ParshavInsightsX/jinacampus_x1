@@ -18,7 +18,7 @@ describe("table and filter polish", () => {
     expect(primitives).toContain('data-responsive-table="true"');
     expect(primitives).toContain('data-mobile-table-shell="true"');
     expect(primitives).toContain("min-w-0 overflow-hidden");
-    expect(primitives).toContain("Scroll sideways to view all columns.");
+    expect(primitives).not.toContain("Scroll sideways to view all columns.");
     expect(primitives).toContain("aria-disabled");
     expect(primitives).toContain("min-h-11");
   });
@@ -76,7 +76,7 @@ describe("table and filter polish", () => {
     const primitives = source("src/components/ui/table-primitives.tsx");
 
     expect(staffTable).toContain("PaginationControls");
-    expect(staffTable).toContain("Showing page");
+    expect(staffTable).toContain('itemLabel="staff members"');
     expect(primitives).toContain("Page {page} of {totalPages}");
     expect(staffTable).toContain("params.set(\"staffType\", filterParams.staffType)");
     expect(staffTable).toContain("params.set(\"status\", filterParams.status)");
@@ -93,13 +93,15 @@ describe("table and filter polish", () => {
       "src/app/(dashboard)/academia/guardians/page.tsx",
       "src/app/(dashboard)/academia/enrollments/page.tsx",
       "src/app/(dashboard)/staffboard/staff/page.tsx",
-      "src/modules/staffboard-lite/components/attendance/staff-attendance-table.tsx"
+      "src/modules/staffboard-lite/components/attendance/staff-attendance-table.tsx",
+      "src/modules/staffboard-lite/components/attendance/staff-attendance-correction-form.tsx"
     ].map(source).join("\n");
 
     expect(combined).toContain("ariaLabel={`Edit");
     expect(combined).toContain("Correct");
-    expect(combined).toContain("View only");
-    expect(combined).toContain("No record yet");
+    expect(combined).toContain("View Only");
+    expect(combined).toContain("Use Manual Entry");
+    expect(combined).toContain("Request Correction");
     expect(combined).not.toContain("min-h-10");
   });
 

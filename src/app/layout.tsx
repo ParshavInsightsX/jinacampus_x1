@@ -43,8 +43,10 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // Browser extensions can annotate the document root before React hydrates.
+  // Keep suppression at this boundary so application subtree mismatches still surface.
   return (
-    <html lang="en" className={`${manrope.variable} ${nunitoSans.variable}`}>
+    <html lang="en" className={`${manrope.variable} ${nunitoSans.variable}`} suppressHydrationWarning>
       <body>{children}</body>
     </html>
   );

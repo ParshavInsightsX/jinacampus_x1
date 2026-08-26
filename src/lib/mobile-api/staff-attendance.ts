@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { requirePermission } from "@/lib/rbac/require-permission";
 import type { TenantContext } from "@/lib/tenant/context";
 import { scanStaffAttendanceQr } from "@/modules/staffboard-lite/services/staff-qr.service";
+import { ATTENDANCE_ENTITLEMENT_FEATURES } from "@/modules/campus-core/entitlements/catalog";
+import { requireAttendanceEntitlements } from "@/modules/campus-core/entitlements/service";
 import { mobileAttendanceDateQuerySchema, mobileQrScanSchema } from "./schemas";
 
 const DEFAULT_ATTENDANCE_TIME_ZONE = "Asia/Kolkata";
@@ -62,6 +64,9 @@ export async function getMobileStaffAttendanceStatus(ctx: TenantContext, input: 
   if (staffProfile.branch.status !== "ACTIVE") throw new AppError("STAFF_BRANCH_INACTIVE", "STAFF_BRANCH_INACTIVE", 400);
 
   await requirePermission({ ctx, permission: "staffboard.attendance.self_view", branchId: staffProfile.branchId });
+  await requireAttendanceEntitlements(ctx, [
+    { featureKey: ATTENDANCE_ENTITLEMENT_FEATURES.STAFF_ATTENDANCE, operation: "READ" }
+  ], { branchId: staffProfile.branchId });
 
   const attendanceDate = params.date
     ? normalizeDateOnly(params.date)

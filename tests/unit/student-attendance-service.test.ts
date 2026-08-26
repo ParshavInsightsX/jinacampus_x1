@@ -35,13 +35,17 @@ type AttendanceRecord = AttendanceWritePayload & {
 
 const mocks = vi.hoisted(() => {
   const tx = {
+    $queryRaw: vi.fn(),
     academicCalendarEntry: { findFirst: vi.fn() },
     attendanceSetting: { findFirst: vi.fn() },
     branch: { findFirst: vi.fn() },
     classSection: { findFirst: vi.fn() },
     enrollment: { findMany: vi.fn() },
     tenantSettings: { findUnique: vi.fn() },
-    studentAttendanceRecord: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), updateMany: vi.fn() }
+    studentAttendanceRecord: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
+    studentAttendanceSession: { findFirst: vi.fn(), update: vi.fn() },
+    studentAttendanceSessionEntry: { update: vi.fn() },
+    studentAttendanceMutation: { create: vi.fn() }
   };
   const db = {
     ...tx,
@@ -122,6 +126,7 @@ function existingRecord(overrides: Partial<ReturnType<typeof createdRecord>> = {
 }
 
 function resetMocks() {
+  mocks.tx.$queryRaw.mockReset();
   mocks.tx.academicCalendarEntry.findFirst.mockReset();
   mocks.tx.classSection.findFirst.mockReset();
   mocks.tx.attendanceSetting.findFirst.mockReset();
@@ -133,12 +138,24 @@ function resetMocks() {
   mocks.tx.studentAttendanceRecord.create.mockReset();
   mocks.tx.studentAttendanceRecord.update.mockReset();
   mocks.tx.studentAttendanceRecord.updateMany.mockReset();
+  mocks.tx.studentAttendanceSession.findFirst.mockReset();
+  mocks.tx.studentAttendanceSession.update.mockReset();
+  mocks.tx.studentAttendanceSessionEntry.update.mockReset();
+  mocks.tx.studentAttendanceMutation.create.mockReset();
   mocks.db.$transaction.mockReset();
   mocks.db.$transaction.mockImplementation((callback: (client: typeof mocks.tx) => unknown) => callback(mocks.tx));
   mocks.requirePermission.mockReset();
   mocks.requirePermission.mockResolvedValue(true);
   mocks.writeAuditLog.mockReset();
   mocks.writeAuditLog.mockResolvedValue({ id: "audit-id" });
+  mocks.tx.$queryRaw.mockResolvedValue([{
+    sessionTableAvailable: true,
+    rosterTableAvailable: true,
+    entryTableAvailable: true,
+    mutationTableAvailable: true,
+    dutyTableAvailable: true,
+    continuityColumnsAvailable: true
+  }]);
   mocks.tx.academicCalendarEntry.findFirst.mockResolvedValue(null);
   mocks.tx.branch.findFirst.mockResolvedValue({ id: branchId, timezone: "Asia/Kolkata" });
   mocks.tx.attendanceSetting.findFirst.mockResolvedValue({
@@ -146,6 +163,7 @@ function resetMocks() {
     studentAutoLockTime: "15:00"
   });
   mocks.tx.studentAttendanceRecord.updateMany.mockResolvedValue({ count: 0 });
+  mocks.tx.studentAttendanceSession.findFirst.mockResolvedValue(null);
 }
 
 function mockCreateAndUpdateWrites() {
@@ -728,6 +746,10 @@ describe("correctStudentAttendance", () => {
         correctedAt: expect.any(Date)
       }
     });
+    expect(mocks.db.$transaction).toHaveBeenCalledWith(
+      expect.any(Function),
+      { maxWait: 10_000, timeout: 60_000 }
+    );
   });
 
   it("uses tenant, branch, academic year, and actor context", async () => {
@@ -972,5 +994,88 @@ describe("correctStudentAttendance", () => {
     expect(mocks.tx.studentAttendanceRecord.update).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ remarks: "Existing note" })
     }));
+  });
+
+  it("keeps legacy correction operational when the modern session migration is pending", async () => {
+    const before = existingRecord({ status: "ABSENT" });
+    const after = {
+      ...before,
+      status: "PRESENT",
+      correctionReason: "Register verified before attendance upgrade",
+      correctedById: ctx.userId,
+      correctedAt: new Date()
+    };
+    mocks.tx.$queryRaw.mockResolvedValue([{
+      sessionTableAvailable: false,
+      rosterTableAvailable: false,
+      entryTableAvailable: false,
+      mutationTableAvailable: false
+    }]);
+    mocks.tx.studentAttendanceRecord.findFirst.mockResolvedValue(before);
+    mocks.tx.studentAttendanceRecord.update.mockResolvedValue(after);
+
+    const result = await correctStudentAttendance(ctx, {
+      attendanceRecordId: recordOneId,
+      status: "PRESENT",
+      correctionReason: "Register verified before attendance upgrade"
+    });
+
+    expect(result.newStatus).toBe("PRESENT");
+    expect(mocks.tx.studentAttendanceRecord.update).toHaveBeenCalledOnce();
+    expect(mocks.tx.studentAttendanceSession.findFirst).not.toHaveBeenCalled();
+    expect(mocks.writeAuditLog).toHaveBeenCalledOnce();
+  });
+
+  it("synchronizes an authorized correction into an existing modern attendance session", async () => {
+    const before = existingRecord({ status: "ABSENT" });
+    const after = {
+      ...before,
+      status: "EXCUSED",
+      correctionReason: "Approved leave evidence",
+      correctedById: ctx.userId,
+      correctedAt: new Date()
+    };
+    const sessionId = "00000000-0000-0000-0000-000000000090";
+    const entryId = "00000000-0000-0000-0000-000000000091";
+    mocks.tx.studentAttendanceRecord.findFirst.mockResolvedValue(before);
+    mocks.tx.studentAttendanceRecord.update.mockResolvedValue(after);
+    mocks.tx.studentAttendanceSession.findFirst.mockResolvedValue({
+      id: sessionId,
+      entries: [{ id: entryId, status: "ABSENT", recordVersion: 3 }]
+    });
+
+    await correctStudentAttendance(ctx, {
+      attendanceRecordId: recordOneId,
+      status: "EXCUSED",
+      correctionReason: "Approved leave evidence"
+    });
+
+    expect(mocks.tx.studentAttendanceSessionEntry.update).toHaveBeenCalledWith({
+      where: { id: entryId },
+      data: {
+        status: "LEAVE",
+        legacyStatus: "EXCUSED",
+        recordVersion: { increment: 1 },
+        updatedById: ctx.userId,
+        markedAt: expect.any(Date)
+      }
+    });
+    expect(mocks.tx.studentAttendanceMutation.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        tenantId: ctx.tenantId,
+        sessionId,
+        entryId,
+        actorUserId: ctx.userId,
+        source: "ADMIN_CORRECTION",
+        previousStatus: "ABSENT",
+        newStatus: "LEAVE",
+        baseRecordVersion: 3,
+        resultingRecordVersion: 4
+      })
+    });
+    expect(mocks.tx.studentAttendanceSession.update).toHaveBeenCalledWith({
+      where: { id: sessionId },
+      data: { sessionVersion: { increment: 1 }, lastMutationAt: expect.any(Date) }
+    });
   });
 });

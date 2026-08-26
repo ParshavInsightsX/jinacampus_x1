@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useActionState, useState } from "react";
+import { DataCollectionNotice } from "@/components/legal/data-collection-notice";
 import { FormField, FormMessage, getFieldError } from "@/components/ui/form-primitives";
 import { SubmitButton } from "@/components/ui/submit-button";
 import {
@@ -237,6 +238,7 @@ export function StudentRegistrationForm({
   return (
     <form action={formAction} className="space-y-5">
       <FormMessage state={state} />
+      <DataCollectionNotice audience="student" />
       {student?.id ? <input type="hidden" name="studentId" value={student.id} /> : null}
 
       <FormSection
@@ -373,8 +375,7 @@ export function StudentRegistrationForm({
         <FormField
           id="student-aadhaar-number"
           label="Aadhaar Number"
-          required={isCreate || !hasExistingAadhaar}
-          helpText={hasExistingAadhaar ? `Stored as ${student?.aadhaarMasked}. Enter all 12 digits only to replace.` : "Enter 12 digits. Full Aadhaar is not stored."}
+          helpText={hasExistingAadhaar ? `Optional. Stored as ${student?.aadhaarMasked}. Enter all 12 digits only to replace.` : "Optional. Aadhaar must not be required for admission. Full Aadhaar is not stored."}
           error={fieldError(state, "aadhaarNumber")}
         >
           <input
@@ -382,7 +383,6 @@ export function StudentRegistrationForm({
             name="aadhaarNumber"
             inputMode="numeric"
             pattern="[0-9\\s-]{12,14}"
-            required={isCreate || !hasExistingAadhaar}
             placeholder={hasExistingAadhaar ? "Optional replacement" : "1234 1234 1234"}
             className="min-h-11 w-full"
           />

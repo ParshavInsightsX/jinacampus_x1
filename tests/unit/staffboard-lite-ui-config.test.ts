@@ -16,7 +16,11 @@ const routeFiles = [
   "src/app/(dashboard)/staffboard/categories/page.tsx",
   "src/app/(dashboard)/staffboard/attendance/page.tsx",
   "src/app/(dashboard)/staffboard/attendance/qr/page.tsx",
+  "src/app/(dashboard)/staffboard/attendance/card/page.tsx",
   "src/app/(dashboard)/staffboard/attendance/scan/page.tsx",
+  "src/app/(dashboard)/staffboard/attendance/credentials/page.tsx",
+  "src/app/(dashboard)/staffboard/attendance/adjustments/page.tsx",
+  "src/app/(dashboard)/staffboard/attendance/me/page.tsx",
   "src/app/(dashboard)/staffboard/attendance/reports/page.tsx",
   "src/app/(dashboard)/staffboard/leave/page.tsx",
   "src/app/(dashboard)/staffboard/leave/apply/page.tsx",
@@ -31,8 +35,12 @@ describe("StaffBoard Lite UI route config", () => {
       staff: "/staffboard/staff",
       categories: "/staffboard/categories",
       attendance: "/staffboard/attendance",
+      myAttendance: "/staffboard/attendance/me",
+      myCard: "/staffboard/attendance/card",
       qr: "/staffboard/attendance/qr",
       scan: "/staffboard/attendance/scan",
+      credentials: "/staffboard/attendance/credentials",
+      adjustments: "/staffboard/attendance/adjustments",
       reports: "/staffboard/attendance/reports",
       leave: "/staffboard/leave",
       leaveReview: "/staffboard/leave/review"
@@ -49,23 +57,26 @@ describe("StaffBoard Lite UI route config", () => {
     expect(staffboardModuleCards.map((card) => card.href)).toEqual([
       "/staffboard/staff",
       "/staffboard/categories",
-      "/staffboard/attendance/qr",
-      "/staffboard/attendance/scan",
       "/staffboard/attendance",
+      "/staffboard/attendance/me",
+      "/staffboard/attendance/scan",
+      "/staffboard/attendance/credentials",
+      "/staffboard/attendance/adjustments",
+      "/staffboard/attendance/card",
       "/staffboard/attendance/reports",
       "/staffboard/leave",
       "/staffboard/leave/review"
     ]);
     expect(staffboardModuleCards.map((card) => card.key)).toContain("attendance");
-    expect(staffboardModuleCards.map((card) => card.title)).toContain("QR Attendance Console");
+    expect(staffboardModuleCards.map((card) => card.title)).toContain("Staff QR Cards");
     expect(staffboardModuleCards.filter((card) => card.status === "coming-soon")).toEqual([]);
   });
 
   it("filters overview cards to StaffBoard permissions", () => {
-    const staffPermissions = new Set<PermissionCode>(["staffboard.attendance.self_scan"]);
+    const staffPermissions = new Set<PermissionCode>(["staffboard.attendance.self_view"]);
 
     expect(getVisibleStaffboardModuleCards(staffPermissions).map((card) => card.href)).toEqual([
-      "/staffboard/attendance/scan"
+      "/staffboard/attendance/me"
     ]);
   });
 
@@ -106,15 +117,17 @@ describe("StaffBoard Lite UI route config", () => {
 
     expect(navigationSource).toContain("StaffBoard Lite");
     expect(navigationSource).toContain("Categories");
-    expect(navigationSource).toContain("Staff Attendance");
-    expect(navigationSource).toContain("QR Console");
-    expect(navigationSource).toContain("Scan QR");
-    expect(navigationSource).toContain("Staff Reports");
+    expect(navigationSource).toContain("Attendance Register");
+    expect(navigationSource).toContain("Staff QR Cards");
+    expect(navigationSource).toContain("Mark Attendance");
+    expect(navigationSource).toContain("Attendance Reports");
     expect(navigationSource).toContain("My Leave");
     expect(navigationSource).toContain("Leave Review");
     expect(navigationSource).toContain("/staffboard/staff");
     expect(navigationSource).toContain("/staffboard/categories");
-    expect(navigationSource).toContain("/staffboard/attendance/qr");
+    expect(navigationSource).toContain("/staffboard/attendance/credentials");
+    expect(navigationSource).toContain("/staffboard/attendance/card");
+    expect(navigationSource).not.toContain('{ title: "Shared Attendance QR"');
     expect(navigationSource).toContain("/staffboard/attendance/scan");
     expect(navigationSource).toContain("/staffboard/attendance/reports");
     expect(navigationSource).toContain("/staffboard/leave");

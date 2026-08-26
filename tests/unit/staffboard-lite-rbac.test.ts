@@ -202,41 +202,21 @@ describe("StaffBoard Lite RBAC", () => {
     expect(mocks.tx.staffProfile.update).not.toHaveBeenCalled();
   });
 
-  it("requires QR generate permission and does not accept attendance view/report as a substitute", async () => {
-    mocks.requirePermission.mockRejectedValue(new Error("FORBIDDEN_PERMISSION:staffboard.attendance.qr.generate"));
-
-    const operatorCtx = { ...ctx, roleCodes: ["OFFICE_STAFF"] };
-    await expect(generateStaffAttendanceQrToken(operatorCtx, { purpose: "CHECK_IN" })).rejects.toThrow(
-      "FORBIDDEN_PERMISSION:staffboard.attendance.qr.generate"
-    );
-
-    expect(mocks.requirePermission).toHaveBeenCalledWith({
-      ctx: operatorCtx,
-      permission: "staffboard.attendance.qr.generate",
-      branchId
+  it("retires shared QR generation and staff self-scan before permission or database work", async () => {
+    await expect(generateStaffAttendanceQrToken(ctx, { purpose: "CHECK_IN" })).rejects.toMatchObject({
+      code: "STAFF_SHARED_QR_RETIRED",
+      status: 410
     });
+    await expect(scanStaffAttendanceQr(ctx, { token: "opaque-card-payload" })).rejects.toMatchObject({
+      code: "STAFF_SELF_SCAN_DISABLED",
+      status: 403
+    });
+
+    expect(mocks.requirePermission).not.toHaveBeenCalled();
     expect(mocks.db.$transaction).not.toHaveBeenCalled();
-    expect(mocks.tx.staffAttendanceQrToken.create).not.toHaveBeenCalled();
-  });
-
-  it("requires self-scan permission before QR scan can read or write attendance records", async () => {
-    mocks.tx.staffProfile.findFirst.mockResolvedValue(staffProfile());
-    mocks.requirePermission.mockRejectedValue(new Error("FORBIDDEN_PERMISSION:staffboard.attendance.self_scan"));
-
-    await expect(scanStaffAttendanceQr(ctx, {
-      token: "raw-staff-qr-token-12345"
-    })).rejects.toThrow("FORBIDDEN_PERMISSION:staffboard.attendance.self_scan");
-
-    expect(mocks.requirePermission).toHaveBeenCalledWith({
-      ctx,
-      permission: "staffboard.attendance.self_scan",
-      branchId
-    });
-    expect(mocks.tx.staffAttendanceQrToken.findFirst).not.toHaveBeenCalled();
     expect(mocks.tx.staffAttendanceRecord.update).not.toHaveBeenCalled();
   });
-
-  it("does not let self-scan-only staff view the staff attendance admin table", async () => {
+  it("does not let own-card-only staff view the staff attendance admin table", async () => {
     mocks.requirePermission.mockRejectedValue(new Error("FORBIDDEN_PERMISSION:staffboard.attendance.view"));
 
     const result = await listStaffAttendanceForDate(ctx, { date: "2026-05-07" });

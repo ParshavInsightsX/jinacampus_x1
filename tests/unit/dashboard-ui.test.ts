@@ -27,6 +27,8 @@ describe("dashboard UI", () => {
     expect(routeSource).toContain("getStaffAttendanceDashboardMetrics");
     expect(routeSource).toContain("getStaffAttendanceDashboardTrend");
     expect(routeSource).not.toContain("@/lib/db");
+    expect(routeSource).toContain("function loadDashboardPair");
+    expect(routeSource.match(/await loadDashboardPair/g)).toHaveLength(4);
   });
 
   it("renders the dashboard header and expected metric labels", () => {
@@ -98,15 +100,16 @@ describe("dashboard UI", () => {
       "/academia/students",
       "/academia/attendance/mark",
       "/academia/attendance/reports",
-      "/staffboard/attendance/qr",
+      "/staffboard/attendance/credentials",
+      "/staffboard/attendance/scan",
       "/staffboard/attendance",
       "/staffboard/attendance/reports",
       "/staffboard/staff",
-      "/staffboard/attendance/scan",
+      "/staffboard/attendance/card",
       "/staffboard/attendance/me"
     ]);
-    expect(DASHBOARD_QUICK_ACTIONS.map((action) => action.label)).toContain("Generate Staff QR");
-    expect(DASHBOARD_QUICK_ACTIONS.map((action) => action.label)).toContain("Staff Attendance");
+    expect(DASHBOARD_QUICK_ACTIONS.map((action) => action.label)).toContain("Staff QR Cards");
+    expect(DASHBOARD_QUICK_ACTIONS.map((action) => action.label)).toContain("Attendance Register");
 
     const permissions = new Set<PermissionCode>([
       "campuscore.tenant.view",

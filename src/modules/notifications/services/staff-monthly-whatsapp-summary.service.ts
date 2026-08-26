@@ -47,7 +47,7 @@ export type StaffAttendanceSummaryMember = {
 
 export type StaffAttendanceSummaryRecord = {
   staffId: string;
-  status: "PRESENT" | "ABSENT" | "LATE" | "HALF_DAY" | "ON_LEAVE" | "WEEK_OFF" | "HOLIDAY" | "NOT_MARKED";
+  status: "PRESENT" | "ABSENT" | "LATE" | "HALF_DAY" | "ON_LEAVE" | "OFFICIAL_DUTY" | "WEEK_OFF" | "HOLIDAY" | "INCOMPLETE" | "NOT_MARKED";
   workingMinutes: number | null;
 };
 
@@ -136,12 +136,12 @@ export function calculateStaffMonthlySummary(
     summary.markedDays += 1;
     summary.totalWorkingMinutes += record.workingMinutes ?? 0;
     if (record.status !== "WEEK_OFF" && record.status !== "HOLIDAY") summary.workingDays += 1;
-    if (record.status === "PRESENT") summary.presentDays += 1;
+    if (record.status === "PRESENT" || record.status === "OFFICIAL_DUTY") summary.presentDays += 1;
     if (record.status === "LATE") summary.lateDays += 1;
     if (record.status === "HALF_DAY") summary.halfDayDays += 1;
     if (record.status === "ON_LEAVE") summary.leaveDays += 1;
     if (record.status === "ABSENT") summary.absentDays += 1;
-    if (record.status === "NOT_MARKED") summary.notMarkedDays += 1;
+    if (record.status === "NOT_MARKED" || record.status === "INCOMPLETE") summary.notMarkedDays += 1;
     if (record.status === "WEEK_OFF") summary.weekOffDays += 1;
     if (record.status === "HOLIDAY") summary.holidayDays += 1;
   }

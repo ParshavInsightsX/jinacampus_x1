@@ -71,8 +71,8 @@ export async function createStudentRecord(
       fullName: names.fullName,
       displayName: names.displayName,
       joinedAt: joinedAt ?? data.admissionDate,
-      aadhaarMasked: maskAadhaarNumber(aadhaarNumber),
-      aadhaarLast4: lastFourDigits(aadhaarNumber),
+      aadhaarMasked: aadhaarNumber ? maskAadhaarNumber(aadhaarNumber) : undefined,
+      aadhaarLast4: aadhaarNumber ? lastFourDigits(aadhaarNumber) : undefined,
       bankAccountMasked: bankAccountNumber ? maskBankAccountNumber(bankAccountNumber) : undefined,
       bankAccountLast4: bankAccountNumber ? lastFourDigits(bankAccountNumber) : undefined,
       createdById: ctx.userId

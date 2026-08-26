@@ -7,7 +7,7 @@
     "node": "24.x"
   },
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "dev:raw": "next dev",
     "build": "next build",
     "postinstall": "prisma generate",
@@ -21,6 +21,7 @@
     "db:studio": "prisma studio",
     "db:seed": "prisma db seed",
     "brand:qr:generate": "node --import tsx scripts/generate-website-qr.ts",
+    "legal:readiness": "node --import tsx scripts/check-legal-readiness.ts",
     "demo:qa:reset": "tsx prisma/demo-qa-reset.ts",
     "platform-admin:provision": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/provision-platform-administrator.ts",
     "platform-admin:principal-recovery-access": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/set-platform-principal-recovery-access.ts",
@@ -60,6 +61,7 @@
     "vitest": "4.1.10"
   },
   "overrides": {
+    "nanoid": "3.3.18",
     "postcss": "8.5.25",
     "sharp": "0.35.3",
     "uuid": "11.1.1"

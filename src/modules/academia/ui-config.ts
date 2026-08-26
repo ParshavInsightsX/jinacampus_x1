@@ -36,6 +36,7 @@ export type AcademiaListPageConfig = {
 export const academiaAttendanceRoutes = {
   overview: "/academia/attendance",
   mark: "/academia/attendance/mark",
+  coverage: "/academia/attendance/coverage",
   reports: "/academia/attendance/reports"
 } as const;
 

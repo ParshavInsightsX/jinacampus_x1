@@ -4,6 +4,8 @@ import { notFound } from "@/lib/errors";
 import { writeAuditLog } from "@/lib/audit/audit-log";
 import type { TenantContext } from "@/lib/tenant/context";
 import { STAFFBOARD_LITE_AUDIT_EVENTS } from "@/modules/staffboard-lite/audit-events";
+import { ATTENDANCE_ENTITLEMENT_FEATURES } from "@/modules/campus-core/entitlements/catalog";
+import { requireAttendanceEntitlements } from "@/modules/campus-core/entitlements/service";
 import { correctStaffAttendanceSchema } from "@/modules/staffboard-lite/schemas";
 import {
   calculateCheckInStatus,
@@ -42,6 +44,20 @@ export async function correctStaffAttendance(
 ): Promise<CorrectStaffAttendanceResult> {
   const data = correctStaffAttendanceSchema.parse(input);
   if (!ctx.userId) throw validationError("ACTOR_REQUIRED");
+
+  const recordScope = await db.staffAttendanceRecord.findFirst({
+    where: {
+      id: data.attendanceRecordId,
+      tenantId: ctx.tenantId,
+      branchId: { in: ctx.accessibleBranchIds }
+    },
+    select: { branchId: true }
+  });
+  if (!recordScope) throw notFound("STAFF_ATTENDANCE_RECORD_NOT_FOUND");
+  await requireAttendanceEntitlements(ctx, [
+    { featureKey: ATTENDANCE_ENTITLEMENT_FEATURES.STAFF_ATTENDANCE, operation: "READ" },
+    { featureKey: ATTENDANCE_ENTITLEMENT_FEATURES.CORRECTION, operation: "WRITE" }
+  ], { branchId: recordScope.branchId });
 
   return db.$transaction(async (tx) => {
     const before = await tx.staffAttendanceRecord.findFirst({

@@ -181,7 +181,9 @@ describe("StaffBoard Lite staff attendance admin queries", () => {
       late: 1,
       halfDay: 1,
       absentNotMarked: 2,
-      onLeaveHoliday: 1
+      onLeaveHoliday: 1,
+      officialDuty: 0,
+      pendingReview: 0
     });
   });
 

@@ -1,19 +1,15 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { FormField } from "@/components/ui/form-primitives";
-import { correctStaffAttendanceAction } from "@/modules/staffboard-lite/actions/staff-attendance.actions";
+import { useState, useTransition } from "react";
+import { ClipboardEdit, Loader2 } from "lucide-react";
+import { requestStaffAttendanceAdjustmentAction } from "@/modules/staffboard-lite/actions/staff-attendance-domain.actions";
 import {
   formatStaffAttendanceDate,
   formatStaffAttendanceDateTime,
   formatStaffAttendanceLabel,
   formatWorkingMinutes,
   institutionalDateTimeLocalToIso,
-  STAFF_ATTENDANCE_CORRECTION_STATUS_OPTIONS,
-  staffAttendanceCorrectionErrorMessage,
-  toDateTimeLocalValue,
-  validateStaffAttendanceCorrectionDraft
+  toDateTimeLocalValue
 } from "./staff-attendance-admin-state";
 
 type StaffAttendanceCorrectionFormProps = {
@@ -41,182 +37,78 @@ export function StaffAttendanceCorrectionForm({
   correctionReason: existingCorrectionReason,
   timeZone
 }: StaffAttendanceCorrectionFormProps) {
-  const router = useRouter();
-  const detailsRef = useRef<HTMLDetailsElement>(null);
-  const [status, setStatus] = useState(currentStatus === "NOT_MARKED" ? "PRESENT" : currentStatus);
-  const [checkInValue, setCheckInValue] = useState(toDateTimeLocalValue(checkInAt, timeZone));
-  const [checkOutValue, setCheckOutValue] = useState(toDateTimeLocalValue(checkOutAt, timeZone));
-  const [correctionReason, setCorrectionReason] = useState("");
+  const [adjustmentType, setAdjustmentType] = useState(checkInAt ? (checkOutAt ? "SET_PRESENT" : "ADD_CHECK_OUT") : "ADD_CHECK_IN");
+  const [occurredAt, setOccurredAt] = useState(toDateTimeLocalValue(adjustmentType === "ADD_CHECK_OUT" ? checkOutAt : checkInAt, timeZone));
+  const [reasonCode, setReasonCode] = useState("MISSED_SCAN");
+  const [reasonText, setReasonText] = useState("");
+  const [reasonError, setReasonError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  function submitCorrection() {
-    setError(null);
-    setMessage(null);
+  const needsTime = adjustmentType === "ADD_CHECK_IN" || adjustmentType === "ADD_CHECK_OUT";
 
-    const draftError = validateStaffAttendanceCorrectionDraft({
-      correctionReason,
-      checkInAt: checkInValue,
-      checkOutAt: checkOutValue
-    });
-    if (draftError) {
-      setError(draftError);
+  function submitRequest() {
+    setMessage(null);
+    setError(null);
+    setReasonError(null);
+    if (reasonText.trim().length < 5) {
+      setReasonError("Write a short, verified reason.");
       return;
     }
-
+    if (needsTime && !occurredAt) return setError("Select the attendance time.");
     startTransition(async () => {
-      const payload: {
-        attendanceRecordId: string;
-        status: string;
-        correctionReason: string;
-        checkInAt?: string;
-        checkOutAt?: string;
-      } = {
+      const response = await requestStaffAttendanceAdjustmentAction({
         attendanceRecordId,
-        status,
-        correctionReason
-      };
-      if (checkInValue) payload.checkInAt = institutionalDateTimeLocalToIso(checkInValue, timeZone);
-      if (checkOutValue) payload.checkOutAt = institutionalDateTimeLocalToIso(checkOutValue, timeZone);
-
-      const result = await correctStaffAttendanceAction(payload);
-      if (result.ok) {
-        setMessage(`Attendance corrected to ${formatStaffAttendanceLabel(result.data.newStatus)}.`);
-        setCorrectionReason("");
-        setStatus(result.data.newStatus);
-        setCheckInValue(toDateTimeLocalValue(result.data.checkInAt, timeZone));
-        setCheckOutValue(toDateTimeLocalValue(result.data.checkOutAt, timeZone));
-        router.refresh();
-      } else {
-        setError(staffAttendanceCorrectionErrorMessage(result.code, result.error));
+        adjustmentType,
+        ...(needsTime ? { occurredAt: institutionalDateTimeLocalToIso(occurredAt, timeZone) } : {}),
+        reasonCode,
+        reasonText: reasonText.trim()
+      });
+      if (!response.ok) {
+        setError(response.error);
+        return;
       }
+      setMessage(response.message);
+      setReasonText("");
     });
   }
 
-  function cancelCorrection() {
-    setStatus(currentStatus === "NOT_MARKED" ? "PRESENT" : currentStatus);
-    setCheckInValue(toDateTimeLocalValue(checkInAt, timeZone));
-    setCheckOutValue(toDateTimeLocalValue(checkOutAt, timeZone));
-    setCorrectionReason("");
-    setMessage(null);
-    setError(null);
-    if (detailsRef.current) detailsRef.current.open = false;
-  }
-
-  const summaryItems = [
-    { label: "Employee", value: `${employeeCode} · ${staffName}` },
-    { label: "Date", value: formatStaffAttendanceDate(attendanceDate, timeZone) },
-    { label: "Current status", value: formatStaffAttendanceLabel(currentStatus) },
-    { label: "Check-in", value: formatStaffAttendanceDateTime(checkInAt, timeZone) },
-    { label: "Check-out", value: formatStaffAttendanceDateTime(checkOutAt, timeZone) },
-    { label: "Working minutes", value: formatWorkingMinutes(workingMinutes) },
-    { label: "Existing reason", value: existingCorrectionReason ?? "-" }
-  ];
-  const reasonError = error?.startsWith("Enter a correction reason") ? error : undefined;
-
   return (
-    <details ref={detailsRef} className="w-[22rem] max-w-[85vw] rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-lg shadow-slate-950/10">
-      <summary className="min-h-11 cursor-pointer text-sm font-medium text-brand-700">Correct</summary>
+    <details className="w-[22rem] max-w-[85vw] rounded-lg border border-white/80 bg-white/75 p-3 shadow-lg backdrop-blur-xl">
+      <summary className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-semibold text-brand-700 premium-focus"><ClipboardEdit className="h-4 w-4" aria-hidden="true" />Request Correction</summary>
       <div className="mt-3 space-y-4">
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
-          Corrections are audit logged and should be used only after verification.
-        </div>
-
-        <dl className="grid gap-2 rounded-lg bg-slate-50 p-3 text-xs">
-          {summaryItems.map((item) => (
-            <div key={item.label} className="grid gap-0.5">
-              <dt className="font-medium uppercase tracking-wide text-slate-400">{item.label}</dt>
-              <dd className="break-words text-slate-700">{item.value}</dd>
-            </div>
-          ))}
+        <p className="rounded-lg border border-amber-200 bg-amber-50/90 px-3 py-2 text-xs leading-5 text-amber-900">Corrections are audit logged. Your request will not change attendance until another authorised user verifies and approves it.</p>
+        <dl className="grid gap-2 rounded-lg border border-slate-200 bg-white/60 p-3 text-xs">
+          <div><dt className="font-semibold text-slate-500">Staff</dt><dd className="mt-0.5 text-slate-800">{employeeCode} · {staffName}</dd></div>
+          <div><dt className="font-semibold text-slate-500">Date and Status</dt><dd className="mt-0.5 text-slate-800">{formatStaffAttendanceDate(attendanceDate, timeZone)} · {formatStaffAttendanceLabel(currentStatus)}</dd></div>
+          <div><dt className="font-semibold text-slate-500">Recorded Time</dt><dd className="mt-0.5 text-slate-800">{formatStaffAttendanceDateTime(checkInAt, timeZone)} to {formatStaffAttendanceDateTime(checkOutAt, timeZone)} · {formatWorkingMinutes(workingMinutes)}</dd></div>
+          {existingCorrectionReason ? <div><dt className="font-semibold text-slate-500">Previous Note</dt><dd className="mt-0.5 text-slate-800">{existingCorrectionReason}</dd></div> : null}
         </dl>
-
-        <div>
-          <label htmlFor={`${attendanceRecordId}-status`} className="text-xs font-medium text-slate-600">
-            Status
-          </label>
-          <select
-            id={`${attendanceRecordId}-status`}
-            value={status}
-            onChange={(event) => setStatus(event.target.value)}
-            disabled={isPending}
-            className="mt-1 min-h-11 w-full"
-          >
-            {STAFF_ATTENDANCE_CORRECTION_STATUS_OPTIONS.map((option) => (
-              <option key={option} value={option}>
-                {formatStaffAttendanceLabel(option)}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label htmlFor={`${attendanceRecordId}-check-in`} className="text-xs font-medium text-slate-600">
-            Check-in time
-          </label>
-          <input
-            id={`${attendanceRecordId}-check-in`}
-            type="datetime-local"
-            value={checkInValue}
-            onChange={(event) => setCheckInValue(event.target.value)}
-            disabled={isPending}
-            className="mt-1 min-h-11 w-full"
-          />
-        </div>
-
-        <div>
-          <label htmlFor={`${attendanceRecordId}-check-out`} className="text-xs font-medium text-slate-600">
-            Check-out time
-          </label>
-          <input
-            id={`${attendanceRecordId}-check-out`}
-            type="datetime-local"
-            value={checkOutValue}
-            onChange={(event) => setCheckOutValue(event.target.value)}
-            disabled={isPending}
-            className="mt-1 min-h-11 w-full"
-          />
-        </div>
-
-        <FormField
-          id={`${attendanceRecordId}-reason`}
-          label="Correction reason"
-          required
-          helpText="Write a short, verified reason. This reason is saved for audit and future reporting."
-          error={reasonError}
-        >
+        <label className="grid gap-2 text-xs font-semibold text-slate-700">Requested change<select value={adjustmentType} onChange={(event) => { setAdjustmentType(event.target.value); setOccurredAt(""); }} disabled={isPending} className="min-h-11"><option value="ADD_CHECK_IN">Add Missing Check-In</option><option value="ADD_CHECK_OUT">Add Missing Check-Out</option><option value="SET_PRESENT">Mark Present</option><option value="SET_ABSENT">Mark Absent</option><option value="SET_HALF_DAY">Mark Half Day</option><option value="SET_ON_LEAVE">Mark On Leave</option><option value="SET_OFFICIAL_DUTY">Mark Official Duty</option><option value="ADD_NOTE">Add Attendance Note</option></select></label>
+        {needsTime ? <label className="grid gap-2 text-xs font-semibold text-slate-700">Attendance time<input type="datetime-local" value={occurredAt} onChange={(event) => setOccurredAt(event.target.value)} disabled={isPending} className="min-h-11" /></label> : null}
+        <label className="grid gap-2 text-xs font-semibold text-slate-700">Reason category<select value={reasonCode} onChange={(event) => setReasonCode(event.target.value)} disabled={isPending} className="min-h-11"><option value="MISSED_SCAN">Missed QR Scan</option><option value="INCORRECT_STATUS">Incorrect Status</option><option value="DEVICE_UNAVAILABLE">Scanner Unavailable</option><option value="OFFICIAL_DUTY">Official Duty</option><option value="OTHER">Other</option></select></label>
+        <label className="grid gap-2 text-xs font-semibold text-slate-700">
+          Correction reason
           <textarea
-            id={`${attendanceRecordId}-reason`}
-            value={correctionReason}
-            onChange={(event) => setCorrectionReason(event.target.value)}
+            value={reasonText}
+            onChange={(event) => {
+              setReasonText(event.target.value);
+              if (reasonError) setReasonError(null);
+            }}
             disabled={isPending}
             rows={3}
-            placeholder="Reason required"
+            maxLength={1000}
             aria-invalid={Boolean(reasonError)}
-            className="min-h-24 w-full rounded-lg border border-slate-300 px-3 py-2 text-base sm:text-sm"
+            aria-describedby="attendance-correction-reason-help attendance-correction-reason-error"
+            placeholder="Explain what was verified and what should change."
           />
-        </FormField>
-
-        <button
-          type="button"
-          onClick={submitCorrection}
-          disabled={isPending}
-          className="min-h-11 w-full rounded-lg bg-brand-700 px-3 py-1.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-        >
-          {isPending ? "Saving..." : "Save correction"}
-        </button>
-        <button
-          type="button"
-          onClick={cancelCorrection}
-          disabled={isPending}
-          className="mt-2 min-h-11 w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 disabled:cursor-not-allowed disabled:opacity-60 sm:ml-2 sm:mt-0 sm:w-auto"
-        >
-          Cancel
-        </button>
-
-        {message ? <p className="text-xs font-medium text-emerald-700">{message}</p> : null}
-        {error && !reasonError ? <p role="alert" className="text-xs font-medium text-rose-700">{error}</p> : null}
+        </label>
+        <p id="attendance-correction-reason-help" className="text-xs text-slate-500">Write a short, verified reason.</p>
+        {reasonError ? <p id="attendance-correction-reason-error" role="alert" className="text-sm font-medium text-rose-700">{reasonError}</p> : null}
+        {message ? <p role="status" className="text-sm font-medium text-emerald-700">{message}</p> : null}
+        {error ? <p role="alert" className="text-sm font-medium text-rose-700">{error}</p> : null}
+        <button type="button" onClick={submitRequest} disabled={isPending} className="premium-primary-button min-h-11 w-full gap-2 premium-focus">{isPending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <ClipboardEdit className="h-4 w-4" aria-hidden="true" />}{isPending ? "Sending..." : "Send for Approval"}</button>
       </div>
     </details>
   );

@@ -197,7 +197,7 @@ beforeEach(() => {
   mocks.getSessionExpiresAt.mockReturnValue(futureSessionExpiry);
   mocks.writeAuditLog.mockResolvedValue(undefined);
   mocks.getEffectivePermissions.mockResolvedValue(new Set([
-    "staffboard.attendance.self_scan",
+    "staffboard.attendance.credential.self_view",
     "academia.attendance.view",
     "academia.attendance.mark"
   ]));
@@ -270,7 +270,7 @@ describe("mobile backend auth", () => {
     expect(mocks.db.tenant.findUnique).toHaveBeenCalledWith({ where: { slug: "jinacampus-demo" } });
     expect(result.token).toBe(rawToken);
     expect(result.user.email).toBe("teacher@example.test");
-    expect(result.user.capabilities.canScanStaffQr).toBe(true);
+    expect(result.user.capabilities.canScanStaffQr).toBe(false);
     expect(mocks.db.session.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         tenantId,
