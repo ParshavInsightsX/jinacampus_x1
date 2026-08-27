@@ -36,13 +36,17 @@ describe("StaffBoard Lite staff QR card UI", () => {
     expect(card).not.toMatch(/tokenHash|rawToken|password|credential secret/i);
   });
 
-  it("gives staff a digital-only view with no print or download action", () => {
+  it("gives staff a purpose-specific Attendance QR view with no print or download action", () => {
     const page = source("src/app/(dashboard)/staffboard/attendance/card/page.tsx");
+    const presentation = source("src/modules/staffboard-lite/components/attendance/staff-attendance-qr-presentation.tsx");
 
     expect(page).toContain("getMyStaffAttendanceCredentialCard");
-    expect(page).toContain('<StaffIdentityCard card={result.card} mode="self" />');
-    expect(page).toContain("Printing and downloading are not available.");
-    expect(page).not.toMatch(/window\.print|recordStaffAttendanceCredentialPrintAction|download=/);
+    expect(page).toContain("StaffAttendanceQrPresentation");
+    expect(page).not.toContain("StaffIdentityCard");
+    expect(presentation).toContain("QRCodeSVG");
+    expect(presentation).toContain("Ready for check-in");
+    expect(presentation).toContain("Ready for check-out");
+    expect(presentation).not.toMatch(/window\.print|recordStaffAttendanceCredentialPrintAction|download=/);
   });
 
   it("audits manager printing before opening the browser print dialog", () => {

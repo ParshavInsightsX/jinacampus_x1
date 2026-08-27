@@ -2,6 +2,7 @@ import { MobilePageHeader } from "@/components/app-shell/mobile-page-header";
 import { PermissionState } from "@/components/ui/empty-state";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { safeTimeZone } from "@/lib/dates/time-zone";
+import { AppError } from "@/lib/errors";
 import { getEffectivePermissions } from "@/lib/rbac/require-permission";
 import { ATTENDANCE_ENTITLEMENT_FEATURES } from "@/modules/campus-core/entitlements/catalog";
 import { requireAttendanceEntitlements } from "@/modules/campus-core/entitlements/service";
@@ -47,7 +48,15 @@ export default async function StaffAttendancePage({ searchParams }: StaffAttenda
   if (filters.branchId && !ctx.accessibleBranchIds.includes(filters.branchId)) {
     return <PermissionState />;
   }
-  const data = await listStaffAttendanceForDate(ctx, filters);
+  let data: Awaited<ReturnType<typeof listStaffAttendanceForDate>>;
+  try {
+    data = await listStaffAttendanceForDate(ctx, filters);
+  } catch (error) {
+    if (error instanceof AppError && error.code === "FORBIDDEN_STAFF_ATTENDANCE_BRANCH") {
+      return <PermissionState />;
+    }
+    throw error;
+  }
   if (!data.selectedBranchId) return <PermissionState />;
 
   const permissions = await getEffectivePermissions({ ctx, branchId: data.selectedBranchId });

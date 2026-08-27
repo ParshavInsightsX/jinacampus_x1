@@ -18,6 +18,7 @@ const tenantId = "00000000-0000-0000-0000-000000000001";
 const actorUserId = "00000000-0000-0000-0000-000000000002";
 const branchId = "00000000-0000-0000-0000-000000000003";
 const otherBranchId = "00000000-0000-0000-0000-000000000004";
+const institutionId = "00000000-0000-0000-0000-000000000006";
 
 const ctx: TenantContext = {
   tenantId,
@@ -26,7 +27,8 @@ const ctx: TenantContext = {
   userType: "STAFF",
   activeBranchId: branchId,
   accessibleBranchIds: [branchId],
-  activeAcademicYearId: "00000000-0000-0000-0000-000000000005"
+  activeAcademicYearId: "00000000-0000-0000-0000-000000000005",
+  institutionId
 };
 
 function branch(overrides: Record<string, unknown> = {}) {
@@ -97,6 +99,7 @@ describe("StaffBoard Lite staff attendance admin queries", () => {
     expect(mocks.db.branch.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: expect.objectContaining({
         tenantId,
+        institutionId,
         id: { in: [branchId] },
         status: { not: "ARCHIVED" }
       })

@@ -57,8 +57,8 @@ export const DASHBOARD_QUICK_ACTIONS = [
     audiences: ["admin"]
   },
   {
-    label: "Mark Staff Attendance",
-    description: "Open the supervised QR scanner for the active branch.",
+    label: "Staff Attendance",
+    description: "Open the continuous supervised scanner for the active branch.",
     href: "/staffboard/attendance/scan",
     permissions: ["staffboard.attendance.scan"],
     audiences: ["admin", "office"]
@@ -85,17 +85,10 @@ export const DASHBOARD_QUICK_ACTIONS = [
     audiences: ["admin"]
   },
   {
-    label: "My Staff Card",
-    description: "Display your card for an authorised attendance operator.",
+    label: "My Attendance",
+    description: "Display your Attendance QR for an authorised scanner.",
     href: "/staffboard/attendance/card",
     permissions: ["staffboard.attendance.credential.self_view"],
-    audiences: ["office", "teacher", "staff"]
-  },
-  {
-    label: "My Attendance",
-    description: "Review your own check-in, check-out, and working time.",
-    href: "/staffboard/attendance/me",
-    permissions: ["staffboard.attendance.self_view"],
     audiences: ["office", "teacher", "staff"]
   }
 ] as const satisfies readonly DashboardQuickActionDefinition[];

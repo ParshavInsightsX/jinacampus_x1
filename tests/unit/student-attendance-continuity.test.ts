@@ -58,6 +58,15 @@ describe("student attendance continuity", () => {
     expect(schema).toContain("model StudentAttendanceDutyAssignment {");
     expect(schema).toContain("responsibilitySource        StudentAttendanceResponsibilitySource");
     expect(schema).toContain("responsibleUserId           String");
+    expect(schema).toContain(
+      'map: "student_attendance_sessions_tenantId_originalClassTeacherUserId"'
+    );
+    expect(schema).toContain(
+      'map: "student_attendance_duty_assignments_tenantId_assignedByUserId_f"'
+    );
+    expect(schema).toContain(
+      'map: "student_attendance_duty_assignments_tenantId_revokedByUserId_fk"'
+    );
     expect(migration).toContain('CREATE TABLE "student_attendance_duty_assignments"');
     expect(migration).toContain('ADD COLUMN "responsibleUserId" UUID');
     expect(migration).toContain('CREATE UNIQUE INDEX "student_attendance_duty_one_live_scope_key"');

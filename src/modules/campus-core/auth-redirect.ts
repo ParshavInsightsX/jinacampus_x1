@@ -16,6 +16,6 @@ export function getPostLoginRedirectPath(roleCodes: readonly string[] = []) {
   if (hasTeacherRole(roleCodes)) {
     return "/academia/attendance/mark";
   }
-  if (roleCodes.includes("STAFF")) return "/staffboard/attendance/me";
+  if (roleCodes.includes("STAFF")) return "/staffboard/attendance/card";
   return "/dashboard";
 }

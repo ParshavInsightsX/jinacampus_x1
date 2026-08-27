@@ -31,6 +31,7 @@ import {
   requestStaffAttendanceAdjustment,
   reviewStaffAttendanceAdjustment
 } from "@/modules/staffboard-lite/services/staff-attendance-adjustments.service";
+import { getMyStaffAttendanceQrLiveState } from "@/modules/staffboard-lite/services/staff-attendance-self.service";
 
 type ActionFailure = {
   ok: false;
@@ -128,9 +129,13 @@ export async function closeStaffAttendanceScanSessionAction(input: unknown) {
   }
 }
 
-export async function recordSupervisedStaffQrScanAction(input: unknown) {
+export async function recordSupervisedStaffQrScanAction(formData: FormData) {
   try {
-    const parsed = recordSupervisedStaffQrScanSchema.parse(input);
+    const parsed = recordSupervisedStaffQrScanSchema.parse({
+      sessionId: formData.get("sessionId"),
+      qrPayload: formData.get("qrPayload"),
+      clientRequestId: formData.get("clientRequestId")
+    });
     const ctx = await getTenantContext();
     const data = await recordSupervisedStaffQrScan(ctx, parsed);
     revalidateAttendance();
@@ -138,6 +143,21 @@ export async function recordSupervisedStaffQrScanAction(input: unknown) {
     return { ok: true, data, message: `${action} recorded for ${data.staffName}.` } as const;
   } catch (error) {
     return actionError(error, "Unable to record staff attendance.", "This QR card or scanner session is not valid.");
+  }
+}
+
+export async function pollMyStaffAttendanceQrAction(input: unknown) {
+  try {
+    const parsed = staffAttendanceCredentialIdSchema.parse(input);
+    const ctx = await getTenantContext();
+    const data = await getMyStaffAttendanceQrLiveState(ctx, parsed.credentialId);
+    return { ok: true, data, message: "Attendance status refreshed." } as const;
+  } catch (error) {
+    return actionError(
+      error,
+      "Unable to refresh your attendance status.",
+      "The Attendance QR is not valid for this account."
+    );
   }
 }
 

@@ -79,14 +79,14 @@ export const staffboardModuleCards: readonly StaffboardModuleCard[] = [
   {
     key: "my-attendance",
     title: "My Attendance",
-    description: "Review your check-in, check-out, working time, and correction requests.",
-    href: staffboardRoutes.myAttendance,
-    permissions: ["staffboard.attendance.self_view"]
+    description: "Display your Attendance QR for the authorised school scanner.",
+    href: staffboardRoutes.myCard,
+    permissions: ["staffboard.attendance.credential.self_view"]
   },
   {
     key: "scan",
-    title: "Mark Attendance",
-    description: "Use the supervised scanner to record staff check-in or check-out.",
+    title: "Staff Attendance",
+    description: "Use the continuous supervised scanner to record staff check-in or check-out.",
     href: staffboardRoutes.scan,
     permissions: ["staffboard.attendance.scan"]
   },
@@ -106,10 +106,10 @@ export const staffboardModuleCards: readonly StaffboardModuleCard[] = [
   },
   {
     key: "my-card",
-    title: "My Staff Card",
-    description: "Display your issued card for supervised attendance scanning.",
-    href: staffboardRoutes.myCard,
-    permissions: ["staffboard.attendance.credential.self_view"]
+    title: "Attendance History",
+    description: "Review your check-in, check-out, working time, and correction requests.",
+    href: staffboardRoutes.myAttendance,
+    permissions: ["staffboard.attendance.self_view"]
   },
   {
     key: "reports",

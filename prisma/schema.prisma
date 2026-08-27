@@ -4221,7 +4221,7 @@ model StudentAttendanceSession {
   startedBy                User                              @relation("StudentAttendanceSessionStartedBy", fields: [tenantId, startedById], references: [tenantId, id], onDelete: Restrict)
   completedBy              User?                             @relation("StudentAttendanceSessionCompletedBy", fields: [tenantId, completedById], references: [tenantId, id], onDelete: Restrict)
   responsibleUser          User                              @relation("StudentAttendanceSessionResponsibleUser", fields: [tenantId, responsibleUserId], references: [tenantId, id], onDelete: Restrict)
-  originalClassTeacherUser User?                             @relation("StudentAttendanceSessionOriginalClassTeacher", fields: [tenantId, originalClassTeacherUserId], references: [tenantId, id], onDelete: Restrict)
+  originalClassTeacherUser User?                             @relation("StudentAttendanceSessionOriginalClassTeacher", fields: [tenantId, originalClassTeacherUserId], references: [tenantId, id], onDelete: Restrict, map: "student_attendance_sessions_tenantId_originalClassTeacherUserId")
   delegatedBy              User?                             @relation("StudentAttendanceSessionDelegatedBy", fields: [tenantId, delegatedByUserId], references: [tenantId, id], onDelete: Restrict)
   roster                   StudentAttendanceSessionRoster[]
   entries                  StudentAttendanceSessionEntry[]
@@ -4272,12 +4272,12 @@ model StudentAttendanceDutyAssignment {
   tenant         Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   institution    Institution               @relation(fields: [tenantId, institutionId], references: [tenantId, id], onDelete: Restrict)
   branch         Branch                    @relation(fields: [tenantId, branchId], references: [tenantId, id], onDelete: Restrict)
-  academicYear   AcademicYear              @relation(fields: [tenantId, academicYearId], references: [tenantId, id], onDelete: Restrict)
-  classSection   ClassSection              @relation(fields: [tenantId, classSectionId], references: [tenantId, id], onDelete: Restrict)
+  academicYear   AcademicYear              @relation(fields: [tenantId, academicYearId], references: [tenantId, id], onDelete: Restrict, map: "student_attendance_duty_assignments_tenantId_academicYearId_fke")
+  classSection   ClassSection              @relation(fields: [tenantId, classSectionId], references: [tenantId, id], onDelete: Restrict, map: "student_attendance_duty_assignments_tenantId_classSectionId_fke")
   session        StudentAttendanceSession? @relation(fields: [tenantId, sessionId], references: [tenantId, id], onDelete: Restrict)
-  assignedUser   User                      @relation("StudentAttendanceDutyAssignedUser", fields: [tenantId, assignedUserId], references: [tenantId, id], onDelete: Restrict)
-  assignedByUser User                      @relation("StudentAttendanceDutyAssignedBy", fields: [tenantId, assignedByUserId], references: [tenantId, id], onDelete: Restrict)
-  revokedByUser  User?                     @relation("StudentAttendanceDutyRevokedBy", fields: [tenantId, revokedByUserId], references: [tenantId, id], onDelete: Restrict)
+  assignedUser   User                      @relation("StudentAttendanceDutyAssignedUser", fields: [tenantId, assignedUserId], references: [tenantId, id], onDelete: Restrict, map: "student_attendance_duty_assignments_tenantId_assignedUserId_fke")
+  assignedByUser User                      @relation("StudentAttendanceDutyAssignedBy", fields: [tenantId, assignedByUserId], references: [tenantId, id], onDelete: Restrict, map: "student_attendance_duty_assignments_tenantId_assignedByUserId_f")
+  revokedByUser  User?                     @relation("StudentAttendanceDutyRevokedBy", fields: [tenantId, revokedByUserId], references: [tenantId, id], onDelete: Restrict, map: "student_attendance_duty_assignments_tenantId_revokedByUserId_fk")
 
   @@unique([tenantId, id], map: "student_attendance_duty_assignments_tenant_id_id_key")
   @@index([tenantId, branchId, attendanceDate, status], map: "student_attendance_duty_branch_date_status_idx")

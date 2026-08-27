@@ -85,11 +85,11 @@ export const NAVIGATION_GROUPS = [
       { title: "Staff Profiles", href: "/staffboard/staff", permissions: ["staffboard.staff.view"] },
       { title: "Categories", href: "/staffboard/categories", permissions: ["staffboard.staff.view"] },
       { title: "Attendance Register", href: "/staffboard/attendance", permissions: ["staffboard.attendance.view"] },
-      { title: "Mark Attendance", href: "/staffboard/attendance/scan", permissions: ["staffboard.attendance.scan"] },
+      { title: "Staff Attendance", href: "/staffboard/attendance/scan", permissions: ["staffboard.attendance.scan"] },
       { title: "Staff QR Cards", href: "/staffboard/attendance/credentials", permissions: ["staffboard.attendance.credential.manage"] },
       { title: "Attendance Corrections", href: "/staffboard/attendance/adjustments", permissions: ["staffboard.attendance.adjustment.approve"] },
-      { title: "My Staff Card", href: "/staffboard/attendance/card", permissions: ["staffboard.attendance.credential.self_view"] },
-      { title: "My Attendance", href: "/staffboard/attendance/me", permissions: ["staffboard.attendance.self_view"] },
+      { title: "My Attendance", href: "/staffboard/attendance/card", permissions: ["staffboard.attendance.credential.self_view"] },
+      { title: "Attendance History", href: "/staffboard/attendance/me", permissions: ["staffboard.attendance.self_view"] },
       { title: "My Leave", href: "/staffboard/leave", permissions: ["staffboard.leave.self_view"] },
       { title: "Leave Review", href: "/staffboard/leave/review", permissions: ["staffboard.leave.view"] },
       { title: "Leave Settings", href: "/staffboard/leave/settings", permissions: ["staffboard.leave.settings.manage"] },
@@ -162,13 +162,13 @@ export const MOBILE_NAVIGATION_SHORTCUTS = [
     audiences: ["teacher"]
   },
   {
-    title: "Mark Attendance",
+    title: "Staff Attendance",
     href: "/staffboard/attendance/scan",
     permissions: ["staffboard.attendance.scan"],
     audiences: ["admin", "office"]
   },
   {
-    title: "My Staff Card",
+    title: "My Attendance",
     href: "/staffboard/attendance/card",
     permissions: ["staffboard.attendance.credential.self_view"],
     audiences: ["office", "teacher", "staff"]
@@ -272,15 +272,15 @@ const MOBILE_BOTTOM_NAVIGATION_ITEMS = {
       audiences: ["office"]
     },
     {
-      title: "Mark Attendance",
+      title: "Staff Attendance",
       href: "/staffboard/attendance/scan",
       permissions: ["staffboard.attendance.scan"],
       audiences: ["office"]
     },
     {
       title: "My Attendance",
-      href: "/staffboard/attendance/me",
-      permissions: ["staffboard.attendance.self_view"],
+      href: "/staffboard/attendance/card",
+      permissions: ["staffboard.attendance.credential.self_view"],
       audiences: ["office"]
     }
   ],
@@ -292,13 +292,13 @@ const MOBILE_BOTTOM_NAVIGATION_ITEMS = {
       audiences: ["staff"]
     },
     {
-      title: "My Staff Card",
+      title: "My Attendance",
       href: "/staffboard/attendance/card",
       permissions: ["staffboard.attendance.credential.self_view"],
       audiences: ["staff"]
     },
     {
-      title: "My Attendance",
+      title: "Attendance History",
       href: "/staffboard/attendance/me",
       permissions: ["staffboard.attendance.self_view"],
       audiences: ["staff"]

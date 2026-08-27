@@ -16,8 +16,13 @@ import {
 } from "lucide-react";
 
 type StaffQrCameraScannerProps = {
+  autoStart?: boolean;
+  continuous?: boolean;
   disabled?: boolean;
+  preferredFacingMode?: "user" | "environment";
   processing?: boolean;
+  rearmSignal?: number;
+  showPrimaryControls?: boolean;
   variant?: "default" | "mobile";
   title?: string;
   description?: string;
@@ -64,17 +69,21 @@ type TorchConstraintSet = MediaTrackConstraintSet & {
 };
 
 const CAMERA_REQUEST_TIMEOUT_MS = 12_000;
+const QR_ABSENT_FRAME_THRESHOLD = 8;
 
 const FALLBACK_CAMERA_CONSTRAINTS: MediaStreamConstraints = {
   audio: false,
   video: true
 };
 
-function preferredCameraConstraints(deviceId?: string): MediaStreamConstraints {
+function preferredCameraConstraints(
+  preferredFacingMode: "user" | "environment",
+  deviceId?: string
+): MediaStreamConstraints {
   return {
     audio: false,
     video: {
-      ...(deviceId ? { deviceId: { exact: deviceId } } : { facingMode: { ideal: "environment" } }),
+      ...(deviceId ? { deviceId: { exact: deviceId } } : { facingMode: { ideal: preferredFacingMode } }),
       width: { ideal: 1280 },
       height: { ideal: 1280 }
     }
@@ -170,15 +179,31 @@ function isConstraintFailure(error: unknown) {
   );
 }
 
-async function requestCameraStream(mediaDevices: MediaDevices, deviceId?: string) {
+async function requestCameraStream(
+  mediaDevices: MediaDevices,
+  preferredFacingMode: "user" | "environment",
+  deviceId?: string
+) {
   try {
-    return await getUserMediaWithTimeout(mediaDevices, preferredCameraConstraints(deviceId));
+    return await getUserMediaWithTimeout(
+      mediaDevices,
+      preferredCameraConstraints(preferredFacingMode, deviceId)
+    );
   } catch (error) {
     if (isConstraintFailure(error)) {
       return getUserMediaWithTimeout(mediaDevices, FALLBACK_CAMERA_CONSTRAINTS);
     }
     throw error;
   }
+}
+
+function qrPayloadFingerprint(value: string) {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16).padStart(8, "0");
 }
 
 function cameraErrorMessage(error: unknown) {
@@ -307,8 +332,13 @@ function loadImageFromObjectUrl(url: string) {
 }
 
 export function StaffQrCameraScanner({
+  autoStart = false,
+  continuous = false,
   disabled,
+  preferredFacingMode = "environment",
   processing = false,
+  rearmSignal = 0,
+  showPrimaryControls = true,
   variant = "default",
   title = "Scan QR",
   description = "Place the live school QR inside the square. Attendance submits automatically when the code is detected.",
@@ -321,6 +351,8 @@ export function StaffQrCameraScanner({
   const cameraRequestIdRef = useRef(0);
   const streamRef = useRef<MediaStream | null>(null);
   const decodedRef = useRef(false);
+  const blockedFingerprintRef = useRef<string | null>(null);
+  const qrAbsentFrameCountRef = useRef(0);
   const mountedRef = useRef(true);
   const [status, setStatus] = useState<ScannerStatus>("idle");
   const [message, setMessage] = useState("Allow camera access to scan the QR code displayed at the school office or gate.");
@@ -364,18 +396,23 @@ export function StaffQrCameraScanner({
     cameraRequestIdRef.current += 1;
     stopActiveCamera();
     decodedRef.current = false;
+    blockedFingerprintRef.current = null;
+    qrAbsentFrameCountRef.current = 0;
   }, [stopActiveCamera]);
 
   const submitDetectedPayload = useCallback((qrPayload: string) => {
     if (decodedRef.current) return;
 
     decodedRef.current = true;
-    stopActiveCamera();
+    blockedFingerprintRef.current = qrPayloadFingerprint(qrPayload);
+    qrAbsentFrameCountRef.current = 0;
+    stopDecodeLoop();
+    if (!continuous) stopActiveCamera();
     setStatus("detected");
     setCameraError(null);
     setMessage("QR detected. Submitting attendance...");
     onQrPayloadDetected(qrPayload);
-  }, [onQrPayloadDetected, stopActiveCamera]);
+  }, [continuous, onQrPayloadDetected, stopActiveCamera, stopDecodeLoop]);
 
   const scanVideoFrame = useCallback(() => {
     animationFrameRef.current = null;
@@ -393,8 +430,21 @@ export function StaffQrCameraScanner({
         true
       );
       if (qrPayload) {
+        qrAbsentFrameCountRef.current = 0;
+        if (qrPayloadFingerprint(qrPayload) === blockedFingerprintRef.current) {
+          animationFrameRef.current = window.requestAnimationFrame(scanVideoFrame);
+          return;
+        }
         submitDetectedPayload(qrPayload);
         return;
+      }
+
+      if (blockedFingerprintRef.current) {
+        qrAbsentFrameCountRef.current += 1;
+        if (qrAbsentFrameCountRef.current >= QR_ABSENT_FRAME_THRESHOLD) {
+          blockedFingerprintRef.current = null;
+          qrAbsentFrameCountRef.current = 0;
+        }
       }
     }
 
@@ -461,7 +511,13 @@ export function StaffQrCameraScanner({
       stopScanner("idle");
     };
     const stopWhenHidden = () => {
-      if (document.visibilityState === "hidden") stopScanner("idle");
+      if (document.visibilityState === "hidden") {
+        stopScanner("idle");
+        return;
+      }
+      if (autoStart && !disabled) {
+        window.setTimeout(() => void startCamera(), 0);
+      }
     };
 
     window.addEventListener("pagehide", stopForPageLifecycle);
@@ -470,7 +526,29 @@ export function StaffQrCameraScanner({
       window.removeEventListener("pagehide", stopForPageLifecycle);
       document.removeEventListener("visibilitychange", stopWhenHidden);
     };
-  }, [stopScanner]);
+  }, [autoStart, disabled, processing, status, stopScanner]);
+
+  useEffect(() => {
+    if (!autoStart || disabled) return;
+    const timeoutId = window.setTimeout(() => void startCamera(), 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [autoStart, disabled]);
+
+  useEffect(() => {
+    if (!disabled) return;
+    stopCameraSession();
+    setStatus("idle");
+    setMessage("Camera stopped because the attendance scanner is not active.");
+  }, [disabled, stopCameraSession]);
+
+  useEffect(() => {
+    if (!continuous || !streamRef.current || disabled || processing) return;
+    decodedRef.current = false;
+    setStatus("camera-active");
+    setCameraError(null);
+    setMessage("Ready for the next staff Attendance QR.");
+    startDecodeLoop();
+  }, [continuous, rearmSignal, startDecodeLoop]);
 
   async function startCamera(deviceId?: string, replaceActiveCamera = false) {
     if (
@@ -532,7 +610,7 @@ export function StaffQrCameraScanner({
     let stream: MediaStream | null = null;
     try {
       stopActiveCamera();
-      stream = await requestCameraStream(mediaDevices, deviceId);
+      stream = await requestCameraStream(mediaDevices, preferredFacingMode, deviceId);
 
       if (!mountedRef.current || cameraRequestIdRef.current !== requestId) {
         stopMediaStream(stream);
@@ -571,7 +649,7 @@ export function StaffQrCameraScanner({
       }
 
       setStatus("camera-active");
-      setMessage("Point your camera at the staff attendance QR. The scan submits automatically when detected.");
+      setMessage("Present a staff Attendance QR. Attendance submits automatically when detected.");
       startDecodeLoop();
       void updateCameraControls(stream, mediaDevices, requestId);
     } catch (error) {
@@ -724,7 +802,11 @@ export function StaffQrCameraScanner({
               )}
               <p className="mt-3 text-sm font-semibold">{statusLabel(visibleStatus)}</p>
               <p className="mt-1 text-xs leading-5 text-slate-300">
-                {processing ? "Do not close this page while attendance is verified." : "Camera starts only after you tap the button below."}
+                {processing
+                  ? "Do not close this page while attendance is verified."
+                  : autoStart
+                    ? "The camera starts automatically when browser permission allows."
+                    : "Camera starts only after you tap the button below."}
               </p>
             </div>
           </div>
@@ -737,7 +819,7 @@ export function StaffQrCameraScanner({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
+      {showPrimaryControls ? <div className="grid grid-cols-2 gap-2">
         <button
           type="button"
           onClick={() => void startCamera()}
@@ -760,7 +842,7 @@ export function StaffQrCameraScanner({
           <Square className="h-4 w-4" aria-hidden="true" />
           Stop
         </button>
-      </div>
+      </div> : null}
 
       {isCameraActive && (availableCameras.length > 1 || torchSupported) ? (
         <div className="flex items-center justify-center gap-2" aria-label="Camera controls">

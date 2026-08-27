@@ -5,7 +5,6 @@ import { getEffectivePermissions } from "@/lib/rbac/require-permission";
 import { ATTENDANCE_ENTITLEMENT_FEATURES } from "@/modules/campus-core/entitlements/catalog";
 import { requireAttendanceEntitlements } from "@/modules/campus-core/entitlements/service";
 import { StaffAttendanceOperatorScanner } from "@/modules/staffboard-lite/components/attendance/staff-attendance-operator-scanner";
-import { StaffAttendanceWorkspaceNav } from "@/modules/staffboard-lite/components/attendance/staff-attendance-workspace-nav";
 import { PageHeader } from "@/modules/staffboard-lite/components/staffboard-page-shell";
 import { listStaffAttendanceOperatorBranchOptions } from "@/modules/staffboard-lite/services/staff-attendance-scanner.service";
 
@@ -38,26 +37,16 @@ export default async function StaffQrScanPage() {
       <div className="lg:hidden">
         <MobilePageHeader
           eyebrow="Staff Attendance"
-          title="Mark Attendance"
-          description="Scan each staff card to record check-in or check-out."
+          title="Staff Attendance"
+          description="The secure scanner opens automatically and remains ready for consecutive staff."
         />
       </div>
       <div data-desktop-qr-scan-page="true" className="hidden lg:block">
         <PageHeader
-          title="Mark Staff Attendance"
-          description="Start a supervised branch session, then scan each staff attendance card."
+          title="Staff Attendance"
+          description="Continuous supervised scanning for staff check-in and check-out."
         />
       </div>
-      <StaffAttendanceWorkspaceNav
-        active="scan"
-        canViewRegister={permissions.has("staffboard.attendance.view")}
-        canScan
-        canManageCredentials={permissions.has("staffboard.attendance.credential.manage")}
-        canReviewAdjustments={permissions.has("staffboard.attendance.adjustment.approve")}
-        canViewReports={permissions.has("staffboard.attendance.report")}
-        canViewMine={permissions.has("staffboard.attendance.self_view")}
-        canViewCard={permissions.has("staffboard.attendance.credential.self_view")}
-      />
       <StaffAttendanceOperatorScanner branchOptions={branchOptions} defaultBranchId={defaultBranchId} />
     </div>
   );

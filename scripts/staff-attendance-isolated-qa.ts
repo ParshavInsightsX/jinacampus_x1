@@ -18,6 +18,7 @@ import {
   recordSupervisedStaffQrScan,
   startStaffAttendanceScanSession
 } from "@/modules/staffboard-lite/services/staff-attendance-scanner.service";
+import { getMyStaffAttendanceQrLiveState } from "@/modules/staffboard-lite/services/staff-attendance-self.service";
 import { seedPermissions } from "../prisma/seeds/permissions.seed";
 import { seedDefaultRolesForTenant } from "../prisma/seeds/roles.seed";
 
@@ -252,6 +253,60 @@ async function addPrincipalBranchAccess(tenantId: string, userId: string, branch
   });
 }
 
+async function createSiblingInstitutionBranch(input: {
+  school: SchoolFixture;
+  principalUserId: string;
+}) {
+  const institution = await db.institution.create({
+    data: {
+      tenantId: input.school.tenant.id,
+      name: "Synthetic Sibling Institution",
+      displayName: "Synthetic Sibling Institution",
+      code: "SSI",
+      status: "ACTIVE"
+    },
+    select: { id: true }
+  });
+  const branch = await db.branch.create({
+    data: {
+      tenantId: input.school.tenant.id,
+      institutionId: institution.id,
+      name: "Sibling Institution Branch",
+      code: "SIBLING",
+      status: "ACTIVE",
+      timezone: "Asia/Kolkata"
+    },
+    select: { id: true, name: true, code: true }
+  });
+  await db.attendanceSetting.create({
+    data: {
+      tenantId: input.school.tenant.id,
+      branchId: branch.id,
+      staffQrAttendanceEnabled: true,
+      staffAttendanceCaptureMode: "HYBRID",
+      staffSelfScanEnabled: false,
+      staffManualAttendanceEnabled: true,
+      staffCorrectionApprovalRequired: true,
+      staffScanSessionValidityMinutes: 60,
+      staffCredentialValidityDays: 365
+    }
+  });
+  await db.institutionEntitlement.createMany({
+    data: ATTENDANCE_ENTITLEMENT_DEFINITIONS.map((definition) => ({
+      tenantId: input.school.tenant.id,
+      institutionId: institution.id,
+      moduleKey: definition.moduleKey,
+      featureKey: definition.featureKey,
+      access: "FULL" as const,
+      source: "MANUAL" as const,
+      startsAt: EFFECTIVE_FROM,
+      endsAt: ACADEMIC_YEAR_END
+    }))
+  });
+  await addPrincipalBranchAccess(input.school.tenant.id, input.principalUserId, branch.id);
+  return { institutionId: institution.id, branch };
+}
+
 async function addAttendancePolicyAndSchedules(
   school: SchoolFixture,
   principalUserId: string,
@@ -396,6 +451,10 @@ async function main() {
     firstName: "Principal",
     passwordHash
   });
+  const siblingInstitution = await createSiblingInstitutionBranch({
+    school: primarySchool,
+    principalUserId: principal.userId
+  });
   const office = await createAccount({
     school: primarySchool,
     branchId: mainBranch.id,
@@ -463,7 +522,7 @@ async function main() {
   const principalCtx = contextFor({
     school: primarySchool,
     account: principal,
-    accessibleBranchIds: [mainBranch.id, northBranch.id]
+    accessibleBranchIds: [mainBranch.id, northBranch.id, siblingInstitution.branch.id]
   });
   const officeCtx = contextFor({ school: primarySchool, account: office, accessibleBranchIds: [mainBranch.id] });
   const teacherCtx = contextFor({ school: primarySchool, account: teacher, accessibleBranchIds: [mainBranch.id] });
@@ -489,8 +548,14 @@ async function main() {
   denials.push(await expectError("office cross-branch denial", "FORBIDDEN_BRANCH_ACCESS", () =>
     startStaffAttendanceScanSession(officeCtx, { branchId: northBranch.id, mode: "AUTO" })
   ));
-  denials.push(await expectError("office credential management denial", "FORBIDDEN_PERMISSION:staffboard.attendance.credential.manage", () =>
+  denials.push(await expectError("office credential management denial", "FORBIDDEN_ROLE", () =>
     issueStaffAttendanceCredential(officeCtx, { staffId: staff.staffId })
+  ));
+  denials.push(await expectError("same-tenant cross-institution scanner denial", "STAFF_ATTENDANCE_BRANCH_NOT_FOUND", () =>
+    startStaffAttendanceScanSession(principalCtx, {
+      branchId: siblingInstitution.branch.id,
+      mode: "AUTO"
+    })
   ));
 
   const session = await startStaffAttendanceScanSession(officeCtx, { branchId: mainBranch.id, mode: "AUTO" });
@@ -513,6 +578,20 @@ async function main() {
     clientRequestId: randomUUID()
   });
   assert(checkOut.eventType === "CHECK_OUT", "second accepted QR scan must check out");
+  const ownLiveState = await getMyStaffAttendanceQrLiveState(staffCtx, staffCredential.credentialId);
+  assert(ownLiveState.credentialState === "ACTIVE", "own active Attendance QR must remain visible");
+  assert(
+    ownLiveState.attendance?.checkInAt && ownLiveState.attendance.checkOutAt,
+    "own live attendance state must show the accepted check-in and check-out"
+  );
+  const foreignCredentialState = await getMyStaffAttendanceQrLiveState(
+    staffCtx,
+    otherCredential.credentialId
+  );
+  assert(
+    foreignCredentialState.credentialState === "UNAVAILABLE",
+    "a cross-tenant credential identifier must not resolve for the signed-in staff member"
+  );
   denials.push(await expectError("third QR scan denial", "STAFF_ATTENDANCE_ALREADY_RECORDED", () =>
     recordSupervisedStaffQrScan(officeCtx, {
       sessionId: session.id,
@@ -624,7 +703,11 @@ async function main() {
     tenantSlug: primarySchool.tenant.slug,
     otherTenantSlug: otherSchool.tenant.slug,
     institutionId: primarySchool.institution.id,
-    branchIds: { main: mainBranch.id, north: northBranch.id },
+    branchIds: {
+      main: mainBranch.id,
+      north: northBranch.id,
+      siblingInstitution: siblingInstitution.branch.id
+    },
     users: {
       principal: { email: principal.email, role: principal.role },
       office: { email: office.email, role: office.role },
@@ -639,6 +722,8 @@ async function main() {
       manualApproval: "PASS",
       ownCorrection: "PASS",
       selfServiceScope: "PASS",
+      attendanceQrPollingScope: "PASS",
+      institutionBoundary: "PASS",
       denials,
       attendanceEventCount: events,
       outboxEventCount: outboxEvents,
@@ -663,7 +748,9 @@ async function main() {
       manualApproval: "PASS",
       selfCorrection: "PASS",
       tenantAndBranchDenials: "PASS",
+      institutionBoundary: "PASS",
       selfServiceScope: "PASS",
+      attendanceQrPollingScope: "PASS",
       auditAndOutbox: "PASS",
       sensitiveAuditOutput: "PASS"
     },

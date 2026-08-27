@@ -58,11 +58,11 @@ describe("StaffBoard Lite UI route config", () => {
       "/staffboard/staff",
       "/staffboard/categories",
       "/staffboard/attendance",
-      "/staffboard/attendance/me",
+      "/staffboard/attendance/card",
       "/staffboard/attendance/scan",
       "/staffboard/attendance/credentials",
       "/staffboard/attendance/adjustments",
-      "/staffboard/attendance/card",
+      "/staffboard/attendance/me",
       "/staffboard/attendance/reports",
       "/staffboard/leave",
       "/staffboard/leave/review"
@@ -119,7 +119,7 @@ describe("StaffBoard Lite UI route config", () => {
     expect(navigationSource).toContain("Categories");
     expect(navigationSource).toContain("Attendance Register");
     expect(navigationSource).toContain("Staff QR Cards");
-    expect(navigationSource).toContain("Mark Attendance");
+    expect(navigationSource).toContain("Staff Attendance");
     expect(navigationSource).toContain("Attendance Reports");
     expect(navigationSource).toContain("My Leave");
     expect(navigationSource).toContain("Leave Review");

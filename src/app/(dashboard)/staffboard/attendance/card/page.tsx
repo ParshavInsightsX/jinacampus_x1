@@ -1,26 +1,27 @@
-import { AlertTriangle, IdCard } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { MobilePageHeader } from "@/components/app-shell/mobile-page-header";
 import { ErrorState, PermissionState } from "@/components/ui/empty-state";
 import { requireAuth } from "@/lib/auth/require-auth";
+import { safeTimeZone } from "@/lib/dates/time-zone";
 import { getEffectivePermissions } from "@/lib/rbac/require-permission";
 import { isIdentityCardSchemaAvailable } from "@/lib/schema-readiness/identity-cards";
-import { StaffIdentityCard } from "@/modules/staffboard-lite/components/attendance/staff-identity-card";
-import { StaffQrSelfNavigation } from "@/modules/staffboard-lite/components/attendance/staff-qr-self-navigation";
+import { StaffAttendanceQrPresentation } from "@/modules/staffboard-lite/components/attendance/staff-attendance-qr-presentation";
 import { PageHeader } from "@/modules/staffboard-lite/components/staffboard-page-shell";
 import { getMyStaffAttendanceCredentialCard } from "@/modules/staffboard-lite/services/staff-attendance-credentials.service";
+import { getMyStaffAttendanceQrLiveState } from "@/modules/staffboard-lite/services/staff-attendance-self.service";
 
 const stateCopy = {
   NOT_ISSUED: {
-    title: "Attendance card not issued",
-    description: "Ask your Principal to issue your staff attendance card."
+    title: "Attendance QR not issued",
+    description: "Ask your Principal to issue your Staff Attendance QR."
   },
   EXPIRED: {
-    title: "Attendance card expired",
-    description: "This card can no longer be used. Ask your Principal to issue a replacement."
+    title: "Attendance QR expired",
+    description: "This QR can no longer be used. Ask your Principal to issue a replacement."
   },
   REISSUE_REQUIRED: {
-    title: "Card reissue required",
-    description: "Your existing card remains protected, but secure digital viewing requires a newly issued card."
+    title: "Attendance QR reissue required",
+    description: "Your existing printed card remains protected, but digital display requires a newly issued Attendance QR."
   }
 } as const;
 
@@ -32,47 +33,43 @@ export default async function MyStaffAttendanceCardPage() {
   const schemaAvailable = await isIdentityCardSchemaAvailable();
   const result = schemaAvailable ? await getMyStaffAttendanceCredentialCard(ctx) : null;
   const canViewAttendance = permissions.has("staffboard.attendance.self_view");
+  let initialLiveState = null;
+  if (result?.state === "AVAILABLE" && canViewAttendance) {
+    try {
+      initialLiveState = await getMyStaffAttendanceQrLiveState(ctx, result.card.credentialId);
+    } catch {
+      initialLiveState = { credentialState: "UNAVAILABLE" as const, attendance: null };
+    }
+  }
 
   return (
     <div className="attendance-page-wash space-y-5 rounded-lg p-1 sm:p-2">
       <div className="lg:hidden">
         <MobilePageHeader
-          eyebrow="Staff Profile"
-          title="My Staff Card"
-          description="Show this card to an authorised attendance operator."
+          eyebrow="Staff Attendance"
+          title="My Attendance"
+          description="Show this QR to the authorised attendance scanner."
         />
       </div>
       <div className="hidden lg:block">
         <PageHeader
-          title="My Staff Attendance Card"
-          description="Display your active card for supervised attendance scanning. Printing and downloading are not available."
+          title="My Attendance"
+          description="Present your secure Attendance QR and receive confirmation when attendance is recorded."
         />
       </div>
 
-      <StaffQrSelfNavigation
-        active="card"
-        canViewCard
-        canViewAttendance={canViewAttendance}
-      />
-
       {!result ? (
         <ErrorState
-          title="My Staff Card is temporarily unavailable"
+          title="My Attendance QR is temporarily unavailable"
           description="The required identity-card setup is still being completed. Please contact the JinaCampus Administrator."
         />
       ) : result.state === "AVAILABLE" ? (
-        <section className="attendance-glass-panel mx-auto max-w-5xl p-4 sm:p-6">
-          <div className="mb-5 flex items-start gap-3 rounded-lg border border-cyan-200 bg-cyan-50/90 p-4 text-sm text-cyan-950">
-            <IdCard className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
-            <div>
-              <p className="font-semibold">Present this digital card at the attendance desk</p>
-              <p className="mt-1 leading-6">
-                An authorised Principal or attendance operator must scan it. You cannot scan your own attendance.
-              </p>
-            </div>
-          </div>
-          <StaffIdentityCard card={result.card} mode="self" />
-        </section>
+        <StaffAttendanceQrPresentation
+          card={result.card}
+          canMonitorAttendance={canViewAttendance}
+          initialLiveState={initialLiveState}
+          timeZone={safeTimeZone(ctx.timeZone)}
+        />
       ) : (
         <section className="attendance-glass-panel mx-auto max-w-xl p-6 text-center">
           <AlertTriangle className="mx-auto h-8 w-8 text-amber-600" aria-hidden="true" />

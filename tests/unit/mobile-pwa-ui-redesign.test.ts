@@ -83,8 +83,8 @@ describe("mobile web/PWA UI redesign", () => {
     ]);
     expect(getMobileBottomNavigationItems(staffPermissions).map((item) => item.title)).toEqual([
       "Home",
-      "My Staff Card",
       "My Attendance",
+      "Attendance History",
       "Profile",
       "More",
     ]);
@@ -92,7 +92,7 @@ describe("mobile web/PWA UI redesign", () => {
     expect(getMobileBottomNavigationItems(officePermissions, ["OFFICE_STAFF"]).map((item) => item.title)).toEqual([
       "Home",
       "Attendance",
-      "Mark Attendance",
+      "Staff Attendance",
       "My Attendance",
       "More",
     ]);
@@ -139,9 +139,16 @@ describe("mobile web/PWA UI redesign", () => {
     expect(operatorScanner).toContain("StaffQrCameraScanner");
     expect(operatorScanner).toContain("recordSupervisedStaffQrScanAction");
     expect(operatorScanner).toContain("StaffQrManualTokenInput");
+    expect(operatorScanner).toContain("autoStart");
+    expect(operatorScanner).toContain("continuous");
+    expect(operatorScanner).toContain('preferredFacingMode="user"');
+    expect(operatorScanner).toContain("showPrimaryControls={false}");
+    expect(operatorScanner).not.toContain("Scan Next Staff Member");
     expect(scanner).toContain('data-qr-scan-frame="true"');
     expect(scanner).toContain("aspect-square");
-    expect(scanner).toContain("Start Camera");
+    expect(scanner).toContain("if (!autoStart || disabled) return;");
+    expect(scanner).toContain("window.setTimeout(() => void startCamera(), 0)");
+    expect(scanner).not.toContain("autoStartAttemptedRef");
     expect(scanner).toContain("Upload QR image/photo");
     expect(scanner).toContain("Camera requires a secure HTTPS connection");
   });

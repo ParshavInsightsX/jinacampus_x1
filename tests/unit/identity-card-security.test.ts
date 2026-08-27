@@ -41,15 +41,15 @@ describe("identity cards and supervised staff attendance", () => {
     expect(actions).toContain("recordStaffAttendanceCredentialPrint");
   });
 
-  it("allows only the signed-in linked staff member to view their active digital card", () => {
+  it("allows only the signed-in linked staff member to view their active Attendance QR", () => {
     const service = source("src/modules/staffboard-lite/services/staff-attendance-credentials.service.ts");
     const selfPage = source("src/app/(dashboard)/staffboard/attendance/card/page.tsx");
 
     expect(service).toContain("userId: ctx.userId");
     expect(service).toContain('permission: "staffboard.attendance.credential.self_view"');
     expect(service).toContain('viewerScope: "SELF"');
-    expect(selfPage).toContain('mode="self"');
-    expect(selfPage).toContain("Printing and downloading are not available.");
+    expect(selfPage).toContain("StaffAttendanceQrPresentation");
+    expect(selfPage).not.toContain("StaffIdentityCard");
     expect(selfPage).not.toMatch(/recordStaffAttendanceCredentialPrintAction|window\.print|download=/);
   });
 

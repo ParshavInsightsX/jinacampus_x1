@@ -14,7 +14,7 @@ describe("attendance fast login and workspace selection", () => {
   it("keeps single-role redirects short and asks multi-role users to choose", () => {
     expect(getPostLoginRedirectPath(["PRINCIPAL"])).toBe("/dashboard");
     expect(getPostLoginRedirectPath(["TEACHER"])).toBe("/academia/attendance/mark");
-    expect(getPostLoginRedirectPath(["STAFF"])).toBe("/staffboard/attendance/me");
+    expect(getPostLoginRedirectPath(["STAFF"])).toBe("/staffboard/attendance/card");
     expect(getPostLoginRedirectPath(["TEACHER", "STAFF"])).toBe("/account/workspaces");
     expect(getPostLoginRedirectPath(["PRINCIPAL", "TEACHER"])).toBe("/account/workspaces");
     expect(getPostLoginRedirectPath(["ADMINISTRATOR"])).toBe("/dashboard");
@@ -36,7 +36,7 @@ describe("attendance fast login and workspace selection", () => {
     ]);
     expect(teacherWorkspaces.map((workspace) => workspace.href)).toEqual([
       "/academia/attendance/mark",
-      "/staffboard/attendance/me"
+      "/staffboard/attendance/card"
     ]);
 
     const staffWorkspaces = getAvailableSchoolWorkspaces(["STAFF"], new Set<PermissionCode>([

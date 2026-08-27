@@ -559,6 +559,7 @@ export async function listStaffAttendanceOperatorBranchOptions(ctx: TenantContex
   const branches = await db.branch.findMany({
     where: {
       tenantId: ctx.tenantId,
+      institutionId: ctx.institutionId ?? undefined,
       id: { in: ctx.accessibleBranchIds },
       status: "ACTIVE"
     },

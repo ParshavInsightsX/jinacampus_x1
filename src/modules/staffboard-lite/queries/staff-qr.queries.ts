@@ -25,6 +25,7 @@ export async function listStaffQrBranchOptions(ctx: TenantContext): Promise<Staf
   const branches = await db.branch.findMany({
     where: {
       tenantId: ctx.tenantId,
+      institutionId: ctx.institutionId ?? undefined,
       id: { in: ctx.accessibleBranchIds },
       status: { not: "ARCHIVED" }
     },

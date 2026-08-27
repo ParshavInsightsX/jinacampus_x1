@@ -82,8 +82,7 @@ const actionIconByLabel = {
   "Mark Student Attendance": <ClipboardCheck className="h-5 w-5" aria-hidden="true" />,
   "Student Reports": <BarChart3 className="h-5 w-5" aria-hidden="true" />,
   "Manage Staff": <BriefcaseBusiness className="h-5 w-5" aria-hidden="true" />,
-  "Mark Staff Attendance": <QrCode className="h-5 w-5" aria-hidden="true" />,
-  "My Staff Card": <QrCode className="h-5 w-5" aria-hidden="true" />,
+  "Staff Attendance": <QrCode className="h-5 w-5" aria-hidden="true" />,
   "Staff QR Cards": <QrCode className="h-5 w-5" aria-hidden="true" />,
   "Attendance Register": <BriefcaseBusiness className="h-5 w-5" aria-hidden="true" />,
   "Attendance Reports": <BriefcaseBusiness className="h-5 w-5" aria-hidden="true" />,
@@ -269,7 +268,7 @@ export function MobileDashboard({
                 { label: "Working minutes", value: selfAttendance.workingMinutes ?? "Pending" }
               ]}
               actions={
-                <Link href="/staffboard/attendance/me" className="premium-secondary-button w-full">View my attendance</Link>
+                <Link href="/staffboard/attendance/card" className="premium-secondary-button w-full">Open My Attendance QR</Link>
               }
             />
           ) : (

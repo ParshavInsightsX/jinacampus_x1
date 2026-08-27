@@ -105,8 +105,7 @@ describe("dashboard UI", () => {
       "/staffboard/attendance",
       "/staffboard/attendance/reports",
       "/staffboard/staff",
-      "/staffboard/attendance/card",
-      "/staffboard/attendance/me"
+      "/staffboard/attendance/card"
     ]);
     expect(DASHBOARD_QUICK_ACTIONS.map((action) => action.label)).toContain("Staff QR Cards");
     expect(DASHBOARD_QUICK_ACTIONS.map((action) => action.label)).toContain("Attendance Register");

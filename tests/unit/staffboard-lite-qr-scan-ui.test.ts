@@ -19,18 +19,33 @@ describe("StaffBoard Lite supervised QR scanner UI", () => {
     expect(route).not.toContain("StaffQrScanForm");
   });
 
-  it("starts a supervised branch session and keeps manual entry available", () => {
+  it("starts a continuous supervised branch session and keeps recovery fallback available", () => {
     const operator = source("src/modules/staffboard-lite/components/attendance/staff-attendance-operator-scanner.tsx");
 
     expect(operator).toContain("startStaffAttendanceScanSessionAction");
     expect(operator).toContain("closeStaffAttendanceScanSessionAction");
     expect(operator).toContain("recordSupervisedStaffQrScanAction");
+    expect(operator).toContain("const scanFormData = new FormData()");
+    expect(operator).toContain('scanFormData.set("qrPayload", payload)');
+    expect(operator).toContain("recordSupervisedStaffQrScanAction(scanFormData)");
+    expect(operator).not.toContain("recordSupervisedStaffQrScanAction({");
     expect(operator).toContain("StaffQrCameraScanner");
     expect(operator).toContain("StaffQrManualTokenInput");
     expect(operator).toContain("submissionLock.current");
     expect(operator).toContain("crypto.randomUUID()");
-    expect(operator).toContain("Scan Next Staff Member");
-    expect(operator).toContain("Attendance was not recorded");
+    expect(operator).toContain("automaticStartAttempted");
+    expect(operator).toContain("scheduleRearm");
+    expect(operator).toContain("RESULT_DISPLAY_MS = 2_000");
+    expect(operator).toContain("activeBranch?.timezone");
+    expect(operator).toContain("The scanner session could not be closed.");
+    expect(operator).toContain('stationState === "SESSION_EXPIRED"');
+    expect(operator).toContain("Restart scanner");
+    expect(operator).toContain("autoStart");
+    expect(operator).toContain("continuous");
+    expect(operator).toContain('preferredFacingMode="user"');
+    expect(operator).toContain("showPrimaryControls={false}");
+    expect(operator).not.toContain("Begin Attendance");
+    expect(operator).not.toContain("Scan Next Staff Member");
   });
 
   it("implements resilient iOS, Android, and PWA camera behavior", () => {
@@ -40,6 +55,7 @@ describe("StaffBoard Lite supervised QR scanner UI", () => {
     expect(scanner).toContain("CAMERA_REQUEST_TIMEOUT_MS = 12_000");
     expect(scanner).toContain("getUserMediaWithTimeout");
     expect(scanner).toContain("preferredCameraConstraints");
+    expect(scanner).toContain('preferredFacingMode: "user" | "environment"');
     expect(scanner).toContain("FALLBACK_CAMERA_CONSTRAINTS");
     expect(scanner).toContain("window.isSecureContext");
     expect(scanner).toContain("navigator.mediaDevices");
@@ -47,6 +63,11 @@ describe("StaffBoard Lite supervised QR scanner UI", () => {
     expect(scanner).toContain("decodeQrFromCanvas");
     expect(scanner).toContain("jsQR(imageData.data");
     expect(scanner).toContain("window.requestAnimationFrame(scanVideoFrame)");
+    expect(scanner).toContain("blockedFingerprintRef");
+    expect(scanner).toContain("QR_ABSENT_FRAME_THRESHOLD");
+    expect(scanner).toContain("rearmSignal");
+    expect(scanner).toContain('if (!disabled) return;');
+    expect(scanner).toContain("Camera stopped because the attendance scanner is not active.");
     expect(scanner).toContain("playsInline");
     expect(scanner).toContain("webkit-playsinline");
     expect(scanner).toContain('data-qr-scan-frame="true"');
@@ -96,9 +117,12 @@ describe("StaffBoard Lite supervised QR scanner UI", () => {
   it("does not persist or render raw scanner payloads in client storage", () => {
     const operator = source("src/modules/staffboard-lite/components/attendance/staff-attendance-operator-scanner.tsx");
     const scanner = source("src/modules/staffboard-lite/components/attendance/staff-qr-camera-scanner.tsx");
+    const actions = source("src/modules/staffboard-lite/actions/staff-attendance-domain.actions.ts");
 
     expect(`${operator}\n${scanner}`).not.toMatch(/localStorage|sessionStorage|indexedDB|document\.cookie|console\.log/i);
     expect(`${operator}\n${scanner}`).not.toMatch(/tokenHash|passwordHash|tenantId=.*payload/i);
+    expect(actions).toContain("recordSupervisedStaffQrScanAction(formData: FormData)");
+    expect(actions).toContain('qrPayload: formData.get("qrPayload")');
   });
 
   it("keeps the own-attendance page read-only and bounded", () => {
@@ -111,8 +135,25 @@ describe("StaffBoard Lite supervised QR scanner UI", () => {
     expect(query).toContain('permission: "staffboard.attendance.self_view"');
     expect(query).toContain("take: Math.min(Math.max(limit, 1), 31)");
     expect(page).toContain('id="attendance-history"');
-    expect(page).toContain("Open My Staff Card");
+    expect(page).toContain("Open My Attendance QR");
     expect(page).not.toContain("StaffQrCameraScanner");
+  });
+
+  it("keeps staff QR status polling session-derived and tenant scoped", () => {
+    const service = source("src/modules/staffboard-lite/services/staff-attendance-self.service.ts");
+    const action = source("src/modules/staffboard-lite/actions/staff-attendance-domain.actions.ts");
+    const presentation = source("src/modules/staffboard-lite/components/attendance/staff-attendance-qr-presentation.tsx");
+
+    expect(service).toContain("tenantId: ctx.tenantId");
+    expect(service).toContain("userId: ctx.userId");
+    expect(service).toContain("branchId: { in: ctx.accessibleBranchIds }");
+    expect(service).toContain('permission: "staffboard.attendance.credential.self_view"');
+    expect(service).toContain('permission: "staffboard.attendance.self_view"');
+    expect(action).toContain("pollMyStaffAttendanceQrAction");
+    expect(presentation).toContain('document.visibilityState === "visible"');
+    expect(presentation).toContain("POLL_INTERVAL_MS = 4_000");
+    expect(presentation).toContain("Attendance recorded");
+    expect(presentation).not.toMatch(/tenantId|branchId|userId|tokenHash|passwordHash/);
   });
 
   it("sets a camera permissions policy for web and installed PWA routes", () => {

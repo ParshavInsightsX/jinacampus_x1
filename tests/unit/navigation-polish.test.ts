@@ -52,10 +52,11 @@ describe("navigation polish", () => {
     expect(staffboardItems).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ title: "Attendance Register", href: "/staffboard/attendance" }),
-        expect.objectContaining({ title: "Mark Attendance", href: "/staffboard/attendance/scan" }),
+        expect.objectContaining({ title: "Staff Attendance", href: "/staffboard/attendance/scan" }),
         expect.objectContaining({ title: "Staff QR Cards", href: "/staffboard/attendance/credentials" }),
         expect.objectContaining({ title: "Attendance Corrections", href: "/staffboard/attendance/adjustments" }),
-        expect.objectContaining({ title: "My Staff Card", href: "/staffboard/attendance/card" }),
+        expect.objectContaining({ title: "My Attendance", href: "/staffboard/attendance/card" }),
+        expect.objectContaining({ title: "Attendance History", href: "/staffboard/attendance/me" }),
         expect.objectContaining({ title: "Attendance Reports", href: "/staffboard/attendance/reports" })
       ])
     );
@@ -116,7 +117,7 @@ describe("navigation polish", () => {
 
     expect(
       items.filter((item) => isNavItemActive(item, "/staffboard/attendance/scan", activeHref)).map((item) => item.title)
-    ).toEqual(["Mark Attendance"]);
+    ).toEqual(["Staff Attendance"]);
   });
 
   it("keeps dashboard quick actions on real MVP routes", () => {
@@ -129,19 +130,17 @@ describe("navigation polish", () => {
       "/staffboard/attendance",
       "/staffboard/attendance/reports",
       "/staffboard/staff",
-      "/staffboard/attendance/card",
-      "/staffboard/attendance/me"
+      "/staffboard/attendance/card"
     ]);
     expect(DASHBOARD_QUICK_ACTIONS.map((action) => action.label)).toEqual([
       "Manage Students",
       "Mark Student Attendance",
       "Student Reports",
       "Staff QR Cards",
-      "Mark Staff Attendance",
+      "Staff Attendance",
       "Attendance Register",
       "Attendance Reports",
       "Manage Staff",
-      "My Staff Card",
       "My Attendance"
     ]);
   });
@@ -181,7 +180,7 @@ describe("navigation polish", () => {
       "Mark Student Attendance",
       "Student Reports",
       "Staff QR Cards",
-      "Mark Staff Attendance",
+      "Staff Attendance",
       "Attendance Register",
       "Attendance Reports",
       "Manage Staff"
@@ -189,9 +188,9 @@ describe("navigation polish", () => {
     expect(getVisibleDashboardQuickActions(teacherPermissions).map((action) => action.label)).toEqual([
       "Mark Student Attendance",
       "Student Reports",
-      "My Staff Card"
+      "My Attendance"
     ]);
-    expect(getVisibleDashboardQuickActions(staffPermissions).map((action) => action.label)).toEqual(["My Staff Card"]);
+    expect(getVisibleDashboardQuickActions(staffPermissions).map((action) => action.label)).toEqual(["My Attendance"]);
   });
 
   it("builds role-focused mobile shortcuts without fake routes", () => {
@@ -210,12 +209,12 @@ describe("navigation polish", () => {
     expect(getPrimaryMobileNavigationItems(teacherPermissions).map((item) => item.title)).toEqual([
       "Home",
       "Attendance",
-      "My Staff Card",
+      "My Attendance",
       "Reports"
     ]);
     expect(getPrimaryMobileNavigationItems(staffPermissions).map((item) => item.title)).toEqual([
       "Home",
-      "My Staff Card"
+      "My Attendance"
     ]);
     expect(MOBILE_NAVIGATION_SHORTCUTS.map((item) => item.href)).not.toEqual(
       expect.arrayContaining(["/feedesk"])

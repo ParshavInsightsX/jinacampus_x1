@@ -24,12 +24,12 @@ type StaffAttendanceWorkspaceNavProps = {
 
 const items = [
   { key: "register", label: "Attendance Register", href: "/staffboard/attendance", icon: CalendarCheck2, permission: "canViewRegister" },
-  { key: "scan", label: "Mark Attendance", href: "/staffboard/attendance/scan", icon: ScanLine, permission: "canScan" },
+  { key: "scan", label: "Staff Attendance", href: "/staffboard/attendance/scan", icon: ScanLine, permission: "canScan" },
   { key: "credentials", label: "Staff QR Cards", href: "/staffboard/attendance/credentials", icon: IdCard, permission: "canManageCredentials" },
-  { key: "card", label: "My Staff Card", href: "/staffboard/attendance/card", icon: IdCard, permission: "canViewCard" },
+  { key: "card", label: "My Attendance", href: "/staffboard/attendance/card", icon: IdCard, permission: "canViewCard" },
   { key: "adjustments", label: "Attendance Corrections", href: "/staffboard/attendance/adjustments", icon: ClipboardCheck, permission: "canReviewAdjustments" },
   { key: "reports", label: "Reports", href: "/staffboard/attendance/reports", icon: History, permission: "canViewReports" },
-  { key: "mine", label: "My Attendance", href: "/staffboard/attendance/me", icon: UserRoundCheck, permission: "canViewMine" }
+  { key: "mine", label: "Attendance History", href: "/staffboard/attendance/me", icon: UserRoundCheck, permission: "canViewMine" }
 ] as const;
 
 export function StaffAttendanceWorkspaceNav(props: StaffAttendanceWorkspaceNavProps) {

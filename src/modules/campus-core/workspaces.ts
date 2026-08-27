@@ -61,16 +61,18 @@ export function getAvailableSchoolWorkspaces(
     });
   }
 
-  if (
-    hasAnyPermission(permissions, [
-      "staffboard.attendance.credential.self_view",
-      "staffboard.attendance.self_view"
-    ])
-  ) {
+  if (hasAnyPermission(permissions, ["staffboard.attendance.credential.self_view"])) {
     workspaces.push({
       id: "self-attendance",
       title: "My Attendance",
-      description: "Review your own attendance record and display your supervised attendance card.",
+      description: "Display your Attendance QR for the authorised school scanner.",
+      href: "/staffboard/attendance/card"
+    });
+  } else if (hasAnyPermission(permissions, ["staffboard.attendance.self_view"])) {
+    workspaces.push({
+      id: "self-attendance",
+      title: "Attendance History",
+      description: "Review your own attendance record and correction requests.",
       href: "/staffboard/attendance/me"
     });
   }

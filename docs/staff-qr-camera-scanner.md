@@ -2,8 +2,8 @@
 
 ## Status
 
-- Date: 2026-08-26
-- Status: Operator-only supervised scanner and personal Staff Card flow implemented locally; isolated migration, authenticated role QA, DB-backed photo lifecycle, private Storage infrastructure, and representative card rendering passed, while deployment migration, physical printing, and approved-HTTPS real-device QA remain pending
+- Date: 2026-08-27
+- Status: Automatic continuous operator scanner and purpose-specific personal Attendance QR implemented locally; focused regressions pass, while DB-backed authenticated role QA and approved-HTTPS Android/iOS/PWA certification for this update remain pending
 - Route: `/staffboard/attendance/scan`
 - Native mobile app: not required
 - File upload/storage changes: not included
@@ -13,30 +13,33 @@ No passwords, raw QR payloads, QR tokens, token hashes, session secrets, or real
 ## Primary Supervised Flow
 
 1. An authorised attendance operator signs in to JinaCampus.
-2. The operator opens StaffBoard Lite > Scan Staff QR Card.
-3. The server starts or resumes an operator- and branch-bound scanner session.
-4. The operator taps Start Camera and the browser requests permission.
-5. The operator places the staff member's opaque Staff QR Card inside the 1:1 frame.
-6. `jsQR` decodes the payload in memory; no capture button is required.
-7. The scanner submits the payload with a stable client request ID.
+2. The operator opens StaffBoard Lite > Staff Attendance.
+3. The server automatically starts an operator- and branch-bound scanner session.
+4. The scanner requests the preferred front camera automatically after the secure session is ready, with browser-safe camera fallback.
+5. The operator places the staff member's opaque Attendance QR inside the 1:1 frame.
+6. `jsQR` continuously decodes frames in memory; no capture or confirmation button is required.
+7. The scanner submits the payload once with a unique idempotency key.
 8. The server validates permission, entitlement, tenant, institution, branch, session, staff assignment, credential hash/lifecycle, attendance date, calendar/leave state, and duplicate rules.
 9. The service appends an attendance event, recalculates the daily Attendance Register projection, and writes audit/outbox records in one transaction.
-10. The operator receives a safe success, duplicate, warning, or rejection result without QR secrets.
+10. A safe result appears above the live camera for two seconds, then the station automatically rearms for the next staff member.
+11. The same QR held in the frame remains suppressed until it leaves the frame; server duplicate controls remain authoritative.
 
 Staff self-scan and shared-QR generation are retired. Legacy service entry points return safe disabled responses before database work. A staff member may display only their own active card; the camera scanner is available only to a separately authorised operator. Historical QA notes below describe earlier implementations and do not override this current model.
 
-## Automatic Scanner UX - 2026-08-11
+## Automatic Continuous Scanner UX - 2026-08-27
 
 - The live preview is a mobile-first 1:1 square with a centered scan guide and automatic frame decoding.
-- The rear-facing camera is preferred. A generic video constraint fallback remains available when browser camera constraints fail.
+- The supervised station prefers the front-facing camera for a fixed gate or office device. Camera switching remains available when the browser exposes multiple cameras, and a generic video constraint fallback is used when preferred constraints fail.
 - Camera requests retain the 12-second timeout so the interface cannot remain indefinitely on a permission state.
 - Camera switching appears only when the browser reports multiple video inputs.
 - Flashlight control appears only when the active track reports torch capability; unsupported browsers continue without it.
-- Start, stop, retry, page hide, tab hide, route change, and component unmount all stop active media tracks safely.
+- The normal loop has no Start, Confirm, Continue, or Next action. Explicit retry remains available for blocked camera states.
+- Stop, session expiry, page hide, tab hide, route change, and component unmount all stop active media tracks safely.
 - A processing lock prevents repeated camera detections and duplicate client submissions while the server action is running.
+- An in-memory non-secret fingerprint suppresses a QR held in the frame and is never persisted or logged.
 - Invalid, expired, wrong-branch, duplicate, check-in-required, permission, holiday, leave, offline, and camera errors use safe user-facing states.
 - QR image upload and manual token entry remain controlled fallbacks and use the same server validation path.
-- Scanner, Today, and History navigation is permission-aware; server-side RBAC remains authoritative.
+- Principal/Administrator attendance navigation opens `/staffboard/attendance/scan`; staff My Attendance opens `/staffboard/attendance/card`; detailed history remains at `/staffboard/attendance/me`.
 
 The scanner does not send client-provided tenant, branch, staff, role, or attendance-status claims. No raw QR payload is stored in browser persistence or placed in redirect URLs.
 
@@ -56,10 +59,11 @@ The fallback accepts the opaque payload encoded in an issued Staff QR Identifica
 
 Camera access requires HTTPS in deployed environments. Localhost works for development.
 
-## Staff Card and PWA Update - 2026-08-26
+## Attendance QR and PWA Update - 2026-08-27
 
 - `/staffboard/attendance/credentials` is the Principal-family lifecycle console for issue, preview, audited print, reissue, revoke, and history.
-- `/staffboard/attendance/card` is the staff member's own digital-only card view and contains no print or download action.
+- `/staffboard/attendance/card` is the staff member's purpose-specific digital Attendance QR and contains no full identity-card, print, or download action.
+- The personal page polls only while visible, uses session-derived staff and branch scope, and shows an automatic same-screen confirmation when check-in or check-out is recorded.
 - `/staffboard/attendance/scan` is the operator-only supervised scanner route and requires `staffboard.attendance.scan` on the selected branch.
 - `/staffboard/attendance/qr` is now a compatibility redirect and no longer renders a shared QR generator.
 - Installed PWA use remains online-first and keeps the same secure login, camera, tenant, institution, branch, permission, entitlement, session, duplicate, and audit checks.
@@ -433,3 +437,39 @@ Server-side safety remains authoritative:
 Readiness note:
 
 This hardening removes the known source-level Safari/PWA button-response risk, but it does not certify physical camera readiness. Run approved-HTTPS Android Chrome, iOS Safari, and installed PWA tests for CHECK_IN, CHECK_OUT, invalid QR, denied permission, camera unavailable, duplicate/expired QR, and wrong-branch QR where fixtures exist.
+
+## Continuous Supervised Scanner Release Gate - 2026-08-27
+
+Status: authenticated isolated database/browser QA passed; real-device HTTPS camera certification remains blocked.
+
+Completed:
+
+- Applied the complete 32-migration history to disposable PostgreSQL 17 and confirmed no schema drift.
+- Passed Principal, Office Staff, Teacher, Staff, wrong-branch, cross-tenant, cross-institution, and personal-QR service boundaries.
+- Passed 24 authenticated Chrome browser-engine checks at desktop and 390 x 844 mobile emulation.
+- Recorded check-in and check-out through manual fallback using the same server scan action.
+- Confirmed automatic scanner rearm, wrong-branch rejection, cross-tenant rejection, personal status refresh, and no print/download controls.
+- Confirmed safe headless camera-unavailable handling and retained manual fallback.
+- Fixed automatic camera startup remaining Idle under React development Strict Mode.
+- Constrained all Staff Attendance branch option queries to the active institution.
+
+Not completed or claimed:
+
+- No embedded-browser screenshot or visual QA; the embedded environment was unavailable.
+- No Android Chrome live camera test; ADB reported no attached device.
+- No iPhone or iPad Safari live camera test; no iOS bridge was available.
+- No installed-PWA physical camera test.
+- No physical permission, preview, front-camera switching, live decode, brightness, orientation, background/resume, route-leave, or logout certification.
+
+Device matrix:
+
+| Check | Android Chrome | iPhone/iPad Safari | Installed PWA |
+| --- | --- | --- | --- |
+| Automatic camera preview | Blocked | Blocked | Blocked |
+| Permission denied and recovery | Blocked | Blocked | Blocked |
+| Live QR detection | Blocked | Blocked | Blocked |
+| Check-in and check-out | Blocked | Blocked | Blocked |
+| Consecutive scan rearm | Blocked | Blocked | Blocked |
+| Camera unavailable and cleanup | Blocked | Blocked | Blocked |
+
+Final scanner status: **release candidate with physical-device QA pending**. Do not claim complete QR camera readiness until the supervised Android/iOS/PWA matrix passes over the approved HTTPS deployment.

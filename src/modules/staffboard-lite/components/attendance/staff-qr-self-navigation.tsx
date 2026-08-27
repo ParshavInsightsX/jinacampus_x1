@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarClock, IdCard, QrCode } from "lucide-react";
+import { CalendarClock, QrCode } from "lucide-react";
 
 type StaffQrSelfNavigationProps = {
   active: "card" | "today" | "history";
@@ -14,10 +14,10 @@ export function StaffQrSelfNavigation({
 }: StaffQrSelfNavigationProps) {
   const links = [
     canViewCard
-      ? { key: "card" as const, href: "/staffboard/attendance/card", label: "My Staff Card", icon: IdCard }
+      ? { key: "card" as const, href: "/staffboard/attendance/card", label: "My Attendance", icon: QrCode }
       : null,
     canViewAttendance
-      ? { key: "today" as const, href: "/staffboard/attendance/me", label: "Today", icon: QrCode }
+      ? { key: "today" as const, href: "/staffboard/attendance/me", label: "Today's Record", icon: CalendarClock }
       : null,
     canViewAttendance
       ? {

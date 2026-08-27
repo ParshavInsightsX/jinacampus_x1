@@ -70,7 +70,9 @@ describe("mobile browser QA pass", () => {
     expect(doc).toContain("Student ID Cards");
     expect(doc).toContain("Staff Attendance Admin");
     expect(doc).toContain("full student-row workflow could not be tested");
-    expect(doc).toContain("staff self-attendance camera access and the shared five-hour QR console are retired");
+    expect(doc).toContain("staff self-attendance camera access and the shared QR console are retired");
+    expect(doc).toContain("purpose-specific Attendance QR");
+    expect(doc).toContain("no Start, Confirm, Continue, or Next action");
     expect(doc).toContain("must not be used for the current release");
     expect(doc).toContain("Phase 10.5 adds browser-based camera scanning");
     expect(doc).toContain("Android Chrome real-device QR scan");

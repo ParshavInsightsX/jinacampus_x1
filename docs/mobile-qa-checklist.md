@@ -4,7 +4,7 @@ This document records the Phase 8.2 responsive browser QA plan for the current J
 
 Phase 8.2 no-new-browser-framework QA is complete. Authenticated mobile QA continues as `TASKS.md` Phase 9.7 after the local database is reachable and seeded with users/data for admin/principal, teacher, and staff flows.
 
-Current supervised Staff Attendance update (2026-08-26): staff self-attendance camera access and the shared five-hour QR console are retired. Each staff member may display only their own active digital Staff Card. A separately authorised Principal, Administrator, or attendance operator uses a branch-bound session and the automatic 1:1 `jsQR` scanner. Staff cannot print, download, or scan their own card. The authenticated mobile drawer retains PWA installation guidance. Offline attendance remains out of scope. The additive identity-card migration, synthetic DB-backed authorization matrix, and authenticated private-photo lifecycle have passed in isolated non-production environments; deployment migration, physical print checks, and approved-HTTPS device scanning QA remain required.
+Current supervised Staff Attendance update (2026-08-27): staff self-attendance camera access and the shared QR console are retired. Each staff member may display only their own purpose-specific Attendance QR. A separately authorised Principal, Administrator, or attendance operator opens a branch-bound automatic 1:1 `jsQR` station; the secure session, camera request, detection, result, and rearm loop require no Start, Confirm, Continue, or Next action during normal operation. Staff cannot print, download, or scan their own QR. The authenticated mobile drawer retains PWA installation guidance. Offline attendance remains out of scope. Focused source regressions pass; DB-backed authenticated role QA and approved-HTTPS Android/iOS/PWA testing for this update remain required.
 
 QA records dated before 2026-08-26 below are retained as historical evidence only. Their shared-QR generation and staff self-scan steps must not be used for the current release.
 
@@ -115,13 +115,13 @@ Student Attendance Marking, `/academia/attendance/mark`:
 Staff QR Scan, `/staffboard/attendance/scan`:
 
 - [ ] A user without `staffboard.attendance.scan` sees a safe denial and no camera controls.
-- [ ] An authorised operator can select only an accessible branch and start a bound scan session.
-- [ ] Camera scanner Start Camera button is visible and tappable.
+- [ ] An authorised operator receives an automatic session for only an accessible branch.
+- [ ] The camera request begins automatically after the secure session is ready; retry is visible when recovery is required.
 - [ ] Camera preview is centered, square, and does not overflow at 360 px.
-- [ ] Rear camera is preferred and scanning begins automatically without a capture button.
+- [ ] Front camera is preferred for the supervised station, switching is available when supported, and scanning requires no capture button.
 - [ ] The UI locks while the server validates a detected card.
 - [ ] Manual token entry remains available when camera scanning fails.
-- [ ] Success stays in the operator workflow and shows staff name, employee code, branch, status, event time, and working time.
+- [ ] Success stays above the live camera, uses branch-local time, and automatically rearms after two seconds.
 - [ ] Duplicate, expired, revoked, superseded, wrong-branch, leave-managed, locked-period, and invalid-card errors remain safe and readable.
 - [ ] No QR payload, token hash, tenant ID, or internal error is rendered or persisted.
 - [ ] Camera tracks stop on Stop, page hide, tab hide, route change, and unmount.
@@ -133,8 +133,8 @@ Staff QR Cards, `/staffboard/attendance/credentials` and `/staffboard/attendance
 - [ ] Print preview contains only the front and reverse CR80 card faces, with no application chrome or controls.
 - [ ] Institution logo, staff photo, name, employee code, designation, department, branch, validity, and contact details fit without overflow.
 - [ ] The QR is large, high contrast, and scannable after physical printing.
-- [ ] Staff own-card view loads only the linked active credential.
-- [ ] Staff own-card view contains no print or download action and is excluded from print media.
+- [ ] Staff My Attendance loads only the linked active credential as a purpose-specific Attendance QR.
+- [ ] Staff My Attendance contains no full identity-card, print, or download action and is excluded from print media.
 - [ ] Revoked, expired, legacy reissue-required, and not-issued states use safe copy.
 - [ ] `/staffboard/attendance/qr` redirects to the correct managed card, own card, or register route and exposes no shared QR generator.
 
@@ -835,3 +835,57 @@ Source and automated verification now cover the system-level mobile shell:
 Detailed implementation and boundary notes are in `docs/mobile-pwa-ui-modernisation.md`.
 
 Pending verification remains physical Android Chrome, iOS Safari, installed-PWA, on-screen keyboard, safe-area, orientation, camera, TalkBack, and VoiceOver QA over an approved HTTPS environment.
+
+## Automatic Staff Attendance Station - 2026-08-27
+
+Source-level status: implemented and focused regressions passed. No database migration or deployment was performed for this UI and navigation update.
+
+- Principal/Admin/Operator Staff Attendance opens `/staffboard/attendance/scan`.
+- Staff My Attendance opens `/staffboard/attendance/card`; Attendance History remains a secondary route.
+- The operator station automatically starts its server-bound branch session and camera, prefers the front camera, decodes continuously, shows the result above the camera for two seconds, and rearms automatically.
+- A held QR is suppressed in memory until removed from the frame. The server continues to enforce credential hash, lifecycle, session, branch, tenant, idempotency, duplicate, calendar, leave, timestamp, and audit rules.
+- Session expiry stops the stream and exposes a clearly labelled restart action.
+- Personal Attendance QR polling runs only while the page is visible and displays a same-screen check-in/check-out confirmation.
+- Manual token and QR image fallbacks remain available for controlled recovery.
+
+Required physical-device matrix:
+
+| Check | Android Chrome | iOS Safari | Installed PWA |
+| --- | --- | --- | --- |
+| First camera permission and automatic preview | Pending | Pending | Pending |
+| Previously granted camera permission | Pending | Pending | Pending |
+| Preferred front camera and camera switching | Pending | Pending | Pending |
+| CHECK_IN and CHECK_OUT | Pending | Pending | Pending |
+| Consecutive staff QR codes and two-second rearm | Pending | Pending | Pending |
+| Same QR held in frame | Pending | Pending | Pending |
+| Permission denied, camera unavailable, and timeout | Pending | Pending | Pending |
+| Wrong branch, invalid, expired, and duplicate QR | Pending | Pending | Pending |
+| Background/resume and route-leave camera cleanup | Pending | Pending | Pending |
+| Personal QR foreground polling and confirmation | Pending | Pending | Pending |
+
+Release status: source-level release candidate only. Real-device certification requires physical Android and iOS devices plus an approved HTTPS target.
+
+## Staff Attendance Final Browser Gate - 2026-08-27
+
+Status: **Authenticated isolated database/browser QA passed; physical-device camera certification blocked.**
+
+- All 32 committed migrations applied successfully to a disposable loopback-only PostgreSQL 17 database.
+- The DB-backed Principal, Office Staff, Teacher, and Staff matrix passed, including second-branch, sibling-institution, and second-tenant boundaries.
+- Chrome 151 browser-engine QA passed 24 authenticated checks at desktop and 390 x 844 mobile emulation.
+- Browser checks passed for role-aware login, credential management, supervised-scanner denial, personal QR scope, no print/download, Staff Attendance History, check-in, check-out, two-second automatic rearm, wrong-branch QR, cross-tenant QR, and direct-route denials.
+- A confirmed React Strict Mode camera auto-start defect was fixed and regression-tested.
+- Staff Attendance branch options now require the active institution as well as tenant and branch access.
+- Headless camera-unavailable recovery and manual fallback passed. This does not certify a physical camera or live QR decode.
+- The embedded visual browser was unavailable. No screenshot-based or embedded-browser visual QA is claimed for this pass.
+
+Physical-device availability:
+
+| Device/environment | Status |
+| --- | --- |
+| Android Chrome over approved HTTPS | Blocked: ADB reported no attached or authorised device |
+| iPhone Safari over approved HTTPS | Blocked: no iOS Safari bridge |
+| iPad Safari over approved HTTPS | Blocked: no iOS Safari bridge |
+| Android installed PWA | Blocked: no attached Android device |
+| iOS/iPadOS installed PWA | Blocked: no available iOS device path |
+
+The remaining device run must cover permission grant/deny/retry, automatic preview, preferred front camera and switching, live QR decode, check-in/check-out, consecutive staff scans, held QR, camera unavailable, background/resume, route leave, logout cleanup, safe errors, and personal QR foreground confirmation.

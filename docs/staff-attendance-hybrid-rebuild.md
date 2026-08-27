@@ -2,11 +2,11 @@
 
 ## Status
 
-- Status date: 2026-08-26
-- Delivery state: supervised operator scanning, personal Staff Cards, and selected approval controls implemented locally; shared/self-scan retired
-- Production state: not enabled and not migrated by this task
-- Database evidence: the additive migrations completed successfully against a disposable PostgreSQL 17 database with no schema drift; the disposable database was removed
-- Browser evidence: earlier hybrid-flow QA is historical; authenticated DB-backed card, print, operator, and denial QA for this update remains pending
+- Status date: 2026-08-27
+- Delivery state: automatic continuous operator scanning, personal Attendance QR presentation, and selected approval controls implemented locally; shared/self-scan retired
+- Production state: no production mutation was performed by this task; read-only Prisma status reported all 32 committed migrations already applied
+- Database evidence: the complete migration history applied successfully against disposable PostgreSQL 17 with no schema drift
+- Browser evidence: authenticated role, scope, card, scanner, and denial QA passed 24 Chrome browser-engine checks; no embedded screenshot QA is claimed
 - Physical-device evidence: approved-HTTPS Android Chrome and iOS Safari scanner QA remains pending
 
 No password, raw QR credential, token hash, private URL, connection string, or production record is documented here.
@@ -60,11 +60,11 @@ Changing capture mode or disabling QR is enforced in server services. Navigation
 | Route | School-facing purpose | Server control |
 | --- | --- | --- |
 | `/staffboard/attendance` | Daily Attendance Register and controlled Manual Attendance | Attendance entitlement, branch scope, view/manual/request permissions |
-| `/staffboard/attendance/scan` | Operator-only supervised Staff QR Card scanner | Scan permission, capture setting, entitlement, branch, and session validation |
+| `/staffboard/attendance/scan` | Staff Attendance: automatic continuous operator scanner | Scan permission, capture setting, entitlement, branch, and session validation |
 | `/staffboard/attendance/credentials` | Issue, preview, print, reissue, revoke, and review Staff QR Cards | Principal-family role, credential-management permission, and QR entitlement |
 | `/staffboard/attendance/adjustments` | Review Attendance Corrections | Adjustment-approval permission and branch scope |
-| `/staffboard/attendance/card` | My Staff Card, digital view only | Own-card permission, linked staff profile, branch and institution scope |
-| `/staffboard/attendance/me` | My Attendance and correction requests | Own-attendance permissions and staff linkage |
+| `/staffboard/attendance/card` | My Attendance: purpose-specific digital Attendance QR | Own-card and own-attendance permissions, linked staff profile, branch and institution scope |
+| `/staffboard/attendance/me` | Attendance History and correction requests | Own-attendance permissions and staff linkage |
 | `/staffboard/attendance/reports` | Daily and Monthly Attendance Reports | Report permission and scoped filters |
 | `/staffboard/attendance/qr` | Compatibility redirect only | Routes managers to card management and staff to their own card |
 
@@ -130,6 +130,16 @@ The Staff Attendance workspace uses restrained 50%-tinted glass surfaces with co
 - Tables use responsive containment and attendance cards below the desktop breakpoint.
 - The scanner keeps manual fallback available and does not persist the scanned QR value.
 
+## Continuous Station and Personal QR Update
+
+- The authorised operator route automatically creates the branch-bound scan session and requests camera access when the session is ready.
+- The station prefers the front-facing camera for fixed gate and office devices, then falls back to generic video constraints; supported camera switching remains available.
+- QR frames are decoded continuously with `jsQR`. A detected code submits once, displays a same-screen result above the camera for two seconds, and automatically rearms.
+- An in-memory fingerprint blocks a QR that remains in the frame until it has been absent for consecutive frames. Server idempotency, scan throttling, credential lifecycle, and attendance duplicate rules remain authoritative.
+- Session expiry immediately stops the camera and presents an explicit restart action.
+- Staff open My Attendance directly to display only their own purpose-specific Attendance QR. Foreground-only polling shows check-in/check-out confirmation without exposing tenant, branch, user, role, QR hash, or attendance mutation controls.
+- The complete Staff Identification Card remains a separate authorised management and print workflow.
+
 ## Migration
 
 Additive migrations:
@@ -175,3 +185,18 @@ The following are not represented as complete:
 ## Recommended Next Task
 
 Apply the additive migrations to an approved shared non-production deployment environment only after target and recovery verification, then repeat the authenticated role matrix there. Run approved-HTTPS Android Chrome and iOS Safari scanner QA with physical devices before requesting any further deployment progression. Automatic finalisation, period locking, advanced policy publishing, asynchronous large exports, and operational rate-limit monitoring remain later controlled phases.
+
+## Current Release-Gate Addendum - 2026-08-27
+
+This addendum supersedes older migration-count and pending-browser statements above:
+
+- Read-only status reported all 32 committed migrations already applied on the configured primary database. No migration was executed in this task.
+- All 32 migrations applied to disposable PostgreSQL 17, and the final Prisma schema comparison returned no difference.
+- Authenticated Chrome browser-engine QA passed 24 role, scope, QR, responsive, and runtime checks.
+- React development Strict Mode camera auto-start was fixed after a confirmed Idle state.
+- Register, report, scanner, and QR branch options now enforce the active institution as well as tenant and accessible branch scope.
+- The embedded visual browser was unavailable, so no current screenshot-based or embedded visual QA is claimed.
+- Physical Android Chrome, iPhone/iPad Safari, and installed-PWA camera certification remains blocked by unavailable devices.
+- Fresh production backup/recovery evidence and separately authorised publication/deployment remain required.
+
+The next executable gate is physical-device scanner certification over approved HTTPS. Automatic finalisation, attendance-period locking, advanced policy publishing, asynchronous large exports, and operational rate-limit monitoring remain later controlled phases.

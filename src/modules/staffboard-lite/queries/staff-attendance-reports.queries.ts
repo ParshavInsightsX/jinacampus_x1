@@ -227,6 +227,7 @@ async function resolveReportScope(ctx: TenantContext, branchId?: string): Promis
   const branches = await db.branch.findMany({
     where: {
       tenantId: ctx.tenantId,
+      institutionId: ctx.institutionId ?? undefined,
       id: { in: ctx.accessibleBranchIds },
       status: { not: "ARCHIVED" }
     },

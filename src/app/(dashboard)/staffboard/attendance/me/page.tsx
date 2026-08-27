@@ -38,9 +38,9 @@ export default async function MyStaffAttendancePage() {
   } catch (error) {
     return (
       <div className="space-y-6">
-        <MobilePageHeader eyebrow="Staff attendance" title="My Attendance" description="Your own attendance records." />
+        <MobilePageHeader eyebrow="Staff attendance" title="Attendance History" description="Your own attendance records." />
         <div className="hidden lg:block">
-          <PageHeader title="My Attendance" description="Your own staff attendance records." />
+          <PageHeader title="Attendance History" description="Your own staff attendance records." />
         </div>
         <StaffQrSelfNavigation active="today" canViewCard={canViewCard} canViewAttendance={canViewAttendance} />
         <p role="alert" className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-4 text-sm font-medium text-amber-900">
@@ -60,11 +60,11 @@ export default async function MyStaffAttendancePage() {
     <div className="attendance-page-wash space-y-6 rounded-lg p-1 sm:p-2">
       <MobilePageHeader
         eyebrow="Staff attendance"
-        title="My Attendance"
+        title="Attendance History"
         description="Review today's record and your recent attendance history."
       />
       <div className="hidden lg:block">
-        <PageHeader title="My Attendance" description="Review today's record and your recent staff attendance history." />
+        <PageHeader title="Attendance History" description="Review today's record and your recent staff attendance history." />
       </div>
 
       <StaffQrSelfNavigation active="today" canViewCard={canViewCard} canViewAttendance={canViewAttendance} />
@@ -85,7 +85,7 @@ export default async function MyStaffAttendancePage() {
           <EmptyState
             title="No attendance recorded yet today"
             description="Your record will appear after an authorised attendance operator scans your staff card or marks attendance."
-            actionLabel={canViewCard ? "Open My Staff Card" : undefined}
+            actionLabel={canViewCard ? "Open My Attendance QR" : undefined}
             actionHref={canViewCard ? "/staffboard/attendance/card" : undefined}
           />
         ) : (
@@ -191,7 +191,7 @@ export default async function MyStaffAttendancePage() {
         {canViewCard ? (
           <Link href="/staffboard/attendance/card" className="premium-primary-button min-h-11 w-full gap-2 premium-focus sm:w-auto">
             <IdCard className="h-4 w-4" aria-hidden="true" />
-            Open My Staff Card
+            Open My Attendance QR
           </Link>
         ) : null}
         <Link href="/account/change-password" className="premium-secondary-button min-h-11 w-full premium-focus sm:w-auto">
