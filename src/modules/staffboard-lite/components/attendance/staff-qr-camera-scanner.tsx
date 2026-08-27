@@ -14,6 +14,12 @@ import {
   SwitchCamera,
   VideoOff
 } from "lucide-react";
+import {
+  buildCameraConstraintProfiles,
+  buildContinuousFocusConstraints,
+  buildQrDecodePasses,
+  calculateAdaptiveDecodeIntervalMs
+} from "./staff-qr-scanner-performance";
 
 type StaffQrCameraScannerProps = {
   autoStart?: boolean;
@@ -68,27 +74,14 @@ type TorchConstraintSet = MediaTrackConstraintSet & {
   torch?: boolean;
 };
 
-const CAMERA_REQUEST_TIMEOUT_MS = 12_000;
-const QR_ABSENT_FRAME_THRESHOLD = 8;
-
-const FALLBACK_CAMERA_CONSTRAINTS: MediaStreamConstraints = {
-  audio: false,
-  video: true
+type VideoFrameCallbackElement = HTMLVideoElement & {
+  requestVideoFrameCallback?: (callback: (now: number) => void) => number;
+  cancelVideoFrameCallback?: (handle: number) => void;
 };
 
-function preferredCameraConstraints(
-  preferredFacingMode: "user" | "environment",
-  deviceId?: string
-): MediaStreamConstraints {
-  return {
-    audio: false,
-    video: {
-      ...(deviceId ? { deviceId: { exact: deviceId } } : { facingMode: { ideal: preferredFacingMode } }),
-      width: { ideal: 1280 },
-      height: { ideal: 1280 }
-    }
-  };
-}
+const CAMERA_REQUEST_TIMEOUT_MS = 12_000;
+const QR_ABSENT_FRAME_THRESHOLD = 8;
+const INITIAL_DECODE_INTERVAL_MS = 80;
 
 class CameraTimeoutError extends Error {
   constructor() {
@@ -184,16 +177,35 @@ async function requestCameraStream(
   preferredFacingMode: "user" | "environment",
   deviceId?: string
 ) {
-  try {
-    return await getUserMediaWithTimeout(
-      mediaDevices,
-      preferredCameraConstraints(preferredFacingMode, deviceId)
-    );
-  } catch (error) {
-    if (isConstraintFailure(error)) {
-      return getUserMediaWithTimeout(mediaDevices, FALLBACK_CAMERA_CONSTRAINTS);
+  const profiles = buildCameraConstraintProfiles(preferredFacingMode, deviceId);
+  let lastConstraintError: unknown;
+
+  for (const constraints of profiles) {
+    try {
+      return await getUserMediaWithTimeout(mediaDevices, constraints);
+    } catch (error) {
+      if (!isConstraintFailure(error)) throw error;
+      lastConstraintError = error;
     }
-    throw error;
+  }
+
+  throw lastConstraintError;
+}
+
+async function applyPreferredCameraTuning(stream: MediaStream) {
+  const videoTrack = stream.getVideoTracks()[0];
+  if (!videoTrack || typeof videoTrack.getCapabilities !== "function") return false;
+
+  const constraints = buildContinuousFocusConstraints(
+    videoTrack.getCapabilities() as unknown as { focusMode?: readonly string[] }
+  );
+  if (!constraints) return false;
+
+  try {
+    await videoTrack.applyConstraints(constraints);
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -280,46 +292,50 @@ function statusLabel(status: ScannerStatus) {
   }
 }
 
-function decodeQrFromCanvas(
-  canvas: HTMLCanvasElement,
+function decodeQrFromCanvases(
+  canvases: HTMLCanvasElement[],
   source: HTMLVideoElement | HTMLImageElement,
   width: number,
   height: number,
-  cropToSquare = false
+  sequence = 0,
+  sourceCoverage: "square-preview" | "entire-source" = "square-preview"
 ) {
-  if (width <= 0 || height <= 0) return null;
+  for (const pass of buildQrDecodePasses(width, height, sequence, sourceCoverage)) {
+    const canvas = canvases[pass.canvasSlot] ?? document.createElement("canvas");
+    canvases[pass.canvasSlot] = canvas;
+    const longestSourceEdge = Math.max(pass.sourceWidth, pass.sourceHeight);
+    const scale = Math.min(pass.maxUpscale, pass.maxOutputDimension / longestSourceEdge);
+    const canvasWidth = Math.max(1, Math.round(pass.sourceWidth * scale));
+    const canvasHeight = Math.max(1, Math.round(pass.sourceHeight * scale));
 
-  const sourceSize = cropToSquare ? Math.min(width, height) : null;
-  const sourceX = sourceSize ? Math.max(0, (width - sourceSize) / 2) : 0;
-  const sourceY = sourceSize ? Math.max(0, (height - sourceSize) / 2) : 0;
-  const sourceWidth = sourceSize ?? width;
-  const sourceHeight = sourceSize ?? height;
-  const scale = Math.min(1, 960 / Math.max(sourceWidth, sourceHeight));
-  const canvasWidth = Math.max(1, Math.round(sourceWidth * scale));
-  const canvasHeight = Math.max(1, Math.round(sourceHeight * scale));
+    if (canvas.width !== canvasWidth) canvas.width = canvasWidth;
+    if (canvas.height !== canvasHeight) canvas.height = canvasHeight;
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    if (!context) return null;
 
-  canvas.width = canvasWidth;
-  canvas.height = canvasHeight;
-  const context = canvas.getContext("2d", { willReadFrequently: true });
-  if (!context) return null;
+    context.clearRect(0, 0, canvasWidth, canvasHeight);
+    context.imageSmoothingEnabled = scale < 1;
+    if (scale < 1) context.imageSmoothingQuality = "high";
+    context.drawImage(
+      source,
+      pass.sourceX,
+      pass.sourceY,
+      pass.sourceWidth,
+      pass.sourceHeight,
+      0,
+      0,
+      canvasWidth,
+      canvasHeight
+    );
+    const imageData = context.getImageData(0, 0, canvasWidth, canvasHeight);
+    const qrCode = jsQR(imageData.data, imageData.width, imageData.height, {
+      inversionAttempts: pass.inversionAttempts
+    });
+    const payload = qrCode?.data?.trim();
+    if (payload) return payload;
+  }
 
-  context.drawImage(
-    source,
-    sourceX,
-    sourceY,
-    sourceWidth,
-    sourceHeight,
-    0,
-    0,
-    canvasWidth,
-    canvasHeight
-  );
-  const imageData = context.getImageData(0, 0, canvasWidth, canvasHeight);
-  const qrCode = jsQR(imageData.data, imageData.width, imageData.height, {
-    inversionAttempts: "attemptBoth"
-  });
-
-  return qrCode?.data?.trim() || null;
+  return null;
 }
 
 function loadImageFromObjectUrl(url: string) {
@@ -345,9 +361,15 @@ export function StaffQrCameraScanner({
   onQrPayloadDetected
 }: StaffQrCameraScannerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const decodeCanvasRefs = useRef<HTMLCanvasElement[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const videoFrameCallbackRef = useRef<number | null>(null);
+  const decodeLoopGenerationRef = useRef(0);
+  const decodeFrameRef = useRef<(timestamp: number, generation: number) => void>(() => undefined);
+  const lastDecodeStartedAtRef = useRef(0);
+  const decodeIntervalRef = useRef(INITIAL_DECODE_INTERVAL_MS);
+  const decodeSequenceRef = useRef(0);
   const cameraRequestIdRef = useRef(0);
   const streamRef = useRef<MediaStream | null>(null);
   const decodedRef = useRef(false);
@@ -377,9 +399,15 @@ export function StaffQrCameraScanner({
   }, []);
 
   const stopDecodeLoop = useCallback(() => {
+    decodeLoopGenerationRef.current += 1;
     if (animationFrameRef.current !== null) {
       window.cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
+    }
+    if (videoFrameCallbackRef.current !== null) {
+      const videoElement = videoRef.current as VideoFrameCallbackElement | null;
+      videoElement?.cancelVideoFrameCallback?.(videoFrameCallbackRef.current);
+      videoFrameCallbackRef.current = null;
     }
   }, []);
 
@@ -414,25 +442,59 @@ export function StaffQrCameraScanner({
     onQrPayloadDetected(qrPayload);
   }, [continuous, onQrPayloadDetected, stopActiveCamera, stopDecodeLoop]);
 
-  const scanVideoFrame = useCallback(() => {
-    animationFrameRef.current = null;
-    if (decodedRef.current || !streamRef.current) return;
+  const scheduleDecodeFrame = useCallback((generation: number) => {
+    if (generation !== decodeLoopGenerationRef.current || decodedRef.current || !streamRef.current) return;
+
+    const videoElement = videoRef.current as VideoFrameCallbackElement | null;
+    const handleFrame = (timestamp: number) => {
+      animationFrameRef.current = null;
+      videoFrameCallbackRef.current = null;
+      if (generation !== decodeLoopGenerationRef.current) return;
+      decodeFrameRef.current(timestamp, generation);
+    };
+
+    if (videoElement && typeof videoElement.requestVideoFrameCallback === "function") {
+      videoFrameCallbackRef.current = videoElement.requestVideoFrameCallback(handleFrame);
+      return;
+    }
+
+    animationFrameRef.current = window.requestAnimationFrame(handleFrame);
+  }, []);
+
+  const scanVideoFrame = useCallback((timestamp: number, generation: number) => {
+    if (
+      generation !== decodeLoopGenerationRef.current ||
+      decodedRef.current ||
+      !streamRef.current
+    ) {
+      return;
+    }
+
+    if (timestamp - lastDecodeStartedAtRef.current < decodeIntervalRef.current) {
+      scheduleDecodeFrame(generation);
+      return;
+    }
 
     const videoElement = videoRef.current;
     if (videoElement && videoElement.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-      const canvas = canvasRef.current ?? document.createElement("canvas");
-      canvasRef.current = canvas;
-      const qrPayload = decodeQrFromCanvas(
-        canvas,
+      lastDecodeStartedAtRef.current = timestamp;
+      const decodeStartedAt = window.performance.now();
+      const qrPayload = decodeQrFromCanvases(
+        decodeCanvasRefs.current,
         videoElement,
         videoElement.videoWidth,
         videoElement.videoHeight,
-        true
+        decodeSequenceRef.current
+      );
+      decodeSequenceRef.current += 1;
+      decodeIntervalRef.current = calculateAdaptiveDecodeIntervalMs(
+        window.performance.now() - decodeStartedAt,
+        navigator.hardwareConcurrency || 4
       );
       if (qrPayload) {
         qrAbsentFrameCountRef.current = 0;
         if (qrPayloadFingerprint(qrPayload) === blockedFingerprintRef.current) {
-          animationFrameRef.current = window.requestAnimationFrame(scanVideoFrame);
+          scheduleDecodeFrame(generation);
           return;
         }
         submitDetectedPayload(qrPayload);
@@ -448,13 +510,23 @@ export function StaffQrCameraScanner({
       }
     }
 
-    animationFrameRef.current = window.requestAnimationFrame(scanVideoFrame);
-  }, [submitDetectedPayload]);
+    scheduleDecodeFrame(generation);
+  }, [scheduleDecodeFrame, submitDetectedPayload]);
+
+  useEffect(() => {
+    decodeFrameRef.current = scanVideoFrame;
+  }, [scanVideoFrame]);
 
   const startDecodeLoop = useCallback(() => {
     stopDecodeLoop();
-    animationFrameRef.current = window.requestAnimationFrame(scanVideoFrame);
-  }, [scanVideoFrame, stopDecodeLoop]);
+    for (const slot of [0, 1, 2]) {
+      decodeCanvasRefs.current[slot] ??= document.createElement("canvas");
+    }
+    lastDecodeStartedAtRef.current = 0;
+    decodeIntervalRef.current = INITIAL_DECODE_INTERVAL_MS;
+    decodeSequenceRef.current = 0;
+    scheduleDecodeFrame(decodeLoopGenerationRef.current);
+  }, [scheduleDecodeFrame, stopDecodeLoop]);
 
   const updateCameraControls = useCallback(
     async (stream: MediaStream, mediaDevices: MediaDevices, requestId: number) => {
@@ -548,7 +620,7 @@ export function StaffQrCameraScanner({
     setCameraError(null);
     setMessage("Ready for the next staff Attendance QR.");
     startDecodeLoop();
-  }, [continuous, rearmSignal, startDecodeLoop]);
+  }, [continuous, disabled, processing, rearmSignal, startDecodeLoop]);
 
   async function startCamera(deviceId?: string, replaceActiveCamera = false) {
     if (
@@ -618,6 +690,7 @@ export function StaffQrCameraScanner({
       }
 
       streamRef.current = stream;
+      void applyPreferredCameraTuning(stream);
       videoElement.muted = true;
       videoElement.autoplay = true;
       videoElement.playsInline = true;
@@ -714,9 +787,18 @@ export function StaffQrCameraScanner({
     const imageUrl = URL.createObjectURL(file);
     try {
       const image = await loadImageFromObjectUrl(imageUrl);
-      const canvas = canvasRef.current ?? document.createElement("canvas");
-      canvasRef.current = canvas;
-      const qrPayload = decodeQrFromCanvas(canvas, image, image.naturalWidth, image.naturalHeight);
+      let qrPayload: string | null = null;
+      for (const sequence of [0, 2, 5]) {
+        qrPayload = decodeQrFromCanvases(
+          decodeCanvasRefs.current,
+          image,
+          image.naturalWidth,
+          image.naturalHeight,
+          sequence,
+          "entire-source"
+        );
+        if (qrPayload) break;
+      }
       if (!qrPayload) {
         setImageDecodeStatus("error");
         setImageDecodeMessage("Could not read a staff attendance QR from this image. Use a fresh QR photo or manual token entry.");

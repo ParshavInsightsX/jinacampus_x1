@@ -119,12 +119,24 @@ Staff QR Scan, `/staffboard/attendance/scan`:
 - [ ] The camera request begins automatically after the secure session is ready; retry is visible when recovery is required.
 - [ ] Camera preview is centered, square, and does not overflow at 360 px.
 - [ ] Front camera is preferred for the supervised station, switching is available when supported, and scanning requires no capture button.
+- [ ] The active camera uses a practical 720p or 540p profile and continuous focus when the browser reports support.
+- [ ] A QR is detected at near, normal, and moderately distant presentation without requiring perfect centring.
+- [ ] Minor rotation, viewing angle, hand movement, and off-centre placement remain usable.
+- [ ] Printed cards and QR codes displayed on another phone scan under normal and moderate indoor lighting.
+- [ ] Rapid consecutive scans rearm automatically, while a held QR creates no duplicate client request.
 - [ ] The UI locks while the server validates a detected card.
 - [ ] Manual token entry remains available when camera scanning fails.
 - [ ] Success stays above the live camera, uses branch-local time, and automatically rearms after two seconds.
 - [ ] Duplicate, expired, revoked, superseded, wrong-branch, leave-managed, locked-period, and invalid-card errors remain safe and readable.
 - [ ] No QR payload, token hash, tenant ID, or internal error is rendered or persisted.
 - [ ] Camera tracks stop on Stop, page hide, tab hide, route change, and unmount.
+
+Scanner performance source evidence, 2026-08-27:
+
+- [x] Bounded 1280 x 720, 960 x 540, and generic fallback camera profiles are regression-tested.
+- [x] Capability-gated continuous focus, camera-frame callbacks with animation-frame fallback, reusable decode canvases, adaptive cadence, full-visible-preview coverage, focused distance passes, and periodic inverted decoding are regression-tested.
+- [x] Immediate processing lock, held-code suppression, automatic rearm, manual fallback, and unchanged server-side attendance validation remain covered.
+- [ ] Time-to-first-decode and practical scanning-distance improvements are certified on physical Android, iPhone, iPad, laptop-camera, desktop-webcam, and installed-PWA targets.
 
 Staff QR Cards, `/staffboard/attendance/credentials` and `/staffboard/attendance/card`:
 

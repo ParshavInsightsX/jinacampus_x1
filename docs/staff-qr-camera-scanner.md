@@ -3,7 +3,7 @@
 ## Status
 
 - Date: 2026-08-27
-- Status: Automatic continuous operator scanner and purpose-specific personal Attendance QR implemented locally; focused regressions pass, while DB-backed authenticated role QA and approved-HTTPS Android/iOS/PWA certification for this update remain pending
+- Status: Automatic continuous operator scanner and purpose-specific personal Attendance QR implemented locally; camera and decoder performance hardening plus focused regressions pass, while DB-backed authenticated role QA and approved-HTTPS Android/iOS/PWA performance certification for this update remain pending
 - Route: `/staffboard/attendance/scan`
 - Native mobile app: not required
 - File upload/storage changes: not included
@@ -42,6 +42,22 @@ Staff self-scan and shared-QR generation are retired. Legacy service entry point
 - Principal/Administrator attendance navigation opens `/staffboard/attendance/scan`; staff My Attendance opens `/staffboard/attendance/card`; detailed history remains at `/staffboard/attendance/me`.
 
 The scanner does not send client-provided tenant, branch, staff, role, or attendance-status claims. No raw QR payload is stored in browser persistence or placed in redirect URLs.
+
+## QR Detection Performance Upgrade - 2026-08-27
+
+- Camera acquisition now tries bounded 1280 x 720 at 30 fps and 960 x 540 at 24 fps profiles before the existing generic browser fallback. This favours fast first decode instead of requesting the highest available resolution.
+- Continuous autofocus is requested only when the active camera reports support. Unsupported or rejected focus constraints fail open to normal browser autofocus without interrupting scanning.
+- Dedicated wide, focused, and tight decode canvases are created once, warmed before the first frame, and reused for the camera session.
+- Browsers with requestVideoFrameCallback decode against delivered camera frames. Other browsers retain a requestAnimationFrame fallback.
+- Every decode cycle includes the full visible square preview for off-centre coverage plus an alternating focused pass that improves usable QR detail at normal and moderately distant presentation. Camera pixels cropped outside the visible square are not decoded.
+- A tighter focused pass runs periodically, and the more expensive inverted-code search runs periodically instead of on every frame.
+- Decode cadence adapts between 72 ms and 180 ms using measured decode cost and reported hardware concurrency, limiting CPU pressure on slower devices while keeping faster devices responsive.
+- Downscaling uses high-quality smoothing; focused upscaling preserves QR edges. No additional destructive image filter is applied.
+- The existing immediate processing lock, held-code fingerprint suppression, two-second result display, automatic rearm, unique client request ID, and server idempotency remain unchanged.
+- Uploaded QR images use the same wide, focused, tighter, and periodic inverted-code passes before falling back to manual token entry.
+- No attendance action, server validation, authentication, RBAC, tenant or branch scope, timestamp, duplicate rule, transaction, or audit behavior changed.
+
+Focused source tests cover camera profile order, selected-device scope, optional continuous focus, wide/focused decode coverage, periodic inversion, adaptive cadence, lifecycle cleanup, and duplicate-safe rearming. Physical performance claims remain unverified until the approved device matrix measures time-to-first-decode and practical distance on Android Chrome, iPhone/iPad Safari, installed PWA, laptop cameras, and desktop webcams using printed and screen-displayed QR codes.
 
 ## Manual Fallback
 

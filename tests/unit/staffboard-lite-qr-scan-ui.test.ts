@@ -54,15 +54,19 @@ describe("StaffBoard Lite supervised QR scanner UI", () => {
     expect(scanner).toContain('import jsQR from "jsqr"');
     expect(scanner).toContain("CAMERA_REQUEST_TIMEOUT_MS = 12_000");
     expect(scanner).toContain("getUserMediaWithTimeout");
-    expect(scanner).toContain("preferredCameraConstraints");
+    expect(scanner).toContain("buildCameraConstraintProfiles");
     expect(scanner).toContain('preferredFacingMode: "user" | "environment"');
-    expect(scanner).toContain("FALLBACK_CAMERA_CONSTRAINTS");
+    expect(scanner).toContain("applyPreferredCameraTuning");
+    expect(scanner).toContain("buildContinuousFocusConstraints");
     expect(scanner).toContain("window.isSecureContext");
     expect(scanner).toContain("navigator.mediaDevices");
     expect(scanner).toContain("videoElement.play()");
-    expect(scanner).toContain("decodeQrFromCanvas");
+    expect(scanner).toContain("decodeQrFromCanvases");
     expect(scanner).toContain("jsQR(imageData.data");
-    expect(scanner).toContain("window.requestAnimationFrame(scanVideoFrame)");
+    expect(scanner).toContain("requestVideoFrameCallback");
+    expect(scanner).toContain("window.requestAnimationFrame(handleFrame)");
+    expect(scanner).toContain("calculateAdaptiveDecodeIntervalMs");
+    expect(scanner).toContain("buildQrDecodePasses");
     expect(scanner).toContain("blockedFingerprintRef");
     expect(scanner).toContain("QR_ABSENT_FRAME_THRESHOLD");
     expect(scanner).toContain("rearmSignal");
@@ -74,7 +78,7 @@ describe("StaffBoard Lite supervised QR scanner UI", () => {
     expect(scanner).toContain("aspect-square");
     expect(scanner).toContain("Upload QR image/photo");
     expect(scanner).toContain("videoTrack.applyConstraints");
-    expect(scanner).not.toMatch(/html5-qrcode|qr-scanner|@zxing|BarcodeDetector/);
+    expect(scanner).not.toMatch(/from\s+["'](?:html5-qrcode|qr-scanner|@zxing)|\bBarcodeDetector\b/);
   });
 
   it("stops every camera track across scanner and page lifecycle changes", () => {
