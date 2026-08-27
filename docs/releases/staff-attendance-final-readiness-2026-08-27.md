@@ -291,3 +291,39 @@ The following remain independent:
 6. Physical-device camera certification acceptance.
 
 Passing the isolated database and browser matrix does not authorise any production action. Production deployment should remain paused until the physical-device result and fresh recovery evidence are recorded or an authorised release owner explicitly accepts the device limitation as a documented release exception.
+
+## Production Release Evidence
+
+- Release-owner decision: the documented Android/iOS/PWA physical-device limitation was explicitly accepted for this release on 2026-08-27.
+- Application commit: `e66e12523ac6de08f4893962bbdb777ee923052b`
+- Remote branch: `release/web-v1-20260826`
+- Vercel deployment: `dpl_ChGKoMroeCQR8ioQy28LobcNGpQ4`
+- Deployment target and result: production, `READY`
+- Production alias: `https://jinacampus.vercel.app`
+- Deployment time: 2026-08-27 15:50 IST
+- Responsible operator: Codex release session under explicit Parshwa Insights release-owner approval
+- Database action: none; Prisma reported all 32 committed migrations already applied
+
+Post-deployment smoke:
+
+- `/api/health`: HTTP 200, application healthy, database connected
+- `/`, `/login`, and `/administrator/login`: HTTP 200
+- `/staffboard/attendance/scan` and `/staffboard/attendance/card`: HTTP 307 when unauthenticated
+- `/api/auth/me`: HTTP 401 when unauthenticated
+- PWA manifest and Apple touch icon: HTTP 200
+- JinaCampus branding rendered on both login surfaces
+- `Permissions-Policy`: camera limited to self and microphone disabled
+- Frame protection header present
+- No Prisma error, database URL, token hash, password hash, or stack trace appeared in checked responses
+- Vercel error-level and HTTP 500 log queries returned no entries for the new deployment during the smoke window
+
+Rollback reference:
+
+- Immediate prior ready production deployment: `dpl_FXhyKVJy6wZdsHiQDymWRvU9He6e`
+- Application rollback: use the approved Vercel rollback operation to restore that deployment
+- Database rollback: not applicable to this source-only release; no migration or production database write was performed
+
+Residual limitation:
+
+- Physical Android Chrome, iPhone/iPad Safari, and installed-PWA camera certification remains incomplete by explicit release-owner exception.
+- Authenticated production mutation smoke was not performed because no production QA credential or approved existing session was provided to this release process. The isolated authenticated 24-check role and scope matrix remains the credentialed pre-deployment evidence.
