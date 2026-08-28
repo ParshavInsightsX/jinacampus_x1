@@ -1122,6 +1122,8 @@ Implementation:
 - [x] Deactivate linked login and revoke sessions with non-active employment
 - [x] Add tenant-safe personal attendance dashboard and corrected Office Staff navigation
 - [x] Add `/attendance-login` passkey-first path with password fallback
+- [x] Add additive database-backed password-login throttling shared by school web/mobile and separately scoped for Administrator login
+- [x] Validate password-login throttling migration, cooldown, concurrency contract, and HMAC-only identifiers on isolated PostgreSQL 17
 - [x] Add permission-derived `/account/workspaces` manual selection
 - [x] Add tenant-scoped `/campus-core/readiness` setup checks
 - [x] Add focused lifecycle, navigation, workspace, and readiness tests
@@ -1130,6 +1132,7 @@ Implementation:
 - [ ] Run HTTPS passkey registration/login QA on supported pilot devices
 - [x] Run DB-backed browser QA for the consolidated staff lifecycle and readiness gate
 - [ ] Run physical Android Chrome and iOS Safari attendance-login/passkey QA
+- [ ] Apply `20260828120000_add_password_login_throttling` to the intended database through the approved backup and deployment process
 
 Acceptance criteria:
 

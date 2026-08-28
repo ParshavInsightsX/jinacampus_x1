@@ -27,7 +27,10 @@ const mocks = vi.hoisted(() => ({
     staffProfile: { findFirst: vi.fn() },
     staffAttendanceRecord: { findFirst: vi.fn() }
   },
-  verifyPassword: vi.fn(),
+  verifyPasswordOrDummy: vi.fn(),
+  beginPasswordLoginAttempt: vi.fn(),
+  completePasswordLoginAttempt: vi.fn(),
+  passwordLoginSourceAddress: vi.fn(),
   createRawSessionToken: vi.fn(),
   hashSessionToken: vi.fn(),
   getSessionExpiresAt: vi.fn(),
@@ -41,7 +44,14 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/db", () => ({ db: mocks.db }));
-vi.mock("@/lib/auth/password", () => ({ verifyPassword: mocks.verifyPassword }));
+vi.mock("@/lib/auth/password", () => ({
+  verifyPasswordOrDummy: mocks.verifyPasswordOrDummy
+}));
+vi.mock("@/lib/auth/password-login-throttle", () => ({
+  beginPasswordLoginAttempt: mocks.beginPasswordLoginAttempt,
+  completePasswordLoginAttempt: mocks.completePasswordLoginAttempt,
+  passwordLoginSourceAddress: mocks.passwordLoginSourceAddress
+}));
 vi.mock("@/lib/auth/session", () => ({
   createRawSessionToken: mocks.createRawSessionToken,
   hashSessionToken: mocks.hashSessionToken,
@@ -191,7 +201,17 @@ beforeEach(() => {
     }
   });
   mocks.db.staffAttendanceRecord.findFirst.mockResolvedValue(null);
-  mocks.verifyPassword.mockResolvedValue(true);
+  mocks.verifyPasswordOrDummy.mockResolvedValue(true);
+  mocks.beginPasswordLoginAttempt.mockResolvedValue({
+    realm: "SCHOOL",
+    channel: "MOBILE",
+    tenantId,
+    accountBucketId: "mobile-account-bucket-id",
+    sourceBucketId: null,
+    buckets: []
+  });
+  mocks.completePasswordLoginAttempt.mockResolvedValue(undefined);
+  mocks.passwordLoginSourceAddress.mockReturnValue(null);
   mocks.createRawSessionToken.mockReturnValue(rawToken);
   mocks.hashSessionToken.mockResolvedValue(tokenHash);
   mocks.getSessionExpiresAt.mockReturnValue(futureSessionExpiry);
@@ -244,7 +264,7 @@ beforeEach(() => {
 
 describe("mobile backend auth", () => {
   it("rejects invalid credentials with a safe message", async () => {
-    mocks.verifyPassword.mockResolvedValueOnce(false);
+    mocks.verifyPasswordOrDummy.mockResolvedValueOnce(false);
 
     const error = await createMobileLoginSession({
       schoolId: "jinacampus-demo",
@@ -257,7 +277,26 @@ describe("mobile backend auth", () => {
     const body = await responseBody(response);
     expect(response.status).toBe(401);
     expect(body).toEqual({ success: false, error: "Invalid School ID, email, or password." });
+    expect(mocks.completePasswordLoginAttempt).toHaveBeenCalledWith(
+      expect.objectContaining({ accountBucketId: "mobile-account-bucket-id" }),
+      "FAILURE"
+    );
     expect(JSON.stringify(body)).not.toContain("teacher@example.test");
+  });
+
+  it("maps mobile throttle responses to 429 with Retry-After", async () => {
+    const error = Object.assign(
+      new AppError("PASSWORD_LOGIN_THROTTLED", "PASSWORD_LOGIN_THROTTLED", 429),
+      { retryAfterSeconds: 23 }
+    );
+    const response = mobileApiError(error);
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get("retry-after")).toBe("23");
+    expect(await responseBody(response)).toEqual({
+      success: false,
+      error: "Too many sign-in attempts. Please wait and try again."
+    });
   });
 
   it("returns the raw token once, stores only tokenHash, and never returns passwordHash", async () => {
@@ -279,6 +318,16 @@ describe("mobile backend auth", () => {
         expiresAt: futureSessionExpiry
       })
     });
+    expect(mocks.beginPasswordLoginAttempt).toHaveBeenCalledWith(expect.objectContaining({
+      realm: "SCHOOL",
+      channel: "MOBILE",
+      tenantId,
+      accountKey: userId
+    }));
+    expect(mocks.completePasswordLoginAttempt).toHaveBeenCalledWith(
+      expect.objectContaining({ accountBucketId: "mobile-account-bucket-id" }),
+      "SUCCESS"
+    );
     expect(JSON.stringify(mocks.db.session.create.mock.calls)).not.toContain(rawToken);
     expect(JSON.stringify(result)).not.toContain("passwordHash");
     expect(JSON.stringify(result)).not.toContain(tokenHash);

@@ -103,6 +103,10 @@ export function getUserSafeErrorMessage(errorOrCode: unknown, fallback = DEFAULT
       return "Your account is not active. Please contact an administrator.";
     case "PASSWORD_CHANGE_REQUIRED":
       return "Change your temporary password before continuing.";
+    case "PASSWORD_LOGIN_THROTTLED":
+      return "Too many sign-in attempts. Please wait and try again.";
+    case "PASSWORD_LOGIN_PROTECTION_UNAVAILABLE":
+      return "Sign in is temporarily unavailable. Please try again shortly.";
     case "PRINCIPAL_RECOVERY_ADMIN_REQUIRED":
       return "Your platform administrator account is not authorised to manage Principal recovery.";
     case "PRINCIPAL_RECOVERY_REQUEST_ALREADY_REVIEWED":

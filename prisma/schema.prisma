@@ -88,6 +88,16 @@ enum PasskeyChallengePurpose {
   AUTHENTICATION
 }
 
+enum PasswordLoginThrottleRealm {
+  SCHOOL
+  PLATFORM_ADMINISTRATOR
+}
+
+enum PasswordLoginThrottleDimension {
+  ACCOUNT
+  SOURCE
+}
+
 enum PermissionModule {
   CAMPUS_CORE
   ACADEMIA
@@ -1077,6 +1087,7 @@ model Tenant {
   users                               User[]
   principalPasswordResetRequests      PrincipalPasswordResetRequest[]
   principalRecoveryAttempts           PrincipalPasswordRecoveryAttempt[]
+  passwordLoginThrottles              PasswordLoginThrottle[]
   roles                               Role[]
   rolePermissions                     RolePermission[]
   roleAssignments                     UserRoleAssignment[]
@@ -1321,6 +1332,29 @@ model PrincipalPasswordRecoveryAttempt {
   @@index([ipHash, createdAt])
   @@index([tenantId, createdAt])
   @@map("principal_password_recovery_attempts")
+}
+
+model PasswordLoginThrottle {
+  id              String                         @id @default(uuid()) @db.Uuid
+  tenantId        String?                        @db.Uuid
+  realm           PasswordLoginThrottleRealm
+  dimension       PasswordLoginThrottleDimension
+  scopeHash       String
+  keyHash         String
+  failureCount    Int                            @default(0)
+  windowStartedAt DateTime
+  lastAttemptAt   DateTime?
+  blockedUntil    DateTime?
+  createdAt       DateTime                       @default(now())
+  updatedAt       DateTime                       @updatedAt
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([realm, dimension, scopeHash, keyHash], map: "password_login_throttles_bucket_key")
+  @@index([tenantId, realm, updatedAt], map: "password_login_throttles_tenant_realm_updated_idx")
+  @@index([blockedUntil], map: "password_login_throttles_blocked_until_idx")
+  @@index([updatedAt], map: "password_login_throttles_updated_at_idx")
+  @@map("password_login_throttles")
 }
 
 model Institution {

@@ -1,9 +1,21 @@
 import { NextResponse } from "next/server";
+import { PasswordLoginThrottleRealm } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { verifyPassword } from "@/lib/auth/password";
+import { verifyPasswordOrDummy } from "@/lib/auth/password";
+import {
+  beginPasswordLoginAttempt,
+  completePasswordLoginAttempt,
+  passwordLoginSourceAddress,
+  type PasswordLoginReservation
+} from "@/lib/auth/password-login-throttle";
+import { passwordLoginProtectionResponse } from "@/lib/auth/password-login-response";
 import { setSessionCookie } from "@/lib/auth/cookies";
-import { activeRoleCodes, findLoginUser } from "@/lib/auth/login-identity";
+import {
+  activeRoleCodes,
+  findLoginUser,
+  normalizeLoginIdentifier
+} from "@/lib/auth/login-identity";
 import { createLoginSession } from "@/lib/auth/login-session";
 import { hasSchoolLoginRole } from "@/lib/rbac/roles";
 import { CAMPUS_CORE_AUDIT_EVENTS } from "@/modules/campus-core/audit-events";
@@ -33,36 +45,63 @@ export async function POST(request: Request) {
   const schoolId = schoolIdResult.schoolId;
 
   const tenant = await db.tenant.findUnique({ where: { slug: schoolId } });
-  if (!tenant || tenant.status !== "ACTIVE") return NextResponse.json({ error: SCHOOL_LOGIN_ERROR_MESSAGE }, { status: 401 });
+  const resolved = tenant?.status === "ACTIVE"
+    ? await findLoginUser(db, tenant.id, identifier)
+    : null;
+  const roleCodes = resolved ? activeRoleCodes(resolved.user) : [];
+  const authenticated = (
+    tenant?.status === "ACTIVE" &&
+    resolved?.user.passwordCredential &&
+    hasSchoolLoginRole(roleCodes)
+  ) ? {
+    tenant,
+    resolved,
+    credential: resolved.user.passwordCredential,
+    roleCodes
+  } : null;
+  const sourceAddress = passwordLoginSourceAddress(request);
+  let reservation: PasswordLoginReservation;
+  try {
+    reservation = await beginPasswordLoginAttempt({
+      realm: PasswordLoginThrottleRealm.SCHOOL,
+      channel: "SCHOOL_WEB",
+      tenantId: tenant?.id ?? null,
+      scopeKey: schoolId,
+      accountKey: resolved?.user.id ?? normalizeLoginIdentifier(identifier),
+      sourceAddress
+    });
+  } catch (error) {
+    const response = passwordLoginProtectionResponse(error);
+    if (response) return response;
+    throw error;
+  }
 
-  const resolved = await findLoginUser(db, tenant.id, identifier);
-  if (!resolved?.user.passwordCredential) {
+  const valid = await verifyPasswordOrDummy(
+    password,
+    authenticated?.credential.passwordHash ?? null
+  );
+  if (!valid || !authenticated) {
+    await completePasswordLoginAttempt(reservation, "FAILURE");
     return NextResponse.json({ error: SCHOOL_LOGIN_ERROR_MESSAGE }, { status: 401 });
   }
-  const roleCodes = activeRoleCodes(resolved.user);
-  if (!hasSchoolLoginRole(roleCodes)) {
-    return NextResponse.json({ error: SCHOOL_LOGIN_ERROR_MESSAGE }, { status: 401 });
-  }
-
-  const valid = await verifyPassword(password, resolved.user.passwordCredential.passwordHash);
-  if (!valid) return NextResponse.json({ error: SCHOOL_LOGIN_ERROR_MESSAGE }, { status: 401 });
+  await completePasswordLoginAttempt(reservation, "SUCCESS");
 
   const session = await db.$transaction((tx) => createLoginSession(tx, {
-    tenant,
-    user: resolved.user,
-    roleCodes,
-    passwordChangeRequired: resolved.user.passwordCredential?.mustChange ?? false,
+    tenant: authenticated.tenant,
+    user: authenticated.resolved.user,
+    roleCodes: authenticated.roleCodes,
+    passwordChangeRequired: authenticated.credential.mustChange,
     authMethod: "PASSWORD",
-    identifierType: resolved.identifierType,
+    identifierType: authenticated.resolved.identifierType,
     auditAction: CAMPUS_CORE_AUDIT_EVENTS.AUTH_LOGIN_PASSWORD_SUCCESS,
     userAgent: request.headers.get("user-agent") ?? undefined,
-    ipAddress: request.headers.get("x-forwarded-for") ?? undefined
+    ipAddress: sourceAddress ?? undefined
   }));
   await setSessionCookie(session.rawToken, session.expiresAt);
 
   return NextResponse.json({
     ok: true,
     redirectTo: session.redirectTo,
-    passwordChangeRequired: resolved.user.passwordCredential.mustChange
+    passwordChangeRequired: authenticated.credential.mustChange
   });
 }

@@ -8,7 +8,10 @@ const mocks = vi.hoisted(() => ({
     platformAdministrator: { findUnique: vi.fn(), update: vi.fn() },
     platformAdministratorSession: { create: vi.fn() }
   },
-  verifyPassword: vi.fn(),
+  verifyPasswordOrDummy: vi.fn(),
+  beginPasswordLoginAttempt: vi.fn(),
+  completePasswordLoginAttempt: vi.fn(),
+  passwordLoginSourceAddress: vi.fn(),
   createRawPlatformAdministratorSessionToken: vi.fn(),
   getPlatformAdministratorSessionExpiresAt: vi.fn(),
   hashPlatformAdministratorSessionToken: vi.fn(),
@@ -17,7 +20,14 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/db", () => ({ db: mocks.db }));
-vi.mock("@/lib/auth/password", () => ({ verifyPassword: mocks.verifyPassword }));
+vi.mock("@/lib/auth/password", () => ({
+  verifyPasswordOrDummy: mocks.verifyPasswordOrDummy
+}));
+vi.mock("@/lib/auth/password-login-throttle", () => ({
+  beginPasswordLoginAttempt: mocks.beginPasswordLoginAttempt,
+  completePasswordLoginAttempt: mocks.completePasswordLoginAttempt,
+  passwordLoginSourceAddress: mocks.passwordLoginSourceAddress
+}));
 vi.mock("@/lib/auth/platform-administrator-session", () => ({
   createRawPlatformAdministratorSessionToken: mocks.createRawPlatformAdministratorSessionToken,
   getPlatformAdministratorSessionExpiresAt: mocks.getPlatformAdministratorSessionExpiresAt,
@@ -29,6 +39,7 @@ vi.mock("@/lib/audit/platform-audit-log", () => ({
 }));
 
 import { POST } from "@/app/api/auth/administrator-login/route";
+import { AppError } from "@/lib/errors";
 import {
   ADMINISTRATOR_LOGIN_ERROR_MESSAGE,
   validateSchoolId
@@ -65,7 +76,17 @@ beforeEach(() => {
   mocks.db.platformAdministrator.update.mockResolvedValue({});
   mocks.db.platformAdministratorSession.create.mockResolvedValue({ id: "platform-session-id" });
   mocks.db.$transaction.mockImplementation(async (callback: (client: typeof mocks.db) => unknown) => callback(mocks.db));
-  mocks.verifyPassword.mockResolvedValue(true);
+  mocks.verifyPasswordOrDummy.mockResolvedValue(true);
+  mocks.beginPasswordLoginAttempt.mockResolvedValue({
+    realm: "PLATFORM_ADMINISTRATOR",
+    channel: "ADMINISTRATOR_WEB",
+    tenantId: null,
+    accountBucketId: "administrator-account-bucket-id",
+    sourceBucketId: null,
+    buckets: []
+  });
+  mocks.completePasswordLoginAttempt.mockResolvedValue(undefined);
+  mocks.passwordLoginSourceAddress.mockReturnValue(null);
   mocks.createRawPlatformAdministratorSessionToken.mockReturnValue("raw-platform-session-token");
   mocks.hashPlatformAdministratorSessionToken.mockResolvedValue("hashed-platform-session-token");
   mocks.getPlatformAdministratorSessionExpiresAt.mockReturnValue(new Date("2026-08-03T00:00:00.000Z"));
@@ -106,7 +127,36 @@ describe("independent Administrator Portal and School ID login", () => {
       "raw-platform-session-token",
       expect.any(Date)
     );
+    expect(mocks.beginPasswordLoginAttempt).toHaveBeenCalledWith(expect.objectContaining({
+      realm: "PLATFORM_ADMINISTRATOR",
+      channel: "ADMINISTRATOR_WEB",
+      accountKey: platformAdministrator.id
+    }));
+    expect(mocks.completePasswordLoginAttempt).toHaveBeenCalledWith(
+      expect.objectContaining({ accountBucketId: "administrator-account-bucket-id" }),
+      "SUCCESS"
+    );
     expect(JSON.stringify(result.body)).not.toMatch(/passwordHash|tokenHash|tenantId|raw-platform-session-token/i);
+  });
+
+  it("returns a safe Administrator 429 response without creating a session", async () => {
+    mocks.beginPasswordLoginAttempt.mockRejectedValueOnce(Object.assign(
+      new AppError("PASSWORD_LOGIN_THROTTLED", "PASSWORD_LOGIN_THROTTLED", 429),
+      { retryAfterSeconds: 31 }
+    ));
+
+    const response = await POST(adminLoginRequest({
+      email: platformAdministrator.email,
+      password: "candidate-password"
+    }));
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get("retry-after")).toBe("31");
+    expect(await response.json()).toEqual({
+      error: "Too many sign-in attempts. Please wait and try again."
+    });
+    expect(mocks.verifyPasswordOrDummy).not.toHaveBeenCalled();
+    expect(mocks.db.platformAdministratorSession.create).not.toHaveBeenCalled();
   });
 
   it("returns one safe error shape without consulting tenant users", async () => {

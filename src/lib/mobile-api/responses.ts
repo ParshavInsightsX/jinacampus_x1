@@ -34,6 +34,19 @@ function mobileSafeMessage(error: unknown, options: MobileApiErrorOptions) {
   return getUserSafeErrorMessage(error, options.fallbackMessage ?? DEFAULT_UNEXPECTED_ERROR_MESSAGE);
 }
 
+function retryAfterHeader(error: unknown) {
+  if (
+    error instanceof AppError &&
+    error.code === "PASSWORD_LOGIN_THROTTLED" &&
+    "retryAfterSeconds" in error &&
+    typeof error.retryAfterSeconds === "number" &&
+    Number.isFinite(error.retryAfterSeconds)
+  ) {
+    return { "Retry-After": String(Math.max(1, Math.ceil(error.retryAfterSeconds))) };
+  }
+  return undefined;
+}
+
 export function mobileApiSuccess<T extends Record<string, unknown>>(data: T, status = 200) {
   return NextResponse.json({ success: true, ...data }, { status });
 }
@@ -50,5 +63,8 @@ export function mobileApiError(error: unknown, options: MobileApiErrorOptions = 
   return NextResponse.json({
     success: false,
     error: mobileSafeMessage(error, options)
-  }, { status: statusForError(error) });
+  }, {
+    status: statusForError(error),
+    headers: retryAfterHeader(error)
+  });
 }

@@ -1,6 +1,12 @@
 import { AppError } from "@/lib/errors";
+import { PasswordLoginThrottleRealm } from "@prisma/client";
 import { db } from "@/lib/db";
-import { verifyPassword } from "@/lib/auth/password";
+import { verifyPasswordOrDummy } from "@/lib/auth/password";
+import {
+  beginPasswordLoginAttempt,
+  completePasswordLoginAttempt,
+  passwordLoginSourceAddress
+} from "@/lib/auth/password-login-throttle";
 import { createRawSessionToken, getSessionExpiresAt, hashSessionToken } from "@/lib/auth/session";
 import { writeAuditLog } from "@/lib/audit/audit-log";
 import { getEffectivePermissions } from "@/lib/rbac/require-permission";
@@ -290,35 +296,53 @@ export async function getMobileAuthContext(request: Request) {
 export async function createMobileLoginSession(input: unknown, request: Request) {
   const data: MobileLoginInput = mobileLoginSchema.parse(input);
   const tenant = await db.tenant.findUnique({ where: { slug: data.schoolId } });
-  if (!tenant || tenant.status !== "ACTIVE") {
-    throw new AppError("INVALID_MOBILE_CREDENTIALS", "INVALID_MOBILE_CREDENTIALS", 401);
-  }
-
-  const user = await db.user.findUnique({
-    where: { tenantId_email: { tenantId: tenant.id, email: data.email } },
-    include: { passwordCredential: true }
+  const user = tenant?.status === "ACTIVE"
+    ? await db.user.findUnique({
+        where: { tenantId_email: { tenantId: tenant.id, email: data.email } },
+        include: { passwordCredential: true }
+      })
+    : null;
+  const roleAssignments = tenant?.status === "ACTIVE" && user?.status === "ACTIVE"
+    ? await db.userRoleAssignment.findMany({
+        where: {
+          tenantId: tenant.id,
+          userId: user.id,
+          isActive: true,
+          role: { isActive: true }
+        },
+        select: { role: { select: { code: true } } }
+      })
+    : [];
+  const authenticated = (
+    tenant?.status === "ACTIVE" &&
+    user?.status === "ACTIVE" &&
+    user.passwordCredential &&
+    hasSchoolLoginRole(roleAssignments.map((assignment) => assignment.role.code))
+  ) ? {
+    tenant,
+    user,
+    credential: user.passwordCredential
+  } : null;
+  const sourceAddress = passwordLoginSourceAddress(request);
+  const reservation = await beginPasswordLoginAttempt({
+    realm: PasswordLoginThrottleRealm.SCHOOL,
+    channel: "MOBILE",
+    tenantId: tenant?.id ?? null,
+    scopeKey: data.schoolId,
+    accountKey: user?.id ?? data.email,
+    sourceAddress
   });
-  if (!user || user.status !== "ACTIVE" || !user.passwordCredential) {
+  const valid = await verifyPasswordOrDummy(
+    data.password,
+    authenticated?.credential.passwordHash ?? null
+  );
+  if (!valid || !authenticated) {
+    await completePasswordLoginAttempt(reservation, "FAILURE");
     throw new AppError("INVALID_MOBILE_CREDENTIALS", "INVALID_MOBILE_CREDENTIALS", 401);
   }
-
-  const valid = await verifyPassword(data.password, user.passwordCredential.passwordHash);
-  if (!valid) throw new AppError("INVALID_MOBILE_CREDENTIALS", "INVALID_MOBILE_CREDENTIALS", 401);
-  if (user.passwordCredential.mustChange) {
+  await completePasswordLoginAttempt(reservation, "SUCCESS");
+  if (authenticated.credential.mustChange) {
     throw new AppError("PASSWORD_CHANGE_REQUIRED", "PASSWORD_CHANGE_REQUIRED", 403);
-  }
-
-  const roleAssignments = await db.userRoleAssignment.findMany({
-    where: {
-      tenantId: tenant.id,
-      userId: user.id,
-      isActive: true,
-      role: { isActive: true }
-    },
-    select: { role: { select: { code: true } } }
-  });
-  if (!hasSchoolLoginRole(roleAssignments.map((assignment) => assignment.role.code))) {
-    throw new AppError("INVALID_MOBILE_CREDENTIALS", "INVALID_MOBILE_CREDENTIALS", 401);
   }
 
   const rawToken = createRawSessionToken();
@@ -327,23 +351,26 @@ export async function createMobileLoginSession(input: unknown, request: Request)
 
   await db.session.create({
     data: {
-      tenantId: tenant.id,
-      userId: user.id,
+      tenantId: authenticated.tenant.id,
+      userId: authenticated.user.id,
       tokenHash,
       expiresAt,
       userAgent: userAgentFrom(request),
-      ipAddress: ipAddressFrom(request)
+      ipAddress: sourceAddress ?? undefined
     }
   });
-  await db.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
+  await db.user.update({
+    where: { id: authenticated.user.id },
+    data: { lastLoginAt: new Date() }
+  });
 
   const authContext = await resolveMobileAuthFromRawToken(rawToken, request);
   await writeAuditLog({
     ctx: authContext.ctx,
     action: CAMPUS_CORE_AUDIT_EVENTS.MOBILE_AUTH_LOGIN_SUCCESS,
     entityType: "User",
-    entityId: user.id,
-    metadata: { userEmail: user.email, client: "mobile" }
+    entityId: authenticated.user.id,
+    metadata: { userEmail: authenticated.user.email, client: "mobile" }
   }).catch(() => null);
 
   return {

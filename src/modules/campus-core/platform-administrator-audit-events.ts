@@ -1,5 +1,6 @@
 export const PLATFORM_ADMINISTRATOR_AUDIT_EVENTS = {
   LOGIN_SUCCESS: "platform.administrator.login_success",
+  PASSWORD_LOGIN_THROTTLED: "platform.administrator.password_login_throttled",
   LOGOUT: "platform.administrator.logout",
   PASSWORD_CHANGED: "platform.administrator.password_changed",
   SCHOOL_CREATED: "platform.school.created",

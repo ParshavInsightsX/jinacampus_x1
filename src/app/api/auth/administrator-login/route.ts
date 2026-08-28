@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { PasswordLoginThrottleRealm } from "@prisma/client";
 
 import { writePlatformAuditLog } from "@/lib/audit/platform-audit-log";
 import {
@@ -7,7 +8,14 @@ import {
   hashPlatformAdministratorSessionToken,
   setPlatformAdministratorSessionCookie
 } from "@/lib/auth/platform-administrator-session";
-import { verifyPassword } from "@/lib/auth/password";
+import { verifyPasswordOrDummy } from "@/lib/auth/password";
+import { passwordLoginProtectionResponse } from "@/lib/auth/password-login-response";
+import {
+  beginPasswordLoginAttempt,
+  completePasswordLoginAttempt,
+  passwordLoginSourceAddress,
+  type PasswordLoginReservation
+} from "@/lib/auth/password-login-throttle";
 import { db } from "@/lib/db";
 import { administratorLoginSchema } from "@/modules/campus-core/administrator-schemas";
 import { PLATFORM_ADMINISTRATOR_AUDIT_EVENTS } from "@/modules/campus-core/platform-administrator-audit-events";
@@ -24,26 +32,49 @@ export async function POST(request: Request) {
     where: { email: parsed.data.email },
     include: { credential: true }
   });
+  const authenticated = (
+    administrator?.status === "ACTIVE" &&
+    administrator.credential
+  ) ? {
+    administrator,
+    credential: administrator.credential
+  } : null;
+  const sourceAddress = passwordLoginSourceAddress(request);
+  let reservation: PasswordLoginReservation;
+  try {
+    reservation = await beginPasswordLoginAttempt({
+      realm: PasswordLoginThrottleRealm.PLATFORM_ADMINISTRATOR,
+      channel: "ADMINISTRATOR_WEB",
+      scopeKey: "platform-administrator",
+      accountKey: administrator?.id ?? parsed.data.email,
+      sourceAddress
+    });
+  } catch (error) {
+    const response = passwordLoginProtectionResponse(error);
+    if (response) return response;
+    throw error;
+  }
 
-  if (
-    !administrator ||
-    administrator.status !== "ACTIVE" ||
-    !administrator.credential ||
-    !(await verifyPassword(parsed.data.password, administrator.credential.passwordHash))
-  ) {
+  const valid = await verifyPasswordOrDummy(
+    parsed.data.password,
+    authenticated?.credential.passwordHash ?? null
+  );
+  if (!valid || !authenticated) {
+    await completePasswordLoginAttempt(reservation, "FAILURE");
     return NextResponse.json({ error: ADMINISTRATOR_LOGIN_ERROR_MESSAGE }, { status: 401 });
   }
+  await completePasswordLoginAttempt(reservation, "SUCCESS");
 
   const rawToken = createRawPlatformAdministratorSessionToken();
   const tokenHash = await hashPlatformAdministratorSessionToken(rawToken);
   const expiresAt = getPlatformAdministratorSessionExpiresAt();
-  const ipAddress = request.headers.get("x-forwarded-for") ?? undefined;
+  const ipAddress = sourceAddress ?? undefined;
   const userAgent = request.headers.get("user-agent") ?? undefined;
 
   await db.$transaction(async (tx) => {
     const session = await tx.platformAdministratorSession.create({
       data: {
-        administratorId: administrator.id,
+        administratorId: authenticated.administrator.id,
         tokenHash,
         expiresAt,
         ipAddress,
@@ -52,24 +83,24 @@ export async function POST(request: Request) {
     });
 
     await tx.platformAdministrator.update({
-      where: { id: administrator.id },
+      where: { id: authenticated.administrator.id },
       data: { lastLoginAt: new Date() }
     });
 
     await writePlatformAuditLog({
       ctx: {
-        administratorId: administrator.id,
+        administratorId: authenticated.administrator.id,
         sessionId: session.id,
-        email: administrator.email,
-        displayName: administrator.displayName,
-        canManagePrincipalRecovery: administrator.canManagePrincipalRecovery,
-        passwordChangeRequired: administrator.credential?.mustChange ?? true,
+        email: authenticated.administrator.email,
+        displayName: authenticated.administrator.displayName,
+        canManagePrincipalRecovery: authenticated.administrator.canManagePrincipalRecovery,
+        passwordChangeRequired: authenticated.credential.mustChange,
         ipAddress,
         userAgent
       },
       action: PLATFORM_ADMINISTRATOR_AUDIT_EVENTS.LOGIN_SUCCESS,
       entityType: "PlatformAdministrator",
-      entityId: administrator.id,
+      entityId: authenticated.administrator.id,
       metadata: { authenticationMethod: "PASSWORD" }
     }, tx);
   });
@@ -77,7 +108,7 @@ export async function POST(request: Request) {
   await setPlatformAdministratorSessionCookie(rawToken, expiresAt);
   return NextResponse.json({
     ok: true,
-    redirectTo: administrator.credential.mustChange
+    redirectTo: authenticated.credential.mustChange
       ? "/administrator/account/change-password?required=1"
       : "/administrator"
   });

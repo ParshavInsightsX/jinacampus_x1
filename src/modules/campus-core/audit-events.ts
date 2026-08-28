@@ -3,6 +3,7 @@ export const CAMPUS_CORE_AUDIT_EVENTS = {
   AUTH_LOGIN_PASSWORD_SUCCESS: "auth.login.password_success",
   AUTH_LOGIN_PASSKEY_SUCCESS: "auth.login.passkey_success",
   AUTH_LOGIN_OTP_SUCCESS: "auth.login.otp_success",
+  AUTH_PASSWORD_LOGIN_THROTTLED: "auth.login.password_throttled",
   AUTH_LOGOUT: "campuscore.auth.logout",
   AUTH_PASSWORD_RECOVERY_REQUESTED: "auth.password_recovery_requested",
   PRINCIPAL_PASSWORD_RECOVERY_APPROVED: "auth.principal_password_recovery_approved",

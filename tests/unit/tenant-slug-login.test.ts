@@ -10,7 +10,10 @@ const mocks = vi.hoisted(() => ({
     session: { create: vi.fn() },
     $transaction: vi.fn()
   },
-  verifyPassword: vi.fn(),
+  verifyPasswordOrDummy: vi.fn(),
+  beginPasswordLoginAttempt: vi.fn(),
+  completePasswordLoginAttempt: vi.fn(),
+  passwordLoginSourceAddress: vi.fn(),
   createRawSessionToken: vi.fn(),
   getSessionExpiresAt: vi.fn(),
   hashSessionToken: vi.fn(),
@@ -19,7 +22,14 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/db", () => ({ db: mocks.db }));
-vi.mock("@/lib/auth/password", () => ({ verifyPassword: mocks.verifyPassword }));
+vi.mock("@/lib/auth/password", () => ({
+  verifyPasswordOrDummy: mocks.verifyPasswordOrDummy
+}));
+vi.mock("@/lib/auth/password-login-throttle", () => ({
+  beginPasswordLoginAttempt: mocks.beginPasswordLoginAttempt,
+  completePasswordLoginAttempt: mocks.completePasswordLoginAttempt,
+  passwordLoginSourceAddress: mocks.passwordLoginSourceAddress
+}));
 vi.mock("@/lib/auth/session", () => ({
   createRawSessionToken: mocks.createRawSessionToken,
   getSessionExpiresAt: mocks.getSessionExpiresAt,
@@ -29,6 +39,7 @@ vi.mock("@/lib/auth/cookies", () => ({ setSessionCookie: mocks.setSessionCookie 
 vi.mock("@/lib/audit/audit-log", () => ({ writeAuditLog: mocks.writeAuditLog }));
 
 import { POST } from "@/app/api/auth/login/route";
+import { AppError } from "@/lib/errors";
 import { SCHOOL_LOGIN_ERROR_MESSAGE, normalizeTenantSlug, validateSchoolId } from "@/modules/campus-core/tenant-login-policy";
 
 const tenant = {
@@ -107,7 +118,17 @@ beforeEach(() => {
   mocks.db.user.update.mockResolvedValue({});
   mocks.db.session.create.mockResolvedValue({});
   mocks.db.$transaction.mockImplementation((callback: (client: typeof mocks.db) => unknown) => callback(mocks.db));
-  mocks.verifyPassword.mockResolvedValue(true);
+  mocks.verifyPasswordOrDummy.mockResolvedValue(true);
+  mocks.beginPasswordLoginAttempt.mockResolvedValue({
+    realm: "SCHOOL",
+    channel: "SCHOOL_WEB",
+    tenantId: tenant.id,
+    accountBucketId: "account-bucket-id",
+    sourceBucketId: null,
+    buckets: []
+  });
+  mocks.completePasswordLoginAttempt.mockResolvedValue(undefined);
+  mocks.passwordLoginSourceAddress.mockReturnValue(null);
   mocks.createRawSessionToken.mockReturnValue("raw-session-token");
   mocks.hashSessionToken.mockResolvedValue("hashed-session-token");
   mocks.getSessionExpiresAt.mockReturnValue(new Date("2026-06-03T00:00:00.000Z"));
@@ -159,7 +180,38 @@ describe("School ID login", () => {
       expect.objectContaining({ tenantId: tenant.id, userId: principalUser.id, tokenHash: "hashed-session-token" })
     );
     expect(mocks.setSessionCookie).toHaveBeenCalledWith("raw-session-token", expect.any(Date));
+    expect(mocks.beginPasswordLoginAttempt).toHaveBeenCalledWith(expect.objectContaining({
+      realm: "SCHOOL",
+      channel: "SCHOOL_WEB",
+      tenantId: tenant.id,
+      accountKey: principalUser.id
+    }));
+    expect(mocks.completePasswordLoginAttempt).toHaveBeenCalledWith(
+      expect.objectContaining({ accountBucketId: "account-bucket-id" }),
+      "SUCCESS"
+    );
     expect(JSON.stringify(result.body)).not.toMatch(/passwordHash|tokenHash|tenantId/);
+  });
+
+  it("returns a safe 429 response with Retry-After when the durable limiter blocks login", async () => {
+    mocks.beginPasswordLoginAttempt.mockRejectedValueOnce(Object.assign(
+      new AppError("PASSWORD_LOGIN_THROTTLED", "PASSWORD_LOGIN_THROTTLED", 429),
+      { retryAfterSeconds: 47 }
+    ));
+
+    const response = await POST(loginRequest({
+      schoolId: "jinacampus-demo",
+      email: "principal@demo.jinacampus.test",
+      password: "candidate-password"
+    }));
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get("retry-after")).toBe("47");
+    expect(await response.json()).toEqual({
+      error: "Too many sign-in attempts. Please wait and try again."
+    });
+    expect(mocks.verifyPasswordOrDummy).not.toHaveBeenCalled();
+    expect(mocks.db.session.create).not.toHaveBeenCalled();
   });
 
   it("keeps legacy tenantSlug request compatibility while the UI uses School ID", async () => {
@@ -226,7 +278,7 @@ describe("School ID login", () => {
     });
 
     expect(result).toEqual({ status: 401, body: { error: SCHOOL_LOGIN_ERROR_MESSAGE } });
-    expect(mocks.verifyPassword).not.toHaveBeenCalled();
+    expect(mocks.verifyPasswordOrDummy).toHaveBeenCalledWith("correct-password", null);
     expect(mocks.db.session.create).not.toHaveBeenCalled();
     expect(JSON.stringify(result.body)).not.toMatch(/administrator|role|tenantId/i);
   });
@@ -249,7 +301,7 @@ describe("School ID login", () => {
       vi.clearAllMocks();
       mocks.db.tenant.findUnique.mockResolvedValue("tenantResult" in attempt ? attempt.tenantResult : tenant);
       mocks.db.user.findUnique.mockResolvedValue("userResult" in attempt ? attempt.userResult : principalUser);
-      mocks.verifyPassword.mockResolvedValue("passwordValid" in attempt ? attempt.passwordValid : true);
+      mocks.verifyPasswordOrDummy.mockResolvedValue("passwordValid" in attempt ? attempt.passwordValid : true);
 
       const result = await postLogin({
         schoolId: "jinacampus-demo",
