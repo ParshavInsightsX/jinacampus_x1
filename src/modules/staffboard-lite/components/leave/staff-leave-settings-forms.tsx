@@ -77,6 +77,7 @@ function LeaveTypeForm({ branchId, leaveType, action, pending }: { branchId: str
 
 export function StaffLeaveSettingsForms({
   branchId,
+  defaultYear,
   policy,
   leaveTypes,
   approvers,
@@ -84,6 +85,7 @@ export function StaffLeaveSettingsForms({
   staffCandidates
 }: {
   branchId: string;
+  defaultYear: number;
   policy: LeavePolicy;
   leaveTypes: LeaveType[];
   approvers: Approver[];
@@ -136,7 +138,7 @@ export function StaffLeaveSettingsForms({
         <div className="grid gap-3 md:grid-cols-2">
           <label className="text-sm font-semibold text-slate-700">Staff member<select name="staffId" required defaultValue="" className="mt-2 min-h-11 w-full"><option value="" disabled>Select staff member</option>{staffCandidates.map((person) => <option key={person.id} value={person.id}>{person.name} - {person.detail}</option>)}</select></label>
           <label className="text-sm font-semibold text-slate-700">Tracked leave type<select name="leaveTypeId" required defaultValue="" className="mt-2 min-h-11 w-full"><option value="" disabled>Select leave type</option>{leaveTypes.filter((type) => type.balanceTracked).map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}</select></label>
-          <label className="text-sm font-semibold text-slate-700">Year<input name="year" type="number" min="2000" max="2200" defaultValue={new Date().getUTCFullYear()} required className="mt-2 min-h-11 w-full" /></label>
+          <label className="text-sm font-semibold text-slate-700">Year<input name="year" type="number" min="2000" max="2200" defaultValue={defaultYear} required className="mt-2 min-h-11 w-full" /></label>
           <label className="text-sm font-semibold text-slate-700">Adjustment days<input name="adjustmentDays" type="number" min="-366" max="366" step="0.5" required className="mt-2 min-h-11 w-full" /></label>
           <label className="text-sm font-semibold text-slate-700 md:col-span-2">Reason<textarea name="reason" rows={3} minLength={10} maxLength={1000} required className="mt-2 w-full" /></label>
         </div>

@@ -88,6 +88,28 @@ describe("intelligent auto-hide navbar", () => {
     });
   });
 
+  it("provides specific context for identity-card, leave, and self-attendance routes", () => {
+    expect(getNavbarRouteContext("/academia/students/student-id/id-card")).toEqual({
+      title: "Student ID card",
+      section: "Academia",
+      parentHref: "/academia/students",
+      parentLabel: "Students"
+    });
+    expect(getNavbarRouteContext("/campus-core/institutions/institution-id/legal-identity")).toEqual({
+      title: "Institution legal identity",
+      section: "CampusCore",
+      parentHref: "/campus-core/institutions",
+      parentLabel: "School profile"
+    });
+    expect(getNavbarRouteContext("/staffboard/attendance/card").title).toBe("My Attendance QR");
+    expect(getNavbarRouteContext("/staffboard/attendance/qr").title).toBe("Staff QR cards");
+    expect(getNavbarRouteContext("/staffboard/leave/apply").title).toBe("Apply for leave");
+    expect(getNavbarRouteContext("/staffboard/leave/application-id/edit").title).toBe(
+      "Edit leave application"
+    );
+    expect(getNavbarRouteContext("/account/workspaces").title).toBe("Choose a workspace");
+  });
+
   it("locks visibility for menus, focus, pointer interaction, and mobile navigation", () => {
     const navbar = source("src/components/app-shell/app-navbar.tsx");
     const revealZone = source("src/components/app-shell/top-edge-reveal-zone.tsx");

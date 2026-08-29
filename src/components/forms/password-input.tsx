@@ -31,7 +31,7 @@ export function PasswordInput({ className = "", disabled, ...props }: PasswordIn
         title={label}
         disabled={disabled}
         onClick={() => setIsVisible((current) => !current)}
-        className="absolute right-1 top-1/2 inline-flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-[0.9rem] border border-campus-border bg-white/90 text-slate-700 shadow-sm transition hover:border-brand-200 hover:bg-white hover:text-brand-700 disabled:cursor-not-allowed disabled:opacity-60 premium-focus"
+        className="auth-password-toggle absolute right-0.5 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-transparent bg-transparent text-slate-600 transition hover:bg-brand-50 hover:text-brand-700 disabled:cursor-not-allowed disabled:opacity-60 premium-focus"
       >
         {isVisible ? (
           <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">

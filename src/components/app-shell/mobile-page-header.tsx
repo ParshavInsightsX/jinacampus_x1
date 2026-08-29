@@ -15,7 +15,7 @@ export function MobilePageHeader({ eyebrow, title, description, action }: Mobile
           {eyebrow ? (
             <p className="text-xs font-semibold uppercase text-brand-600">{eyebrow}</p>
           ) : null}
-          <h1 className="mt-1 break-words text-2xl font-semibold text-ink">{title}</h1>
+          <h1 className="mt-1 break-words text-2xl font-semibold leading-tight text-ink">{title}</h1>
         </div>
         {action ? <div className="shrink-0">{action}</div> : null}
       </div>

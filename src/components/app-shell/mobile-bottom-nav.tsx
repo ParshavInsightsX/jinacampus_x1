@@ -74,7 +74,7 @@ export function MobileBottomNav({ groups, items, moreButtonRef, onOpenNavigation
 
   return (
     <nav
-      className={`pointer-events-none fixed inset-x-0 bottom-0 z-50 px-3 pb-[calc(0.5rem+env(safe-area-inset-bottom))] transition-transform duration-200 motion-reduce:transition-none lg:hidden ${fieldFocused ? "translate-y-[calc(100%+env(safe-area-inset-bottom))]" : "translate-y-0"}`}
+      className={`jc-motion-shell pointer-events-none fixed inset-x-0 bottom-0 z-50 px-3 pb-[calc(0.5rem+env(safe-area-inset-bottom))] lg:hidden ${fieldFocused ? "translate-y-[calc(100%+env(safe-area-inset-bottom))]" : "translate-y-0"}`}
       aria-label="Mobile primary navigation"
       data-mobile-navigation="true"
       data-mobile-dock="true"
@@ -85,7 +85,7 @@ export function MobileBottomNav({ groups, items, moreButtonRef, onOpenNavigation
         <div className="grid gap-1" style={{ gridTemplateColumns: gridColumns }}>
           {items.map((item) => {
             const isActive = item.kind === "more" ? false : isNavItemActive(item, pathname, activeHref);
-            const itemClassName = `group flex min-w-0 flex-col items-center justify-center rounded-[1.15rem] px-1 font-semibold transition duration-150 active:scale-[1.06] premium-focus motion-reduce:transform-none ${
+            const itemClassName = `jc-motion-interactive group flex min-w-0 flex-col items-center justify-center rounded-[1.15rem] px-1 font-semibold active:scale-[0.98] premium-focus ${
               compact ? "min-h-12 gap-0.5" : "min-h-14 gap-1"
             } ${
               isActive
@@ -118,7 +118,7 @@ export function MobileBottomNav({ groups, items, moreButtonRef, onOpenNavigation
                 aria-current={isActive ? "page" : undefined}
                 className={itemClassName}
               >
-                <span className={`transition-transform duration-150 motion-reduce:transform-none ${isActive ? "-translate-y-0.5 scale-110" : "group-active:-translate-y-0.5 group-active:scale-110"}`}>
+                <span className={`jc-motion-interactive ${isActive ? "-translate-y-0.5 scale-105" : "group-active:scale-95"}`}>
                   <NavigationIcon href={item.href} className={compact ? "h-5 w-5" : "h-5.5 w-5.5"} />
                 </span>
                 <span className={`max-w-full truncate text-center ${compact ? "text-[9px] leading-3 opacity-80" : "text-[10px] leading-3"}`}>

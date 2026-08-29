@@ -28,8 +28,8 @@ export function NavbarContextMenu({ context, branding, onOpenChange }: NavbarCon
       dataAttribute="school-context"
       panelRole="dialog"
       onOpenChange={onOpenChange}
-      buttonClassName="flex min-h-14 max-w-[28rem] items-center gap-3 rounded-[1.25rem] border border-transparent bg-transparent px-3 text-left text-slate-700 transition hover:bg-white/90 premium-focus"
-      panelClassName="absolute right-0 top-[calc(100%+0.85rem)] z-20 w-[min(23rem,calc(100vw-2rem))] rounded-[1.25rem] border border-white/90 bg-white/95 p-3 shadow-[0_24px_64px_rgba(3,15,46,0.20)] backdrop-blur-2xl"
+      buttonClassName="jc-motion-interactive flex min-h-14 max-w-[28rem] items-center gap-3 rounded-[1.25rem] border border-transparent bg-transparent px-3 text-left text-slate-700 hover:bg-white/90 premium-focus"
+      panelClassName="jc-glass-elevated absolute right-0 top-[calc(100%+0.85rem)] z-20 w-[min(23rem,calc(100vw-2rem))] rounded-[1.25rem] border p-3"
       trigger={(isOpen) => (
         <>
           <span className="flex min-w-0 items-center gap-2.5">
@@ -51,7 +51,7 @@ export function NavbarContextMenu({ context, branding, onOpenChange }: NavbarCon
               <span className="block max-w-[7.5rem] truncate text-xs font-semibold text-ink xl:max-w-[11rem]">{branchLabel}</span>
             </span>
           </span>
-          <ChevronDown className={`h-4 w-4 shrink-0 text-slate-500 transition-transform motion-reduce:transition-none ${isOpen ? "rotate-180" : ""}`} aria-hidden="true" />
+          <ChevronDown className={`jc-motion-interactive h-4 w-4 shrink-0 text-slate-500 ${isOpen ? "rotate-180" : ""}`} aria-hidden="true" />
         </>
       )}
     >

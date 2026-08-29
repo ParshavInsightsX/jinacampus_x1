@@ -73,7 +73,7 @@ export function FormField({
 export function FormMessage({ state }: { state: FormMessageState }) {
   if (state.ok) {
     return (
-      <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 shadow-sm">
+      <p role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 shadow-sm">
         {state.message}
       </p>
     );
@@ -81,7 +81,7 @@ export function FormMessage({ state }: { state: FormMessageState }) {
 
   if (state.error) {
     return (
-      <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 shadow-sm">
+      <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 shadow-sm">
         {state.error}
       </p>
     );

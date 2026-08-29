@@ -5,7 +5,7 @@ import type { PublicKeyCredentialRequestOptionsJSON } from "@simplewebauthn/serv
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 
-import { BrandLogo } from "@/components/brand/brand-logo";
+import { AuthFeedback, type AuthFeedbackTone } from "@/components/auth/auth-feedback";
 import { PasswordInput } from "@/components/forms/password-input";
 import { FormField } from "@/components/ui/form-primitives";
 
@@ -16,9 +16,16 @@ type LoginFormProps = {
   logoUrl: string | null;
   intent?: "standard" | "attendance";
   successRedirect?: string;
+  initialStatus?: "session-expired" | null;
 };
 
-type PendingAction = "passkey" | "password" | null;
+type PendingAction = "passkey" | "password" | "redirect" | null;
+type SignInMethod = "passkey" | "password";
+type FeedbackState = {
+  tone: AuthFeedbackTone;
+  title: string;
+  message: string;
+};
 
 const LOGIN_ERROR_MESSAGE = "Login failed. Please check your credentials.";
 const PASSKEY_ERROR_MESSAGE = "Passkey sign-in failed. Use your employee code and password.";
@@ -58,6 +65,28 @@ function resolvedLoginRedirect(serverRedirect: unknown, successRedirect?: string
   return successRedirect ? safeRedirect(successRedirect) : redirectTo;
 }
 
+function passwordFailure(status: number): FeedbackState {
+  if (status === 429) {
+    return {
+      tone: "warning",
+      title: "Too many sign-in attempts",
+      message: "Please wait a few minutes before trying again."
+    };
+  }
+  if (status >= 500) {
+    return {
+      tone: "error",
+      title: "Sign in is temporarily unavailable",
+      message: "JinaCampus could not complete the request. Please try again shortly."
+    };
+  }
+  return {
+    tone: "error",
+    title: "Sign-in details not accepted",
+    message: `${LOGIN_ERROR_MESSAGE} If your account is inactive, contact your school administrator.`
+  };
+}
+
 function LoadingSpinner() {
   return (
     <svg
@@ -84,22 +113,41 @@ function PasskeyIcon() {
   );
 }
 
+function PasswordIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <rect x="4" y="10" width="16" height="10" rx="2" />
+      <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+    </svg>
+  );
+}
+
 export function LoginForm({
   schoolId,
   schoolIdLocked,
   schoolName,
   logoUrl,
   intent = "standard",
-  successRedirect
+  successRedirect,
+  initialStatus = null
 }: LoginFormProps) {
+  const attendanceIntent = intent === "attendance";
+  const [method, setMethod] = useState<SignInMethod>(attendanceIntent ? "passkey" : "password");
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<FeedbackState | null>(
+    initialStatus === "session-expired"
+      ? {
+          tone: "info",
+          title: "Your session ended",
+          message: "Sign in again to continue securely."
+        }
+      : null
+  );
   const [schoolIdValue, setSchoolIdValue] = useState(schoolId ?? "");
   const [identifier, setIdentifier] = useState("");
   const isPending = pendingAction !== null;
-  const displayName = schoolName ?? "your school";
+  const displayName = schoolName ?? "Your school";
   const recoveryHref = schoolId ? `/forgot-password?schoolId=${encodeURIComponent(schoolId)}` : "/forgot-password";
-  const attendanceIntent = intent === "attendance";
   const attendanceLoginHref = schoolId
     ? `/attendance-login?schoolId=${encodeURIComponent(schoolId)}`
     : "/attendance-login";
@@ -117,12 +165,16 @@ export function LoginForm({
     return normalized;
   }
 
-  async function onPasswordSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function changeMethod(nextMethod: SignInMethod) {
     if (isPending) return;
+    setMethod(nextMethod);
+    setFeedback(null);
+  }
+
+  async function onPasswordSubmit(form: HTMLFormElement) {
     setPendingAction("password");
-    setError(null);
-    const formData = new FormData(event.currentTarget);
+    setFeedback(null);
+    const formData = new FormData(form);
 
     try {
       const response = await fetch("/api/auth/login", {
@@ -136,13 +188,23 @@ export function LoginForm({
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setError(LOGIN_ERROR_MESSAGE);
+        setFeedback(passwordFailure(response.status));
         setPendingAction(null);
         return;
       }
+      setPendingAction("redirect");
+      setFeedback({
+        tone: "success",
+        title: "Sign in successful",
+        message: "Opening your authorised workspace..."
+      });
       window.location.assign(resolvedLoginRedirect(result.redirectTo, successRedirect));
     } catch {
-      setError(LOGIN_ERROR_MESSAGE);
+      setFeedback({
+        tone: "error",
+        title: "Unable to reach JinaCampus",
+        message: "Check your internet connection, then try again."
+      });
       setPendingAction(null);
     }
   }
@@ -152,16 +214,24 @@ export function LoginForm({
     const tenantSlug = normalizedSchoolId();
     const normalizedIdentifier = normalizedIdentity();
     if (!tenantSlug || !normalizedIdentifier) {
-      setError("Enter your School ID and employee code or email.");
+      setFeedback({
+        tone: "warning",
+        title: "Account details required",
+        message: "Enter your School ID and employee code or email."
+      });
       return;
     }
     if (!window.PublicKeyCredential || !navigator.credentials) {
-      setError("Passkeys are not available in this browser. Use your password.");
+      setFeedback({
+        tone: "warning",
+        title: "Passkey not available",
+        message: "This browser cannot use passkeys. Choose Password to continue."
+      });
       return;
     }
 
     setPendingAction("passkey");
-    setError(null);
+    setFeedback(null);
     try {
       const optionsResponse = await fetch("/api/auth/passkey/authentication/options", {
         method: "POST",
@@ -184,160 +254,191 @@ export function LoginForm({
       });
       const verifyResult = await verifyResponse.json().catch(() => ({}));
       if (!verifyResponse.ok) throw new Error("PASSKEY_VERIFY_FAILED");
+      setPendingAction("redirect");
+      setFeedback({
+        tone: "success",
+        title: "Passkey verified",
+        message: "Opening your authorised workspace..."
+      });
       window.location.assign(resolvedLoginRedirect(verifyResult.redirectTo, successRedirect));
     } catch {
-      setError(PASSKEY_ERROR_MESSAGE);
+      setFeedback({
+        tone: "error",
+        title: "Passkey sign-in did not complete",
+        message: PASSKEY_ERROR_MESSAGE
+      });
       setPendingAction(null);
     }
   }
 
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (isPending) return;
+    if (method === "passkey") {
+      await onPasskeySignIn();
+      return;
+    }
+    await onPasswordSubmit(event.currentTarget);
+  }
+
+  const showSchoolContext = Boolean(schoolIdLocked || logoUrl || schoolName);
+
   return (
     <section
-      className="auth-form-panel p-5 sm:p-8 lg:p-9"
+      className="auth-form-panel auth-panel-padding"
       data-mobile-login-form="true"
       data-auth-pending={isPending ? "true" : "false"}
+      data-sign-in-method={method}
       aria-busy={isPending}
     >
-      <BrandLogo className="mx-auto hidden w-[17rem] lg:block" priority />
-      <div className="text-left lg:mt-7">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="auth-form-header text-left">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs font-semibold text-brand-700">Secure school access</p>
           {attendanceIntent ? (
-            <p className="inline-flex min-h-8 items-center rounded-full border border-teal-200 bg-teal-50 px-3 text-xs font-semibold text-teal-800">
-              Fast attendance sign in
+            <p className="auth-portal-badge border-teal-200 bg-teal-50 text-teal-800">
+              Attendance
             </p>
           ) : null}
         </div>
-        <h1 className="mt-3 text-2xl font-semibold text-ink sm:text-3xl">Welcome back</h1>
-        <p className="mt-2 text-sm leading-6 text-slate-600">Use the School ID and account details provided by your institution.</p>
-        {attendanceIntent ? (
-          <p className="mt-3 text-sm font-medium leading-6 text-teal-800">
-            Use a registered passkey for the quickest route to staff attendance.
-          </p>
-        ) : null}
-        {logoUrl || schoolName ? (
-          <div className="auth-context-row mt-5 flex min-h-14 items-center gap-3 px-4 py-3">
-            {logoUrl ? <img src={logoUrl} alt={`${displayName} logo`} className="h-11 w-11 shrink-0 rounded-[0.9rem] border border-white object-cover shadow-sm" /> : null}
+        <h1 className="auth-form-title">Welcome back</h1>
+        <p className="auth-form-description">Use the account details provided by your institution.</p>
+
+        {showSchoolContext ? (
+          <div className="auth-context-row mt-3 flex min-h-12 items-center gap-3 px-3 py-2">
+            {logoUrl ? <img src={logoUrl} alt={`${displayName} logo`} className="h-10 w-10 shrink-0 rounded-lg border border-white object-cover shadow-sm" /> : null}
             <div className="min-w-0">
-              <p className="text-xs font-semibold text-slate-500">School workspace</p>
+              <p className="text-[11px] font-semibold text-slate-500">School workspace</p>
               <p className="truncate text-sm font-semibold text-ink">{displayName}</p>
             </div>
+            {schoolId ? <span className="ml-auto shrink-0 rounded-full bg-white/80 px-2.5 py-1 text-[11px] font-semibold text-brand-700">{schoolId}</span> : null}
           </div>
         ) : null}
       </div>
 
-      <form method="post" onSubmit={onPasswordSubmit} className="mt-6 space-y-4" aria-label="JinaCampus sign in">
-        {schoolIdLocked ? (
-          <>
-            <input type="hidden" name="schoolId" value={schoolId ?? ""} />
-            <p className="rounded-lg border border-brand-100 bg-brand-50 px-4 py-3 text-sm font-semibold text-brand-700">
-              School ID: {schoolId}
-            </p>
-          </>
-        ) : (
-          <FormField id="schoolId" label="School ID" required helpText="Use the School ID provided by your administrator.">
+      <form method="post" onSubmit={onSubmit} className="auth-form-stack" aria-label="JinaCampus sign in">
+        <fieldset>
+          <legend className="sr-only">Choose sign-in method</legend>
+          <div className="auth-method-switch grid grid-cols-2 gap-1 p-1">
+            {([
+              ["password", "Password", <PasswordIcon key="password-icon" />],
+              ["passkey", "Passkey", <PasskeyIcon key="passkey-icon" />]
+            ] as const).map(([value, label, icon]) => (
+              <label key={value} className="cursor-pointer">
+                <input
+                  type="radio"
+                  name="signInMethod"
+                  value={value}
+                  checked={method === value}
+                  onChange={() => changeMethod(value)}
+                  className="sr-only"
+                  disabled={isPending}
+                />
+                <span className={`auth-method-option ${method === value ? "auth-method-option-active" : ""}`}>
+                  {icon}
+                  {label}
+                </span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        {feedback ? (
+          <AuthFeedback tone={feedback.tone} title={feedback.title}>{feedback.message}</AuthFeedback>
+        ) : null}
+
+        {schoolIdLocked ? <input type="hidden" name="schoolId" value={schoolId ?? ""} /> : null}
+        <div className={`auth-identity-grid ${schoolIdLocked ? "auth-identity-grid-single" : ""}`}>
+          {!schoolIdLocked ? (
+            <FormField id="schoolId" label="School ID">
+              <input
+                id="schoolId"
+                name="schoolId"
+                className="auth-field-input w-full outline-none disabled:bg-slate-50"
+                autoComplete="organization"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                inputMode="text"
+                enterKeyHint="next"
+                placeholder="your-school-id"
+                disabled={isPending}
+                required
+                value={schoolIdValue}
+                onChange={(event) => setSchoolIdValue(normalizeSchoolCodeInput(event.target.value))}
+                onBlur={() => setSchoolIdValue((current) => normalizeSchoolCodeForSubmit(current))}
+              />
+            </FormField>
+          ) : null}
+
+          <FormField id="identifier" label="Employee code or email">
             <input
-              id="schoolId"
-              className="auth-field-input w-full outline-none transition disabled:bg-slate-50"
-              autoComplete="organization"
+              id="identifier"
+              className="auth-field-input w-full outline-none disabled:bg-slate-50"
+              name="identifier"
+              autoComplete="username"
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
               inputMode="text"
+              enterKeyHint={method === "passkey" ? "go" : "next"}
               disabled={isPending}
               required
-              value={schoolIdValue}
-              onChange={(event) => setSchoolIdValue(normalizeSchoolCodeInput(event.target.value))}
-              onBlur={() => setSchoolIdValue((current) => normalizeSchoolCodeForSubmit(current))}
+              value={identifier}
+              onChange={(event) => setIdentifier(event.target.value)}
+              onBlur={() => setIdentifier((current) => normalizeIdentifier(current))}
             />
           </FormField>
+        </div>
+
+        {method === "password" ? (
+          <>
+            <FormField id="password" label="Password">
+              <PasswordInput
+                id="password"
+                className="auth-field-input w-full outline-none disabled:bg-slate-50"
+                name="password"
+                autoComplete="current-password"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                enterKeyHint="go"
+                aria-describedby="password-case-help"
+                disabled={isPending}
+                required
+              />
+              <div className="flex flex-wrap items-center justify-between gap-x-3">
+                <p id="password-case-help" className="auth-password-helper text-xs leading-5">Password is case-sensitive. A and a are different.</p>
+                <Link href={recoveryHref} className="auth-inline-link text-brand-700 hover:text-brand-800 premium-focus">
+                  Forgot password?
+                </Link>
+              </div>
+            </FormField>
+            <button type="submit" disabled={isPending} className="auth-action-button auth-action-primary premium-focus" aria-live="polite">
+              {pendingAction === "password" || pendingAction === "redirect"
+                ? <><LoadingSpinner />{pendingAction === "redirect" ? "Opening workspace..." : "Signing in..."}</>
+                : attendanceIntent ? "Continue to attendance" : "Sign in with password"}
+            </button>
+          </>
+        ) : (
+          <>
+            <p className="auth-method-help">Use the passkey registered on this device for password-free access.</p>
+            <button type="submit" disabled={isPending} className="auth-action-button auth-action-primary premium-focus" aria-live="polite">
+              {pendingAction === "passkey" || pendingAction === "redirect"
+                ? <><LoadingSpinner />{pendingAction === "redirect" ? "Opening workspace..." : "Checking passkey..."}</>
+                : <><PasskeyIcon />{attendanceIntent ? "Open attendance with passkey" : "Sign in with passkey"}</>}
+            </button>
+          </>
         )}
 
-        <FormField
-          id="identifier"
-          label="Employee code or email"
-          required
-          helpText="Staff can use the employee code on their profile. Email login remains supported."
-        >
-          <input
-            id="identifier"
-            className="auth-field-input w-full outline-none transition disabled:bg-slate-50"
-            name="identifier"
-            autoComplete="username"
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck={false}
-            disabled={isPending}
-            required
-            value={identifier}
-            onChange={(event) => setIdentifier(event.target.value)}
-            onBlur={() => setIdentifier((current) => normalizeIdentifier(current))}
-          />
-        </FormField>
-
-        <button
-          type="button"
-          onClick={onPasskeySignIn}
-          disabled={isPending}
-          className="auth-action-button auth-action-primary premium-focus"
-          aria-live="polite"
-        >
-          {pendingAction === "passkey"
-            ? <><LoadingSpinner />Checking passkey...</>
-            : <><PasskeyIcon />{attendanceIntent ? "Open attendance with passkey" : "Sign in with passkey"}</>}
-        </button>
-
-        <div className="flex items-center gap-3" aria-hidden="true">
-          <span className="h-px flex-1 bg-slate-200" />
-          <span className="text-xs font-semibold uppercase text-slate-400">Password fallback</span>
-          <span className="h-px flex-1 bg-slate-200" />
-        </div>
-
-        <FormField id="password" label="Password" required>
-          <PasswordInput
-            id="password"
-            className="auth-field-input w-full outline-none transition disabled:bg-slate-50"
-            name="password"
-            autoComplete="current-password"
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck={false}
-            disabled={isPending}
-            required
-          />
-          <p className="mt-2 text-xs font-medium leading-5 text-slate-500">Password is case-sensitive. A and a are different.</p>
-        </FormField>
-
-        <div className="flex justify-end">
-          <Link href={recoveryHref} className="inline-flex min-h-12 items-center text-sm font-semibold text-brand-700 transition hover:text-brand-800 premium-focus">
-            Forgot password?
-          </Link>
-        </div>
-        <button type="submit" disabled={isPending} className="auth-action-button auth-action-secondary premium-focus" aria-live="polite">
-          {pendingAction === "password"
-            ? <><LoadingSpinner />Signing in...</>
-            : attendanceIntent ? "Continue to attendance" : "Sign in with password"}
-        </button>
-
-        {error ? (
-          <p role="alert" className="rounded-[1rem] border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold leading-6 text-red-700 shadow-sm">
-            {error}
-          </p>
-        ) : null}
-        <div className="flex justify-center">
+        <div className="auth-secondary-navigation flex justify-center">
           {attendanceIntent ? (
-            <Link href={standardLoginHref} className="inline-flex min-h-12 items-center text-sm font-semibold text-slate-600 transition hover:text-brand-700 premium-focus">
+            <Link href={standardLoginHref} className="auth-inline-link text-slate-600 hover:text-brand-700 premium-focus">
               Back to standard sign in
             </Link>
           ) : (
-            <div className="flex flex-col items-center gap-3">
-              <Link href={attendanceLoginHref} className="inline-flex min-h-12 items-center text-sm font-semibold text-teal-700 transition hover:text-teal-800 premium-focus">
-                Quick attendance sign in
-              </Link>
-              <Link href="/administrator/login" className="inline-flex min-h-12 items-center text-sm font-semibold text-slate-600 transition hover:text-brand-700 premium-focus">
-                Administrator Login
-              </Link>
-            </div>
+            <Link href={attendanceLoginHref} className="auth-inline-link text-teal-700 hover:text-teal-800 premium-focus">
+              Quick attendance sign in
+            </Link>
           )}
         </div>
       </form>

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { BrandLogo } from "@/components/brand/brand-logo";
+import { AuthFeedback, type AuthFeedbackTone } from "@/components/auth/auth-feedback";
 import { PasswordInput } from "@/components/forms/password-input";
 import { FormField } from "@/components/ui/form-primitives";
 import { ADMINISTRATOR_LOGIN_ERROR_MESSAGE } from "@/modules/campus-core/tenant-login-policy";
@@ -13,6 +13,12 @@ function hasPasswordFormattingIssue(value: string) {
   return value !== value.trim() || /[\u200B-\u200D\uFEFF\r\n]/u.test(value);
 }
 
+type AdministratorFeedback = {
+  tone: AuthFeedbackTone;
+  title: string;
+  message: string;
+};
+
 function LoadingSpinner() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5 animate-spin" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -22,8 +28,16 @@ function LoadingSpinner() {
   );
 }
 
-export function AdministratorLoginForm() {
-  const [error, setError] = useState<string | null>(null);
+export function AdministratorLoginForm({
+  initialStatus = null
+}: {
+  initialStatus?: "session-expired" | null;
+}) {
+  const [feedback, setFeedback] = useState<AdministratorFeedback | null>(
+    initialStatus === "session-expired"
+      ? { tone: "info", title: "Your session ended", message: "Sign in again to continue securely." }
+      : null
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [emailValue, setEmailValue] = useState("");
   const [passwordValue, setPasswordValue] = useState("");
@@ -37,11 +51,11 @@ export function AdministratorLoginForm() {
     const submittedPassword = String(formData.get("password") ?? "");
     const normalizedEmail = submittedEmail.trim().toLowerCase();
     if (hasPasswordFormattingIssue(submittedPassword)) {
-      setError(PASSWORD_FORMAT_ERROR_MESSAGE);
+      setFeedback({ tone: "warning", title: "Check the password", message: PASSWORD_FORMAT_ERROR_MESSAGE });
       return;
     }
 
-    setError(null);
+    setFeedback(null);
     setIsSubmitting(true);
 
     try {
@@ -55,7 +69,12 @@ export function AdministratorLoginForm() {
       });
 
       if (!response.ok) {
-        setError(ADMINISTRATOR_LOGIN_ERROR_MESSAGE);
+        setFeedback(response.status === 429
+          ? { tone: "warning", title: "Too many sign-in attempts", message: "Please wait a few minutes before trying again." }
+          : response.status >= 500
+            ? { tone: "error", title: "Portal temporarily unavailable", message: "JinaCampus could not complete the request. Please try again shortly." }
+            : { tone: "error", title: "Sign-in details not accepted", message: ADMINISTRATOR_LOGIN_ERROR_MESSAGE });
+        setIsSubmitting(false);
         return;
       }
 
@@ -64,10 +83,10 @@ export function AdministratorLoginForm() {
         typeof result.redirectTo === "string" && result.redirectTo.startsWith("/") && !result.redirectTo.startsWith("//")
           ? result.redirectTo
           : "/administrator";
-      window.location.href = redirectTo;
+      setFeedback({ tone: "success", title: "Sign in successful", message: "Opening Platform Administration..." });
+      window.location.assign(redirectTo);
     } catch {
-      setError(ADMINISTRATOR_LOGIN_ERROR_MESSAGE);
-    } finally {
+      setFeedback({ tone: "error", title: "Unable to reach JinaCampus", message: "Check your internet connection, then try again." });
       setIsSubmitting(false);
     }
   }
@@ -76,21 +95,21 @@ export function AdministratorLoginForm() {
     <form
       method="post"
       onSubmit={onSubmit}
-      className="auth-form-panel min-w-0 p-5 sm:p-8 lg:p-9"
+      className="auth-form-panel auth-panel-padding min-w-0"
       aria-busy={isSubmitting}
       data-auth-pending={isSubmitting ? "true" : "false"}
     >
-      <BrandLogo className="mx-auto mb-7 hidden w-[17rem] lg:block" priority />
-      <div className="space-y-2">
-        <span className="inline-flex min-h-8 items-center rounded-full border border-amber-200 bg-amber-50 px-3 text-xs font-semibold text-amber-800">
+      <div className="auth-form-header">
+        <span className="auth-portal-badge border-amber-200 bg-amber-50 text-amber-800">
           Platform Portal
         </span>
-        <h1 className="text-2xl font-semibold text-slate-950 sm:text-3xl">JinaCampus Administrator</h1>
-        <p className="text-sm leading-6 text-slate-500">Authorized platform operators only. School users should use School Login.</p>
+        <h1 className="auth-form-title">JinaCampus Administrator</h1>
+        <p className="auth-form-description">For authorised platform operators. Institution accounts use School Login.</p>
       </div>
 
-      <div className="mt-8 space-y-4">
-        <FormField id="administrator-email" label="Email" required>
+      <div className="auth-form-stack">
+        {feedback ? <AuthFeedback tone={feedback.tone} title={feedback.title}>{feedback.message}</AuthFeedback> : null}
+        <FormField id="administrator-email" label="Email">
           <input
             id="administrator-email"
             className="auth-field-input w-full outline-none transition"
@@ -101,13 +120,14 @@ export function AdministratorLoginForm() {
             autoCapitalize="none"
             autoCorrect="off"
             spellCheck={false}
+            enterKeyHint="next"
             value={emailValue}
             onChange={(event) => setEmailValue(event.target.value.toLowerCase())}
             disabled={isSubmitting}
             required
           />
         </FormField>
-        <FormField id="administrator-password" label="Password" required>
+        <FormField id="administrator-password" label="Password">
           <PasswordInput
             id="administrator-password"
             className="auth-field-input w-full outline-none transition"
@@ -116,19 +136,19 @@ export function AdministratorLoginForm() {
             autoCapitalize="none"
             autoCorrect="off"
             spellCheck={false}
+            enterKeyHint="go"
             value={passwordValue}
             onChange={(event) => setPasswordValue(event.target.value)}
             disabled={isSubmitting}
             required
           />
         </FormField>
-        <p className="text-xs leading-5 text-slate-500">Password is case-sensitive. If you pasted it, remove any spaces before or after the password.</p>
-        {error ? <p role="alert" className="rounded-[1rem] border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 shadow-sm">{error}</p> : null}
+        <p className="auth-password-helper text-xs leading-5">Password is case-sensitive. A and a are different.</p>
         <button type="submit" disabled={isSubmitting} className="auth-action-button auth-action-primary premium-focus" aria-live="polite">
           {isSubmitting ? <><LoadingSpinner /> Signing in...</> : "Sign in to Administrator Portal"}
         </button>
-        <div className="flex justify-center">
-          <Link href="/" className="inline-flex min-h-12 items-center text-sm font-semibold text-slate-600 transition hover:text-brand-700 premium-focus">
+        <div className="auth-secondary-navigation flex justify-center">
+          <Link href="/" className="auth-inline-link text-slate-600 hover:text-brand-700 premium-focus">
             Back to School Login
           </Link>
         </div>

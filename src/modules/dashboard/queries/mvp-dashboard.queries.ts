@@ -21,13 +21,11 @@ export async function getMvpDashboardSummary(
   ctx: TenantContext,
   input: unknown = {}
 ): Promise<MvpDashboardSummary> {
-  const [campusCore, academia, studentAttendanceToday, staffBoard, staffAttendanceToday] = await Promise.all([
-    getCampusCoreDashboardMetrics(ctx, input),
-    getAcademiaDashboardMetrics(ctx, input),
-    getStudentAttendanceDashboardMetrics(ctx, input),
-    getStaffBoardDashboardMetrics(ctx, input),
-    getStaffAttendanceDashboardMetrics(ctx, input)
-  ]);
+  const campusCore = await getCampusCoreDashboardMetrics(ctx, input);
+  const academia = await getAcademiaDashboardMetrics(ctx, input);
+  const studentAttendanceToday = await getStudentAttendanceDashboardMetrics(ctx, input);
+  const staffBoard = await getStaffBoardDashboardMetrics(ctx, input);
+  const staffAttendanceToday = await getStaffAttendanceDashboardMetrics(ctx, input);
 
   return {
     campusCore,

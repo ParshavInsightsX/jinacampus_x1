@@ -8,6 +8,7 @@ import { getTenantContext } from "@/lib/tenant/context";
 import { getPostLoginRedirectPath } from "@/modules/campus-core/auth-redirect";
 import { getSchoolLoginBranding } from "@/modules/campus-core/tenant-login";
 import { validateSchoolId } from "@/modules/campus-core/tenant-login-policy";
+import { getSchoolWorkspaceAccess } from "@/modules/campus-core/workspace-access";
 
 export const metadata: Metadata = {
   title: "Sign in",
@@ -25,11 +26,15 @@ export default async function HomePage({ searchParams }: { searchParams?: HomeSe
 
   if (context) {
     if (context.passwordChangeRequired) redirect("/account/change-password?required=1");
-    redirect(getPostLoginRedirectPath(context.roleCodes ?? []));
+    const params = searchParams ? await searchParams : {};
+    const intent = firstParam(params.intent) === "attendance" ? "attendance" : "standard";
+    const access = await getSchoolWorkspaceAccess(context);
+    redirect(getPostLoginRedirectPath(context.roleCodes ?? [], { ...access, intent }));
   }
 
   const params = searchParams ? await searchParams : {};
   const requestedSchoolId = firstParam(params.schoolId) ?? firstParam(params.tenantSlug);
+  const initialStatus = firstParam(params.status) === "session-expired" ? "session-expired" : null;
   const validation = validateSchoolId(requestedSchoolId);
   const schoolId = validation.ok ? validation.schoolId : null;
   const branding = schoolId
@@ -43,6 +48,7 @@ export default async function HomePage({ searchParams }: { searchParams?: HomeSe
         schoolIdLocked={false}
         schoolName={branding.schoolName}
         logoUrl={branding.logoUrl}
+        initialStatus={initialStatus}
       />
     </AuthShell>
   );

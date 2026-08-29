@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
 
-import { BrandLogo } from "@/components/brand/brand-logo";
+import { AuthFeedback } from "@/components/auth/auth-feedback";
 import { PasswordInput } from "@/components/forms/password-input";
 import { FormField } from "@/components/ui/form-primitives";
 
@@ -75,42 +75,50 @@ export function PrincipalPasswordResetForm() {
   }
 
   return (
-    <section className="auth-form-panel p-5 sm:p-8 lg:p-9" aria-busy={pending}>
-      <BrandLogo className="mx-auto mb-7 hidden w-[17rem] lg:block" priority />
+    <section className="auth-form-panel auth-panel-padding" aria-busy={pending}>
       <p className="text-xs font-semibold text-teal-700">Principal account recovery</p>
-      <h1 className="mt-3 text-2xl font-semibold text-ink sm:text-3xl">Create a new password</h1>
-      <p className="mt-2 text-sm leading-6 text-slate-600">
+      <h1 className="auth-form-title">Create a new password</h1>
+      <p className="auth-form-description">
         Use at least 12 characters with uppercase, lowercase, a number, and a symbol.
       </p>
 
-      {!ready ? <p className="mt-6 text-sm text-slate-600">Preparing secure reset...</p> : null}
+      {!ready ? <AuthFeedback tone="info" title="Preparing secure reset" className="mt-4">Please wait a moment.</AuthFeedback> : null}
       {ready && !credential && !notice ? (
-        <p role="alert" className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+        <AuthFeedback tone="error" title="Reset link unavailable" className="mt-4">
           This password-reset link is invalid, expired, or has already been used.
-        </p>
+        </AuthFeedback>
       ) : null}
       {credential && !notice ? (
-        <form onSubmit={submit} className="mt-7 space-y-4">
-          <FormField id="principal-new-password" label="New password" required>
+        <form onSubmit={submit} className="auth-form-stack">
+          {error ? <AuthFeedback tone="error" title="Password not updated">{error}</AuthFeedback> : null}
+          <FormField id="principal-new-password" label="New password">
             <PasswordInput
               id="principal-new-password"
               name="newPassword"
               value={newPassword}
               onChange={(event) => setNewPassword(event.target.value)}
               autoComplete="new-password"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              enterKeyHint="next"
               required
               disabled={pending}
               minLength={12}
               className={inputClassName}
             />
           </FormField>
-          <FormField id="principal-confirm-password" label="Confirm new password" required>
+          <FormField id="principal-confirm-password" label="Confirm new password">
             <PasswordInput
               id="principal-confirm-password"
               name="confirmNewPassword"
               value={confirmNewPassword}
               onChange={(event) => setConfirmNewPassword(event.target.value)}
               autoComplete="new-password"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              enterKeyHint="go"
               required
               disabled={pending}
               minLength={12}
@@ -124,16 +132,9 @@ export function PrincipalPasswordResetForm() {
       ) : null}
 
       {notice ? (
-        <p role="status" className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
-          {notice}
-        </p>
+        <AuthFeedback tone="success" title="Password updated" className="mt-4">{notice}</AuthFeedback>
       ) : null}
-      {error ? (
-        <p role="alert" className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-          {error}
-        </p>
-      ) : null}
-      <Link href="/" className="auth-action-button auth-action-secondary mt-5 premium-focus">
+      <Link href="/" className="auth-secondary-navigation auth-inline-link mt-2 w-full justify-center text-slate-600 hover:text-brand-700 premium-focus">
         Back to login
       </Link>
     </section>

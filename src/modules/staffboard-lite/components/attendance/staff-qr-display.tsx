@@ -83,15 +83,16 @@ export function StaffQrDisplay({ branchOptions, defaultBranchId }: StaffQrDispla
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isDeactivating, setIsDeactivating] = useState(false);
-  const [nowMs, setNowMs] = useState(() => Date.now());
+  const [nowMs, setNowMs] = useState<number | null>(null);
   const autoRefreshTokenRef = useRef<string | null>(null);
 
   const selectedBranch = useMemo(
     () => branchOptions.find((branch) => branch.id === selectedBranchId) ?? branchOptions[0] ?? null,
     [branchOptions, selectedBranchId]
   );
-  const secondsRemaining = qr ? getSecondsRemaining(qr.validUntil, new Date(nowMs)) : 0;
-  const qrStatus = qr ? getQrDisplayStatus(qr.status, qr.validUntil, new Date(nowMs)) : null;
+  const currentTime = nowMs === null ? null : new Date(nowMs);
+  const secondsRemaining = qr && currentTime ? getSecondsRemaining(qr.validUntil, currentTime) : 0;
+  const qrStatus = qr && currentTime ? getQrDisplayStatus(qr.status, qr.validUntil, currentTime) : null;
   const expired = qrStatus === "EXPIRED";
   const active = qrStatus === "ACTIVE";
   const statusClassName = active
@@ -102,6 +103,7 @@ export function StaffQrDisplay({ branchOptions, defaultBranchId }: StaffQrDispla
   const branchSelectorVisible = branchOptions.length > 1;
 
   useEffect(() => {
+    setNowMs(Date.now());
     const interval = window.setInterval(() => setNowMs(Date.now()), 1000);
     return () => window.clearInterval(interval);
   }, []);

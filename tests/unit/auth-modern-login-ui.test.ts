@@ -17,7 +17,7 @@ describe("modern responsive authentication UI", () => {
     expect(shell).toContain("JINACAMPUS_BRAND.assets.authBackground");
     expect(shell).toContain("data-auth-shell");
     expect(shell).toContain("min-h-dvh");
-    expect(shell).toContain("overflow-x-hidden");
+    expect(shell).not.toContain("overflow-x-hidden");
   });
 
   it("gives each authentication route an explicit visual context without merging auth contracts", () => {
@@ -31,18 +31,25 @@ describe("modern responsive authentication UI", () => {
     expect(source("src/components/auth/administrator-login-form.tsx")).toContain('fetch("/api/auth/administrator-login"');
   });
 
-  it("provides curved glass surfaces, responsive safe areas, and reduced-motion-safe entrance animation", () => {
+  it("provides visible liquid-glass surfaces, responsive safe areas, and reduced-motion-safe entrance animation", () => {
     const globals = source("src/app/globals.css");
     const shell = source("src/components/auth/auth-shell.tsx");
 
     expect(globals).toContain(".auth-form-panel");
-    expect(globals).toContain("border-radius: 2rem");
-    expect(globals).toContain("backdrop-filter: blur(26px)");
+    expect(globals).toContain("border-radius: 0.5rem");
+    expect(globals).toContain("--jc-glass-blur-elevated: 22px");
+    expect(globals).toContain("backdrop-filter: blur(30px) saturate(1.42)");
+    expect(globals).toContain(".auth-light-sweep");
+    expect(globals).toContain("@keyframes jc-auth-light-sweep");
     expect(globals).toContain("@keyframes jc-auth-background-drift");
     expect(globals).toContain("@keyframes jc-auth-panel-enter");
     expect(globals).toContain("prefers-reduced-motion: reduce");
-    expect(shell).toContain("env(safe-area-inset-top)");
-    expect(shell).toContain("env(safe-area-inset-bottom)");
+    expect(globals).toContain("env(safe-area-inset-top)");
+    expect(globals).toContain("env(safe-area-inset-bottom)");
+    expect(globals).toContain("orientation: landscape");
+    expect(globals).toContain("max-height: 620px");
+    expect(globals).toContain("min-height: 100dvh");
+    expect(shell).toContain("auth-shell-layout");
   });
 
   it("renders loading states for school, tenant, attendance, recovery, and administrator routes", () => {
@@ -78,7 +85,23 @@ describe("modern responsive authentication UI", () => {
     expect(administrator).toContain('method="post"');
     expect(passwordInput).toContain('type="button"');
     expect(passwordInput).toContain("aria-label={label}");
+    expect(passwordInput).toContain("auth-password-toggle");
+    expect(school).toContain("data-sign-in-method={method}");
+    expect(school).toContain('attendanceIntent ? "passkey" : "password"');
+    expect(school).toContain("AuthFeedback");
     expect(combined).not.toMatch(/passwordHash|tokenHash|sessionSecret|rawToken/);
     expect(combined).not.toContain("Sign in with Google");
+  });
+
+  it("keeps the Administrator Portal separate from school-facing entry points", () => {
+    const school = source("src/components/auth/login-form.tsx");
+    const administratorPage = source("src/app/administrator/login/page.tsx");
+    const administratorForm = source("src/components/auth/administrator-login-form.tsx");
+
+    expect(school).not.toContain("/administrator/login");
+    expect(school).not.toContain("JinaCampus Administrator Portal");
+    expect(administratorPage).toContain('<AuthShell variant="administrator">');
+    expect(administratorForm).toContain('fetch("/api/auth/administrator-login"');
+    expect(administratorForm).not.toContain('fetch("/api/auth/login"');
   });
 });

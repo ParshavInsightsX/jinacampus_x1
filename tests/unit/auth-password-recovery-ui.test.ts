@@ -33,7 +33,7 @@ describe("auth password recovery and password visibility UX", () => {
     expect(loginFormSource).toContain("/forgot-password");
     expect(loginFormSource).toContain("Forgot password?");
     expect(loginFormSource).toContain("<PasswordInput");
-    expect(loginFormSource).toContain("<BrandLogo");
+    expect(source("src/components/auth/auth-shell.tsx")).toContain("<BrandLogo");
     expect(brandSource).toContain('name: "JinaCampus"');
     expect(brandSource).toContain('tagline: "The Complete School OS"');
     expect(brandSource).toContain('poweredBy: "powered by Parshwa Insights"');
@@ -64,7 +64,8 @@ describe("auth password recovery and password visibility UX", () => {
     expect(loginFormSource).toContain("animate-spin");
     expect(loginFormSource).toContain("disabled={isPending}");
     expect(loginFormSource).toContain("Signing in...");
-    expect(loginFormSource).toContain("role=\"alert\"");
+    expect(loginFormSource).toContain("AuthFeedback");
+    expect(source("src/components/auth/auth-feedback.tsx")).toContain('role={tone === "error" ? "alert" : "status"}');
     expect(loginFormSource).toContain("Login failed. Please check your credentials.");
   });
 
@@ -118,7 +119,8 @@ describe("auth password recovery and password visibility UX", () => {
     const loginFormSource = source("src/components/auth/login-form.tsx");
 
     expect(loginFormSource).toContain("Sign in with passkey");
-    expect(loginFormSource).toContain("Password fallback");
+    expect(loginFormSource).toContain('name="signInMethod"');
+    expect(loginFormSource).toContain('method === "password"');
     expect(loginFormSource).toContain("/api/auth/passkey/authentication/options");
     expect(loginFormSource).toContain("/api/auth/passkey/authentication/verify");
     expect(loginFormSource).not.toContain("OTP login");

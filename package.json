@@ -7,8 +7,9 @@
     "node": "24.x"
   },
   "scripts": {
-    "dev": "next dev --webpack",
+    "dev": "next dev",
     "dev:raw": "next dev",
+    "dev:webpack": "next dev --webpack",
     "build": "next build",
     "postinstall": "prisma generate",
     "start": "next start",

@@ -26,7 +26,8 @@ describe("desktop navigation dock", () => {
     expect(dock).toContain("left-0 right-0");
     expect(dock).toContain("hidden justify-center");
     expect(dock).toContain("lg:flex");
-    expect(layout).toContain("lg:pb-40");
+    expect(layout).not.toContain("lg:pb-40");
+    expect(layout).toContain('mobile-shell-footer px-4 lg:pb-36');
     expect(layout).not.toContain("DesktopShell");
     expect(layout).toContain('max-w-[100rem]');
   });

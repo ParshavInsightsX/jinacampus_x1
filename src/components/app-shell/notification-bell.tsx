@@ -166,9 +166,9 @@ export function NotificationBell({ compact = false, onOpenChange }: Notification
       accessibleLabel={label}
       dataAttribute="notifications"
       buttonClassName={compact
-        ? "relative grid min-h-11 min-w-11 place-items-center rounded-full text-brand-800 transition hover:bg-brand-50 premium-focus"
-        : "relative grid min-h-11 min-w-11 place-items-center rounded-full text-brand-800 transition hover:bg-white premium-focus"}
-      panelClassName="fixed inset-x-3 top-[4.5rem] z-[70] max-h-[min(32rem,calc(100dvh-6rem))] overflow-y-auto rounded-lg border border-white/90 bg-white/95 p-3 shadow-[0_24px_70px_rgba(11,22,56,0.22)] backdrop-blur-2xl sm:absolute sm:inset-x-auto sm:right-0 sm:top-[calc(100%+0.65rem)] sm:w-[23rem]"
+        ? "jc-motion-interactive relative grid min-h-11 min-w-11 place-items-center rounded-full text-brand-800 hover:bg-brand-50 premium-focus"
+        : "jc-motion-interactive relative grid min-h-11 min-w-11 place-items-center rounded-full text-brand-800 hover:bg-white premium-focus"}
+      panelClassName="jc-glass-elevated fixed inset-x-3 top-[4.5rem] z-[70] max-h-[min(32rem,calc(100dvh-6rem))] overflow-y-auto rounded-lg border p-3 sm:absolute sm:inset-x-auto sm:right-0 sm:top-[calc(100%+0.65rem)] sm:w-[23rem]"
       onOpenChange={(open) => {
         onOpenChange?.(open);
         if (open) {

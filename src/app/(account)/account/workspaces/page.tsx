@@ -3,11 +3,11 @@ import { ArrowLeft, BriefcaseBusiness, ClipboardCheck, GraduationCap, Settings }
 
 import { BrandLogo } from "@/components/brand/brand-logo";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { getEffectivePermissions } from "@/lib/rbac/require-permission";
 import {
   getAvailableSchoolWorkspaces,
   type SchoolWorkspace
 } from "@/modules/campus-core/workspaces";
+import { getSchoolWorkspaceAccess } from "@/modules/campus-core/workspace-access";
 
 const workspaceIcon = {
   administration: Settings,
@@ -18,8 +18,12 @@ const workspaceIcon = {
 
 export default async function WorkspacesPage() {
   const ctx = await requireAuth();
-  const permissions = await getEffectivePermissions({ ctx, branchId: ctx.activeBranchId });
-  const workspaces = getAvailableSchoolWorkspaces(ctx.roleCodes ?? [], permissions);
+  const access = await getSchoolWorkspaceAccess(ctx);
+  const workspaces = getAvailableSchoolWorkspaces(
+    ctx.roleCodes ?? [],
+    access.permissions,
+    access.features
+  );
 
   return (
     <main className="min-h-dvh bg-app-background px-4 py-6 sm:px-6 lg:px-8">

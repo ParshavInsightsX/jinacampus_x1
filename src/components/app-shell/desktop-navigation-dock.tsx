@@ -90,7 +90,7 @@ export function DesktopNavigationDock({ groups }: DesktopNavigationDockProps) {
             id="desktop-application-launcher"
             role="dialog"
             aria-label="All application modules"
-            className="absolute bottom-[calc(100%+1rem)] left-1/2 max-h-[min(36rem,calc(100vh-9rem))] w-[min(44rem,calc(100vw-3rem))] -translate-x-1/2 overflow-hidden rounded-[1.5rem] border border-white/90 bg-white/90 shadow-[0_28px_80px_rgba(3,15,46,0.24)] backdrop-blur-2xl"
+            className="jc-glass-elevated absolute bottom-[calc(100%+1rem)] left-1/2 max-h-[min(36rem,calc(100vh-9rem))] w-[min(44rem,calc(100vw-3rem))] -translate-x-1/2 overflow-hidden rounded-[1.5rem] border"
             data-desktop-module-launcher="true"
           >
             <div className="flex min-h-16 items-center justify-between gap-3 border-b border-campus-border/80 px-5">
@@ -151,7 +151,7 @@ export function DesktopNavigationDock({ groups }: DesktopNavigationDockProps) {
 
         <nav
           aria-label="Desktop primary navigation"
-          className="desktop-dock-surface w-fit max-w-full rounded-[1.75rem] border border-white/90 bg-white/75 px-3 py-2.5 shadow-[0_24px_70px_rgba(11,22,56,0.22),inset_0_1px_0_rgba(255,255,255,0.95)] backdrop-blur-2xl"
+          className="desktop-dock-surface jc-glass-application w-fit max-w-full rounded-[1.75rem] border px-3 py-2.5"
           data-dock-launcher-open={launcherOpen}
         >
           <ul className="desktop-dock-list m-0 flex min-h-[4.75rem] list-none items-end justify-center gap-1 p-0">

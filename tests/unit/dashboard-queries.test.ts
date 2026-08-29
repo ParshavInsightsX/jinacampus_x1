@@ -316,7 +316,6 @@ describe("dashboard query services", () => {
   });
 
   it("staffboard dashboard metrics count active staff and staff types", async () => {
-    mocks.db.staffProfile.count.mockResolvedValueOnce(12).mockResolvedValueOnce(7).mockResolvedValueOnce(5);
     mocks.db.staffProfile.groupBy.mockResolvedValue([
       { staffType: "TEACHER", _count: { _all: 7 } },
       { staffType: "ADMIN", _count: { _all: 2 } },
@@ -325,13 +324,16 @@ describe("dashboard query services", () => {
 
     const result = await getStaffBoardDashboardMetrics(ctx, { date: "2026-05-07" });
 
-    expect(mocks.db.staffProfile.count.mock.calls[0][0].where).toMatchObject({
+    expect(mocks.db.staffProfile.count).not.toHaveBeenCalled();
+    expect(mocks.db.staffProfile.groupBy).toHaveBeenCalledWith({
+      by: ["staffType"],
+      where: {
       tenantId,
       branchId: { in: [branchId] },
       employmentStatus: "ACTIVE"
+      },
+      _count: { _all: true }
     });
-    expect(mocks.db.staffProfile.count.mock.calls[1][0].where).toMatchObject({ staffType: "TEACHER" });
-    expect(mocks.db.staffProfile.count.mock.calls[2][0].where).toMatchObject({ NOT: { staffType: "TEACHER" } });
     expect(result).toEqual({
       totalActiveStaff: 12,
       totalTeachers: 7,
@@ -408,11 +410,11 @@ describe("dashboard query services", () => {
   });
 
   it("combines MVP dashboard summary sections", async () => {
-    mocks.db.staffProfile.count
-      .mockResolvedValueOnce(20)
-      .mockResolvedValueOnce(12)
-      .mockResolvedValueOnce(8)
-      .mockResolvedValueOnce(20);
+    mocks.db.staffProfile.groupBy.mockResolvedValue([
+      { staffType: "TEACHER", _count: { _all: 12 } },
+      { staffType: "ADMIN", _count: { _all: 8 } }
+    ]);
+    mocks.db.staffProfile.count.mockResolvedValueOnce(20);
     mocks.db.staffAttendanceRecord.count.mockResolvedValueOnce(15).mockResolvedValueOnce(18);
 
     const result = await getMvpDashboardSummary(ctx, { date: "2026-05-07" });

@@ -17,7 +17,7 @@ export async function getCampusCoreDashboardMetrics(
   const scope = await resolveDashboardScope(ctx, input);
   const branchFilter = activeBranchFilter(scope);
 
-  const [totalBranches, activeAcademicYear, totalUsers, totalActiveRoles] = await Promise.all([
+  const [totalBranches, activeAcademicYear] = await Promise.all([
     db.branch.count({
       where: {
         tenantId: ctx.tenantId,
@@ -36,7 +36,9 @@ export async function getCampusCoreDashboardMetrics(
         name: true
       },
       orderBy: { startDate: "desc" }
-    }),
+    })
+  ]);
+  const [totalUsers, totalActiveRoles] = await Promise.all([
     db.user.count({
       where: {
         tenantId: ctx.tenantId,

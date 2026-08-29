@@ -213,7 +213,6 @@ export async function verifyPasskeyAuthentication(input: {
     return createLoginSession(tx, {
       tenant: input.tenant,
       user: credential.user,
-      roleCodes: activeRoleCodes(credential.user),
       passwordChangeRequired: credential.user.passwordCredential?.mustChange ?? false,
       authMethod: "PASSKEY",
       identifierType: challenge.identifierType === "EMAIL" ? "EMAIL" : "EMPLOYEE_CODE",

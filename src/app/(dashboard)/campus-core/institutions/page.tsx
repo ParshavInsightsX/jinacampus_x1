@@ -17,7 +17,7 @@ export default async function InstitutionsPage() {
       <header>
         <h1 className="text-2xl font-semibold text-slate-950">School Profile</h1>
         <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-500">
-          Review and update the institution profiles available through your assigned branches. New schools are provisioned only from the JinaCampus Administrator Portal.
+          Review and update the institution profiles available through your assigned branches. New schools are provisioned by an authorised JinaCampus platform administrator.
         </p>
       </header>
       {institutions.length ? (

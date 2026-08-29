@@ -45,7 +45,7 @@ export function AuthShell({
 
   return (
     <main
-      className="relative min-h-dvh overflow-x-hidden bg-[#06112d] text-white"
+      className="auth-shell-root relative min-h-dvh bg-[#06112d] text-white"
       data-auth-shell="true"
       data-auth-variant={variant}
     >
@@ -59,36 +59,38 @@ export function AuthShell({
         sizes="100vw"
         className="auth-background-media object-cover object-[38%_center] lg:object-center"
       />
-      <div className="absolute inset-0 bg-[#06112d]/70" aria-hidden="true" />
+      <div className="auth-shell-overlay absolute inset-0" aria-hidden="true" />
+      <div className="auth-light-sweep absolute inset-0" aria-hidden="true" />
 
-      <div className="relative mx-auto grid min-h-dvh w-full max-w-[100rem] grid-cols-1 gap-6 px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))] sm:px-6 sm:py-8 lg:grid-cols-[minmax(0,1fr)_minmax(30rem,0.78fr)] lg:items-center lg:gap-12 lg:px-10 lg:py-10 xl:gap-20 xl:px-16">
-        <section className="auth-hero-enter flex min-w-0 flex-col justify-end pt-4 lg:min-h-[38rem] lg:justify-between lg:py-8" aria-label="JinaCampus">
-          <BrandLogo
-            variant="inverse"
-            className="w-[15rem] sm:w-[19rem] lg:w-[26rem]"
-            priority
-          />
+      <div className="auth-shell-layout relative mx-auto w-full max-w-[100rem]">
+        <section className="auth-shell-hero auth-hero-enter min-w-0" aria-label="JinaCampus">
+          <div className="auth-brand-glass">
+            <BrandLogo
+              variant="primary"
+              className="auth-shell-brand"
+              priority
+            />
+          </div>
 
-          <div className="mt-10 hidden max-w-2xl sm:block lg:mt-auto">
+          <div className="auth-shell-story max-w-2xl" data-auth-story="true">
             <p className="inline-flex min-h-9 items-center rounded-full border border-white/20 bg-white/10 px-4 text-xs font-semibold text-white backdrop-blur-xl">
               {copy.eyebrow}
             </p>
-            <h1 className="mt-5 max-w-xl text-3xl font-semibold leading-tight text-white sm:text-4xl lg:text-5xl">
+            <h2 className="mt-5 max-w-xl text-4xl font-semibold leading-tight text-white xl:text-5xl">
               {copy.title}
-            </h1>
+            </h2>
             <p className="mt-4 max-w-xl text-base leading-7 text-blue-100 lg:text-lg">
               {copy.description}
             </p>
+            <p className="mt-6 text-sm font-medium text-blue-100/90">
+              Secure access. School-scoped context. Permission-aware workflows.
+            </p>
           </div>
-
-          <p className="mt-5 hidden text-sm font-medium text-blue-100/90 lg:block">
-            Secure access. School-scoped context. Permission-aware workflows.
-          </p>
         </section>
 
-        <div className="auth-panel-enter flex min-w-0 flex-col items-center justify-center lg:justify-end">
-          {children}
-          <LegalLinks tone="dark" className="mt-4" />
+        <div className="auth-shell-form-column auth-panel-enter min-w-0">
+          <div className="auth-panel-stage">{children}</div>
+          <LegalLinks tone="dark" compact className="auth-shell-legal" />
         </div>
       </div>
     </main>

@@ -165,7 +165,8 @@ describe("commercial seed safety", () => {
     expect(loginPageSource).toContain("schoolId={schoolId}");
     expect(loginPageSource).toContain("schoolIdLocked={false}");
     expect(loginPageSource).toContain("searchParams");
-    expect(compatibilityRouteSource).toContain('redirect(schoolId ? `/?schoolId=');
+    expect(compatibilityRouteSource).toContain('query.set("schoolId", schoolId)');
+    expect(compatibilityRouteSource).toContain('redirect(serialized ? `/?${serialized}` : "/")');
     expect(`${envExample}\n${readme}`).not.toMatch(/parshavinsights@gmail\.com|JinaCampus@123|ChangeMe@123/);
     expect(envExample).not.toMatch(/postgres(?:ql)?:\/\/[^:\s]+:[^@\s]+@/);
   });

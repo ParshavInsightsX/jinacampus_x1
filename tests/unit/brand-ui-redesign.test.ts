@@ -82,7 +82,8 @@ describe("JinaCampus brand and UI redesign", () => {
     const dashboardLayout = source("src/app/(dashboard)/layout.tsx");
 
     expect(desktop).toContain('data-desktop-navigation-dock="true"');
-    expect(desktop).toContain("backdrop-blur-2xl");
+    expect(desktop).toContain("jc-glass-application");
+    expect(desktop).toContain("jc-glass-elevated");
     expect(navbar).toContain("<BrandLogo");
     expect(dashboardLayout).not.toContain("DesktopShell");
     expect(dashboardLayout).toContain("getMobileBottomNavigationItems(");

@@ -137,7 +137,8 @@ describe("five-role and passkey authentication foundation", () => {
 
     expect(login).toContain("Employee code or email");
     expect(login).toContain("Sign in with passkey");
-    expect(login).toContain("Password fallback");
+    expect(login).toContain('name="signInMethod"');
+    expect(login).toContain('method === "password"');
     expect(login).toContain('password: formData.get("password")');
     expect(loginRoute).toContain("findLoginUser");
     expect(loginRoute).toContain("passwordChangeRequired");

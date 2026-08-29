@@ -8,6 +8,17 @@ export type SchoolWorkspace = {
   href: string;
 };
 
+export type SchoolWorkspaceFeatures = {
+  attendance?: {
+    studentAttendance?: boolean;
+    staffAttendance?: boolean;
+    marking?: boolean;
+    qrRead?: boolean;
+    qrWrite?: boolean;
+    reports?: boolean;
+  };
+};
+
 function hasAnyPermission(
   permissions: ReadonlySet<PermissionCode>,
   required: readonly PermissionCode[]
@@ -17,58 +28,92 @@ function hasAnyPermission(
 
 export function getAvailableSchoolWorkspaces(
   roleCodes: readonly string[],
-  permissions: ReadonlySet<PermissionCode>
+  permissions: ReadonlySet<PermissionCode>,
+  features: SchoolWorkspaceFeatures = {}
 ) {
   const workspaces: SchoolWorkspace[] = [];
+  const attendance = features.attendance;
+  const attendanceFeatureEnabled = (feature: keyof NonNullable<SchoolWorkspaceFeatures["attendance"]>) =>
+    attendance ? attendance[feature] === true : true;
 
   if (
     hasPrincipalRole(roleCodes) &&
-    hasAnyPermission(permissions, ["campuscore.user.view", "campuscore.settings.manage"])
+    hasAnyPermission(permissions, [
+      "campuscore.tenant.view",
+      "campuscore.user.view",
+      "campuscore.settings.manage"
+    ])
   ) {
+    const href = permissions.has("campuscore.tenant.view")
+      ? "/dashboard"
+      : permissions.has("campuscore.user.view")
+        ? "/campus-core/users"
+        : "/campus-core/settings";
     workspaces.push({
       id: "administration",
       title: "School Administration",
       description: "Manage school setup, people, academics, attendance, and governance.",
-      href: "/dashboard"
+      href
     });
   }
 
-  if (
-    roleCodes.includes("OFFICE_STAFF") &&
-    hasAnyPermission(permissions, [
-      "staffboard.staff.view",
-      "staffboard.attendance.view",
-      "staffboard.attendance.report"
-    ])
-  ) {
-    workspaces.push({
+  if (roleCodes.includes("OFFICE_STAFF")) {
+    const href = attendanceFeatureEnabled("staffAttendance") && permissions.has("staffboard.attendance.view")
+      ? "/staffboard/attendance"
+      : attendanceFeatureEnabled("staffAttendance") &&
+          attendanceFeatureEnabled("qrWrite") &&
+          permissions.has("staffboard.attendance.scan")
+        ? "/staffboard/attendance/scan"
+        : attendanceFeatureEnabled("staffAttendance") &&
+            attendanceFeatureEnabled("reports") &&
+            permissions.has("staffboard.attendance.report")
+          ? "/staffboard/attendance/reports"
+          : permissions.has("staffboard.staff.view")
+            ? "/staffboard/staff"
+            : null;
+
+    if (href) workspaces.push({
       id: "office",
       title: "Office Operations",
       description: "Open permission-based staff and attendance operations.",
-      href: "/staffboard/attendance"
+      href
+    });
+  }
+
+  if (hasTeacherRole(roleCodes)) {
+    const href = attendanceFeatureEnabled("studentAttendance") &&
+      attendanceFeatureEnabled("marking") &&
+      permissions.has("academia.attendance.mark")
+      ? "/academia/attendance/mark"
+      : attendanceFeatureEnabled("studentAttendance") && permissions.has("academia.attendance.view")
+        ? "/academia/attendance"
+        : permissions.has("academia.student.view")
+          ? "/academia/students"
+          : null;
+
+    if (href) workspaces.push({
+      id: "teaching",
+      title: "Teaching",
+      description: "Open assigned class, student, and attendance workflows.",
+      href
     });
   }
 
   if (
-    hasTeacherRole(roleCodes) &&
-    hasAnyPermission(permissions, ["academia.attendance.mark", "academia.student.view"])
+    attendanceFeatureEnabled("staffAttendance") &&
+    attendanceFeatureEnabled("qrRead") &&
+    permissions.has("staffboard.attendance.credential.self_view")
   ) {
-    workspaces.push({
-      id: "teaching",
-      title: "Teaching",
-      description: "Open assigned class, student, and attendance workflows.",
-      href: "/academia/attendance/mark"
-    });
-  }
-
-  if (hasAnyPermission(permissions, ["staffboard.attendance.credential.self_view"])) {
     workspaces.push({
       id: "self-attendance",
       title: "My Attendance",
       description: "Display your Attendance QR for the authorised school scanner.",
       href: "/staffboard/attendance/card"
     });
-  } else if (hasAnyPermission(permissions, ["staffboard.attendance.self_view"])) {
+  } else if (
+    attendanceFeatureEnabled("staffAttendance") &&
+    permissions.has("staffboard.attendance.self_view")
+  ) {
     workspaces.push({
       id: "self-attendance",
       title: "Attendance History",

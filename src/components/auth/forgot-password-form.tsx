@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 
-import { BrandLogo } from "@/components/brand/brand-logo";
+import { AuthFeedback } from "@/components/auth/auth-feedback";
 import { FormField } from "@/components/ui/form-primitives";
 import {
   PASSWORD_RECOVERY_HELP_TEXT,
@@ -69,7 +69,11 @@ export function ForgotPasswordForm({ initialSchoolId }: ForgotPasswordFormProps)
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setError("Check the entered details, then try again.");
+        setError(response.status === 429
+          ? "Too many requests. Please wait a few minutes before trying again."
+          : response.status >= 500
+            ? "Account recovery is temporarily unavailable. Please try again shortly."
+            : "Check the entered details, then try again.");
         return;
       }
       setNotice(typeof result.message === "string" ? result.message : PASSWORD_RECOVERY_PUBLIC_MESSAGE);
@@ -82,20 +86,20 @@ export function ForgotPasswordForm({ initialSchoolId }: ForgotPasswordFormProps)
 
   return (
     <section
-      className="auth-form-panel p-5 sm:p-8 lg:p-9"
+      className="auth-form-panel auth-panel-padding"
       aria-busy={pending}
       data-auth-pending={pending ? "true" : "false"}
     >
-      <div className="text-left">
-        <BrandLogo className="mx-auto mb-7 hidden w-[17rem] lg:block" priority />
+      <div className="auth-form-header text-left">
         <p className="text-xs font-semibold text-teal-700">Account recovery</p>
-        <h1 className="mt-3 text-2xl font-semibold text-ink sm:text-3xl">Forgot password?</h1>
-        <p className="mt-2 text-sm leading-6 text-slate-600">{PASSWORD_RECOVERY_HELP_TEXT}</p>
+        <h1 className="auth-form-title">Forgot password?</h1>
+        <p className="auth-form-description">{PASSWORD_RECOVERY_HELP_TEXT}</p>
       </div>
 
       {!notice ? (
-        <form onSubmit={requestRecovery} className="mt-7 space-y-4">
-          <FormField id="recovery-school-id" label="School ID" required>
+        <form onSubmit={requestRecovery} className="auth-form-stack">
+          {error ? <AuthFeedback tone="error" title="Request not completed">{error}</AuthFeedback> : null}
+          <FormField id="recovery-school-id" label="School ID">
             <input
               id="recovery-school-id"
               className="auth-field-input w-full outline-none transition"
@@ -106,23 +110,21 @@ export function ForgotPasswordForm({ initialSchoolId }: ForgotPasswordFormProps)
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
+              enterKeyHint="next"
               disabled={pending}
               required
             />
           </FormField>
           <fieldset className="space-y-3">
             <legend className="text-sm font-semibold text-slate-800">Find Principal account by</legend>
-            <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-slate-50 p-1">
+            <div className="auth-method-switch grid grid-cols-2 gap-1 p-1">
               {([
                 ["EMAIL", "Registered email"],
                 ["PRINCIPAL_ID", "Principal ID"]
               ] as const).map(([value, label]) => (
                 <label
                   key={value}
-                  className={[
-                    "flex min-h-11 cursor-pointer items-center justify-center rounded-lg px-3 text-center text-sm font-semibold transition premium-focus",
-                    recoveryMethod === value ? "bg-white text-brand-700 shadow-sm" : "text-slate-600"
-                  ].join(" ")}
+                  className="cursor-pointer"
                 >
                   <input
                     type="radio"
@@ -133,13 +135,15 @@ export function ForgotPasswordForm({ initialSchoolId }: ForgotPasswordFormProps)
                     className="sr-only"
                     disabled={pending}
                   />
-                  {label}
+                  <span className={`auth-method-option ${recoveryMethod === value ? "auth-method-option-active" : ""}`}>
+                    {label}
+                  </span>
                 </label>
               ))}
             </div>
           </fieldset>
           {recoveryMethod === "EMAIL" ? (
-            <FormField id="recovery-email" label="Registered email" required>
+            <FormField id="recovery-email" label="Registered email">
               <input
                 id="recovery-email"
                 type="email"
@@ -151,6 +155,7 @@ export function ForgotPasswordForm({ initialSchoolId }: ForgotPasswordFormProps)
                 autoCapitalize="none"
                 autoCorrect="off"
                 spellCheck={false}
+                enterKeyHint="go"
                 disabled={pending}
                 required
               />
@@ -159,7 +164,6 @@ export function ForgotPasswordForm({ initialSchoolId }: ForgotPasswordFormProps)
             <FormField
               id="recovery-principal-id"
               label="Principal ID"
-              required
               helpText="Use the Principal ID assigned in the Administrator Portal."
             >
               <input
@@ -172,6 +176,7 @@ export function ForgotPasswordForm({ initialSchoolId }: ForgotPasswordFormProps)
                 autoCapitalize="characters"
                 autoCorrect="off"
                 spellCheck={false}
+                enterKeyHint="go"
                 disabled={pending}
                 required
               />
@@ -184,17 +189,10 @@ export function ForgotPasswordForm({ initialSchoolId }: ForgotPasswordFormProps)
       ) : null}
 
       {notice ? (
-        <p role="status" className="mt-6 rounded-[1rem] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold leading-6 text-emerald-700">
-          {notice}
-        </p>
-      ) : null}
-      {error ? (
-        <p role="alert" className="mt-5 rounded-[1rem] border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold leading-6 text-red-700">
-          {error}
-        </p>
+        <AuthFeedback tone="success" title="Request received" className="mt-4">{notice}</AuthFeedback>
       ) : null}
 
-      <Link href={loginHref} className="auth-action-button auth-action-secondary mt-5 premium-focus">
+      <Link href={loginHref} className="auth-secondary-navigation auth-inline-link mt-2 justify-center text-slate-600 hover:text-brand-700 premium-focus">
         Back to login
       </Link>
     </section>

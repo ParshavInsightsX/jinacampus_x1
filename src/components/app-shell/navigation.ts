@@ -304,7 +304,7 @@ const MOBILE_BOTTOM_NAVIGATION_ITEMS = {
       audiences: ["staff"]
     },
     {
-      title: "Profile",
+      title: "Security",
       href: "/account/change-password",
       permissions: [],
       audiences: ["staff"]
@@ -369,6 +369,8 @@ export type AttendanceNavigationFeatures = {
   staffAttendance?: boolean;
   marking?: boolean;
   qr?: boolean;
+  qrRead?: boolean;
+  qrWrite?: boolean;
   reports?: boolean;
 };
 
@@ -393,13 +395,15 @@ export function isFeatureNavigationEnabled(href: string, features: NavigationFea
   if (href === "/academia/attendance" || href.startsWith("/academia/attendance/")) {
     return attendance.studentAttendance === true;
   }
+  if (href === "/staffboard/attendance/card" || href.startsWith("/staffboard/attendance/card/")) {
+    return attendance.staffAttendance === true && (attendance.qrRead ?? attendance.qr) === true;
+  }
   if (
     href === "/staffboard/attendance/qr" || href.startsWith("/staffboard/attendance/qr/") ||
     href === "/staffboard/attendance/credentials" || href.startsWith("/staffboard/attendance/credentials/") ||
-    href === "/staffboard/attendance/card" || href.startsWith("/staffboard/attendance/card/") ||
     href === "/staffboard/attendance/scan" || href.startsWith("/staffboard/attendance/scan/")
   ) {
-    return attendance.staffAttendance === true && attendance.qr === true;
+    return attendance.staffAttendance === true && (attendance.qrWrite ?? attendance.qr) === true;
   }
   if (href === "/staffboard/attendance/reports" || href.startsWith("/staffboard/attendance/reports/")) {
     return attendance.staffAttendance === true && attendance.reports === true;

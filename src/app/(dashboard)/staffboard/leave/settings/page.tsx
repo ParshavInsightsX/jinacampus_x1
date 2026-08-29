@@ -1,5 +1,6 @@
 import { PermissionState } from "@/components/ui/empty-state";
 import { requireAuth } from "@/lib/auth/require-auth";
+import { getZonedDateTimeParts } from "@/lib/dates/time-zone";
 import { AppError } from "@/lib/errors";
 import { StaffLeaveSettingsForms } from "@/modules/staffboard-lite/components/leave/staff-leave-settings-forms";
 import { PageHeader } from "@/modules/staffboard-lite/components/staffboard-page-shell";
@@ -32,12 +33,14 @@ export default async function StaffLeaveSettingsPage() {
     approvalMode: "PRINCIPAL_OR_DESIGNATED" as const,
     whatsappNotificationsEnabled: false
   };
+  const defaultYear = getZonedDateTimeParts(new Date(), ctx.timeZone).year;
 
   return (
     <div className="space-y-6">
       <PageHeader title="Leave Settings" description={`Policy, types, approvers, and balance controls for ${workspace.branch.name}.`} />
       <StaffLeaveSettingsForms
         branchId={workspace.branch.id}
+        defaultYear={defaultYear}
         policy={{
           allowHalfDay: policy.allowHalfDay,
           allowBackdatedApplications: policy.allowBackdatedApplications,

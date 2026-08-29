@@ -24,6 +24,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
     staffAttendance: attendanceEntitlements.features[ATTENDANCE_ENTITLEMENT_FEATURES.STAFF_ATTENDANCE].read,
     marking: attendanceEntitlements.features[ATTENDANCE_ENTITLEMENT_FEATURES.MARKING].write,
     qr: attendanceEntitlements.features[ATTENDANCE_ENTITLEMENT_FEATURES.QR].write,
+    qrRead: attendanceEntitlements.features[ATTENDANCE_ENTITLEMENT_FEATURES.QR].read,
+    qrWrite: attendanceEntitlements.features[ATTENDANCE_ENTITLEMENT_FEATURES.QR].write,
     reports: attendanceEntitlements.features[ATTENDANCE_ENTITLEMENT_FEATURES.REPORTS].read
   };
   const navigationFeatures = { gradebookEnabled, attendance };
@@ -58,7 +60,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           mobileBottomItems={mobileBottomItems}
           notificationsEnabled={notificationsEnabled}
         />
-        <main className="mobile-shell-content mx-auto w-full max-w-[100rem] flex-1 px-4 pt-4 sm:px-5 md:px-6 lg:px-7 lg:pb-40 lg:pt-6 xl:px-10 xl:pb-40 xl:pt-8" data-mobile-content="true">
+        <main className="mobile-shell-content mx-auto w-full max-w-[100rem] flex-1 px-4 pt-4 sm:px-5 md:px-6 lg:px-7 lg:pt-6 xl:px-10 xl:pt-8" data-mobile-content="true">
           {children}
         </main>
         <footer className="mobile-shell-footer px-4 lg:pb-36">

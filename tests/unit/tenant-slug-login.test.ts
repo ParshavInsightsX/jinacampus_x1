@@ -169,7 +169,7 @@ describe("School ID login", () => {
 
     expect(result).toEqual({
       status: 200,
-      body: { ok: true, redirectTo: "/dashboard", passwordChangeRequired: false }
+      body: { ok: true, redirectTo: "/", passwordChangeRequired: false }
     });
     expect(mocks.db.tenant.findUnique).toHaveBeenCalledWith({ where: { slug: "jinacampus-demo" } });
     expect(mocks.db.user.findUnique.mock.calls[0][0].where.tenantId_email).toEqual({
@@ -236,7 +236,7 @@ describe("School ID login", () => {
 
     expect(result).toEqual({
       status: 200,
-      body: { ok: true, redirectTo: "/academia/attendance/mark", passwordChangeRequired: false }
+      body: { ok: true, redirectTo: "/", passwordChangeRequired: false }
     });
   });
 
@@ -254,7 +254,7 @@ describe("School ID login", () => {
       status: 200,
       body: {
         ok: true,
-        redirectTo: "/staffboard/attendance/card",
+        redirectTo: "/",
         passwordChangeRequired: false
       }
     });
@@ -337,13 +337,14 @@ describe("School ID login", () => {
     expect(loginPage).toContain("schoolId={schoolId}");
     expect(loginPage).toContain("schoolIdLocked={false}");
     expect(loginPage).toContain("searchParams");
-    expect(compatibilityRoute).toContain('redirect(schoolId ? `/?schoolId=');
+    expect(compatibilityRoute).toContain('query.set("schoolId", schoolId)');
+    expect(compatibilityRoute).toContain('query.set("status", "session-expired")');
     expect(tenantLoginPage).toContain("params: Promise<{ tenantSlug: string }>");
     expect(tenantLoginPage).toContain("schoolIdLocked={true}");
     expect(loginForm).toContain('label="School ID"');
     expect(loginForm).toContain('type="hidden" name="schoolId"');
-    expect(loginForm).toContain("Administrator Login");
-    expect(loginForm).toContain("/administrator/login");
+    expect(loginForm).not.toContain("JinaCampus Administrator Portal");
+    expect(loginForm).not.toContain("/administrator/login");
     expect(loginForm).toContain("schoolName");
     expect(loginForm).toContain("logoUrl");
     expect(loginForm).toContain("Forgot password?");
@@ -357,6 +358,8 @@ describe("School ID login", () => {
     expect(existsSync(resolve(process.cwd(), "src/app/api/auth/administrator-login/route.ts"))).toBe(true);
     expect(existsSync(resolve(process.cwd(), "src/app/platform/login/page.tsx"))).toBe(false);
     expect(source("src/components/auth/administrator-login-form.tsx")).not.toContain("schoolId");
+    expect(source("src/components/auth/administrator-login-form.tsx")).toContain('fetch("/api/auth/administrator-login"');
+    expect(source("src/app/administrator/login/page.tsx")).toContain("index: false");
   });
 
   it("session context source resolves tenant, branch, academic year, roles, and institution branding after login", () => {

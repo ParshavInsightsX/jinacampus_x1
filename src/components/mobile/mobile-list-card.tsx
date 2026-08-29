@@ -21,7 +21,7 @@ export function MobileListCard({ title, subtitle, status, meta = [], actions }: 
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="truncate text-sm font-semibold text-slate-950">{title}</h3>
+          <h3 className="break-words text-sm font-semibold leading-5 text-slate-950">{title}</h3>
           {subtitle ? <p className="mt-1 text-xs leading-5 text-slate-500">{subtitle}</p> : null}
         </div>
         {status ? <div className="shrink-0">{status}</div> : null}

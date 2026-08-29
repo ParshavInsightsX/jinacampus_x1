@@ -27,8 +27,26 @@ describe("dashboard UI", () => {
     expect(routeSource).toContain("getStaffAttendanceDashboardMetrics");
     expect(routeSource).toContain("getStaffAttendanceDashboardTrend");
     expect(routeSource).not.toContain("@/lib/db");
-    expect(routeSource).toContain("function loadDashboardPair");
-    expect(routeSource.match(/await loadDashboardPair/g)).toHaveLength(4);
+    expect(routeSource).not.toContain("function loadDashboardPair");
+    expect(routeSource).toContain("Keep at most two metric loaders active");
+    expect(routeSource.match(/\.then\(\(\) =>/g)).toHaveLength(6);
+  });
+
+  it("deduplicates authenticated dashboard context within each server request", () => {
+    const authSource = readProjectFile("src/lib/auth/require-auth.ts");
+    const permissionSource = readProjectFile("src/lib/rbac/require-permission.ts");
+    const entitlementSource = readProjectFile("src/modules/campus-core/entitlements/service.ts");
+
+    expect(authSource).toContain('import { cache } from "react"');
+    expect(authSource).toContain("const getRequiredTenantContext = cache");
+    expect(permissionSource).toContain('import { cache } from "react"');
+    expect(permissionSource).toContain("const loadEffectivePermissions = cache");
+    expect(permissionSource).toContain("ctx.tenantId");
+    expect(permissionSource).toContain("ctx.userId");
+    expect(permissionSource).toContain("ctx.accessibleBranchIds.includes(branchId)");
+    expect(entitlementSource).toContain("const loadCachedAttendanceEntitlementState = cache");
+    expect(entitlementSource).toContain("ctx.tenantId");
+    expect(entitlementSource).toContain("input.institutionId ?? ctx.institutionId ?? null");
   });
 
   it("renders the dashboard header and expected metric labels", () => {

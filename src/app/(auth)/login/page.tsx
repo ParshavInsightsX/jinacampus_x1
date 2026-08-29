@@ -9,5 +9,9 @@ function firstParam(value: string | string[] | undefined) {
 export default async function LoginPage({ searchParams }: { searchParams?: LoginSearchParams }) {
   const params = searchParams ? await searchParams : {};
   const schoolId = firstParam(params.schoolId) ?? firstParam(params.tenantSlug);
-  redirect(schoolId ? `/?schoolId=${encodeURIComponent(schoolId)}` : "/");
+  const query = new URLSearchParams();
+  if (schoolId) query.set("schoolId", schoolId);
+  if (firstParam(params.status) === "session-expired") query.set("status", "session-expired");
+  const serialized = query.toString();
+  redirect(serialized ? `/?${serialized}` : "/");
 }

@@ -2,12 +2,10 @@ import type { Prisma } from "@prisma/client";
 
 import { writeAuditLog } from "@/lib/audit/audit-log";
 import { createRawSessionToken, getSessionExpiresAt, hashSessionToken } from "@/lib/auth/session";
-import { getPostLoginRedirectPath } from "@/modules/campus-core/auth-redirect";
 
 type LoginSessionInput = {
   tenant: { id: string; name: string };
   user: { id: string; email: string; userType: string };
-  roleCodes: readonly string[];
   passwordChangeRequired: boolean;
   authMethod: "PASSWORD" | "PASSKEY";
   identifierType: "EMAIL" | "EMPLOYEE_CODE";
@@ -71,6 +69,6 @@ export async function createLoginSession(
     expiresAt,
     redirectTo: input.passwordChangeRequired
       ? "/account/change-password?required=1"
-      : getPostLoginRedirectPath(input.roleCodes)
+      : "/"
   };
 }

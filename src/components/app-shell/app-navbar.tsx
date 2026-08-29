@@ -56,7 +56,7 @@ export function AppNavbar({
     <>
       <TopEdgeRevealZone onReveal={reveal} />
       <header
-        className={`sticky top-0 z-50 min-w-0 border-b border-white/75 bg-white/90 pt-[env(safe-area-inset-top)] shadow-[0_6px_18px_rgba(11,22,56,0.07)] backdrop-blur-xl transition-transform duration-200 ease-out motion-reduce:transition-none lg:bg-white/70 lg:pt-0 lg:shadow-[0_10px_36px_rgba(11,22,56,0.08)] lg:backdrop-blur-2xl ${isVisible ? "translate-y-0" : "-translate-y-full"}`}
+        className={`jc-glass-application jc-motion-shell sticky top-0 z-50 min-w-0 border-b pt-[env(safe-area-inset-top)] motion-reduce:transition-none lg:pt-0 ${isVisible ? "translate-y-0" : "-translate-y-full"}`}
         data-app-navbar="true"
         data-navbar-layout="stable-sticky-row"
         data-navbar-visible={isVisible}
@@ -86,7 +86,7 @@ export function AppNavbar({
             </div>
           </div>
           <div
-            className="flex shrink-0 items-center gap-1.5 rounded-[1.65rem] border border-white/90 bg-white/65 p-1.5 shadow-[0_16px_42px_rgba(11,22,56,0.12),inset_0_1px_0_rgba(255,255,255,0.95)] backdrop-blur-2xl"
+            className="jc-glass-elevated flex shrink-0 items-center gap-1.5 rounded-[1.65rem] border p-1.5"
             aria-label="Workspace and account controls"
             data-desktop-command-cluster="true"
           >

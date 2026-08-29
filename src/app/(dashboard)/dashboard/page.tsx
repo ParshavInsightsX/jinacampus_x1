@@ -69,9 +69,6 @@ async function safeLoad<T>(enabled: boolean, load: () => Promise<T>): Promise<Pr
   }
 }
 
-function loadDashboardPair<A, B>(first: () => Promise<A>, second: () => Promise<B>) {
-  return Promise.all([first(), second()]);
-}
 
 function settledValue<T>(result: PromiseSettledResult<T | null>) {
   return result.status === "fulfilled" ? result.value : null;
@@ -192,6 +189,8 @@ export default async function DashboardPage() {
     staffAttendance: attendanceEntitlements.features[ATTENDANCE_ENTITLEMENT_FEATURES.STAFF_ATTENDANCE].read,
     marking: attendanceEntitlements.features[ATTENDANCE_ENTITLEMENT_FEATURES.MARKING].write,
     qr: attendanceEntitlements.features[ATTENDANCE_ENTITLEMENT_FEATURES.QR].write,
+    qrRead: attendanceEntitlements.features[ATTENDANCE_ENTITLEMENT_FEATURES.QR].read,
+    qrWrite: attendanceEntitlements.features[ATTENDANCE_ENTITLEMENT_FEATURES.QR].write,
     reports: attendanceEntitlements.features[ATTENDANCE_ENTITLEMENT_FEATURES.REPORTS].read
   };
   const navigationFeatures = { attendance };
@@ -207,22 +206,52 @@ export default async function DashboardPage() {
   const canViewSelfAttendance =
     attendance.staffAttendance && permissions.has("staffboard.attendance.self_view");
 
-  const [campusCoreResult, studentAttendanceTrendResult] = await loadDashboardPair(
-    () => safeLoad(access.campusCore, () => getCampusCoreDashboardMetrics(ctx)),
-    () => safeLoad(access.studentAttendance, () => getStudentAttendanceDashboardTrend(ctx))
+  // Keep at most two metric loaders active while avoiding a barrier between every pair.
+  const academiaResultPromise = safeLoad(
+    access.academia,
+    () => getAcademiaDashboardMetrics(ctx)
   );
-  const [academiaResult, staffAttendanceTrendResult] = await loadDashboardPair(
-    () => safeLoad(access.academia, () => getAcademiaDashboardMetrics(ctx)),
-    () => safeLoad(access.staffAttendance, () => getStaffAttendanceDashboardTrend(ctx))
+  const campusCoreResultPromise = safeLoad(
+    access.campusCore,
+    () => getCampusCoreDashboardMetrics(ctx)
   );
-  const [studentAttendanceResult, staffBoardResult] = await loadDashboardPair(
-    () => safeLoad(access.studentAttendance, () => getStudentAttendanceDashboardMetrics(ctx)),
-    () => safeLoad(access.staffBoard, () => getStaffBoardDashboardMetrics(ctx))
+  const studentAttendanceResultPromise = academiaResultPromise.then(() =>
+    safeLoad(access.studentAttendance, () => getStudentAttendanceDashboardMetrics(ctx))
   );
-  const [staffAttendanceResult, selfAttendanceResult] = await loadDashboardPair(
-    () => safeLoad(access.staffAttendance, () => getStaffAttendanceDashboardMetrics(ctx)),
-    () => safeLoad(canViewSelfAttendance, () => getMobileStaffAttendanceStatus(ctx))
+  const staffAttendanceResultPromise = campusCoreResultPromise.then(() =>
+    safeLoad(access.staffAttendance, () => getStaffAttendanceDashboardMetrics(ctx))
   );
+  const staffBoardResultPromise = studentAttendanceResultPromise.then(() =>
+    safeLoad(access.staffBoard, () => getStaffBoardDashboardMetrics(ctx))
+  );
+  const selfAttendanceResultPromise = staffAttendanceResultPromise.then(() =>
+    safeLoad(canViewSelfAttendance, () => getMobileStaffAttendanceStatus(ctx))
+  );
+  const studentAttendanceTrendResultPromise = staffBoardResultPromise.then(() =>
+    safeLoad(access.studentAttendance, () => getStudentAttendanceDashboardTrend(ctx))
+  );
+  const staffAttendanceTrendResultPromise = selfAttendanceResultPromise.then(() =>
+    safeLoad(access.staffAttendance, () => getStaffAttendanceDashboardTrend(ctx))
+  );
+  const [
+    campusCoreResult,
+    academiaResult,
+    studentAttendanceResult,
+    staffBoardResult,
+    staffAttendanceResult,
+    studentAttendanceTrendResult,
+    staffAttendanceTrendResult,
+    selfAttendanceResult
+  ] = await Promise.all([
+    campusCoreResultPromise,
+    academiaResultPromise,
+    studentAttendanceResultPromise,
+    staffBoardResultPromise,
+    staffAttendanceResultPromise,
+    studentAttendanceTrendResultPromise,
+    staffAttendanceTrendResultPromise,
+    selfAttendanceResultPromise
+  ]);
 
   const results = [
     campusCoreResult,

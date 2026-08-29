@@ -89,7 +89,6 @@ export async function POST(request: Request) {
   const session = await db.$transaction((tx) => createLoginSession(tx, {
     tenant: authenticated.tenant,
     user: authenticated.resolved.user,
-    roleCodes: authenticated.roleCodes,
     passwordChangeRequired: authenticated.credential.mustChange,
     authMethod: "PASSWORD",
     identifierType: authenticated.resolved.identifierType,

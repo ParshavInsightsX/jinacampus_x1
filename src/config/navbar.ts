@@ -40,6 +40,7 @@ const NAVBAR_ROUTE_RULES: readonly NavbarRouteRule[] = [
   { pattern: /^\/gradebook\/assessments\/[^/]+\/?$/, title: "Marks entry", section: "GradeBook", parentHref: "/gradebook", parentLabel: "GradeBook" },
   { pattern: /^\/gradebook\/reports\/?$/, title: "Published results", section: "GradeBook", parentHref: "/gradebook", parentLabel: "GradeBook" },
   { pattern: /^\/gradebook\/?$/, title: "GradeBook", section: "GradeBook" },
+  { pattern: /^\/campus-core\/institutions\/[^/]+\/legal-identity\/?$/, title: "Institution legal identity", section: "CampusCore", parentHref: "/campus-core/institutions", parentLabel: "School profile" },
   { pattern: /^\/campus-core\/institutions\/[^/]+\/edit\/?$/, title: "Edit school profile", section: "CampusCore", parentHref: "/campus-core/institutions", parentLabel: "School profile" },
   { pattern: /^\/campus-core\/institutions\/[^/]+\/?$/, title: "School profile", section: "CampusCore", parentHref: "/campus-core/institutions", parentLabel: "Schools" },
   { pattern: /^\/campus-core\/institutions\/?$/, title: "School profile", section: "CampusCore" },
@@ -57,6 +58,7 @@ const NAVBAR_ROUTE_RULES: readonly NavbarRouteRule[] = [
   { pattern: /^\/campus-core\/readiness\/?$/, title: "School readiness", section: "CampusCore" },
   { pattern: /^\/campus-core\/audit-logs\/?$/, title: "Audit logs", section: "CampusCore" },
   { pattern: /^\/academia\/students\/create\/?$/, title: "Register student", section: "Academia", parentHref: "/academia/students", parentLabel: "Students" },
+  { pattern: /^\/academia\/students\/[^/]+\/id-card\/?$/, title: "Student ID card", section: "Academia", parentHref: "/academia/students", parentLabel: "Students" },
   { pattern: /^\/academia\/students\/[^/]+\/edit\/?$/, title: "Edit student", section: "Academia", parentHref: "/academia/students", parentLabel: "Students" },
   { pattern: /^\/academia\/students\/[^/]+\/?$/, title: "Student profile", section: "Academia", parentHref: "/academia/students", parentLabel: "Students" },
   { pattern: /^\/academia\/students\/?$/, title: "Students", section: "Academia" },
@@ -77,12 +79,19 @@ const NAVBAR_ROUTE_RULES: readonly NavbarRouteRule[] = [
   { pattern: /^\/staffboard\/attendance\/credentials\/?$/, title: "Staff QR cards", section: "StaffBoard Lite", parentHref: "/staffboard/attendance", parentLabel: "Attendance register" },
   { pattern: /^\/staffboard\/attendance\/adjustments\/?$/, title: "Attendance corrections", section: "StaffBoard Lite", parentHref: "/staffboard/attendance", parentLabel: "Attendance register" },
   { pattern: /^\/staffboard\/attendance\/scan\/?$/, title: "Mark staff attendance", section: "StaffBoard Lite", parentHref: "/staffboard/attendance", parentLabel: "Attendance register" },
-  { pattern: /^\/staffboard\/attendance\/qr\/?$/, title: "Shared attendance QR", section: "StaffBoard Lite", parentHref: "/staffboard/attendance", parentLabel: "Attendance register" },
+  { pattern: /^\/staffboard\/attendance\/qr\/?$/, title: "Staff QR cards", section: "StaffBoard Lite", parentHref: "/staffboard/attendance", parentLabel: "Attendance register" },
+  { pattern: /^\/staffboard\/attendance\/card\/?$/, title: "My Attendance QR", section: "StaffBoard Lite", parentHref: "/staffboard/attendance/me", parentLabel: "My attendance" },
   { pattern: /^\/staffboard\/attendance\/me\/?$/, title: "My attendance", section: "StaffBoard Lite" },
   { pattern: /^\/staffboard\/attendance\/?$/, title: "Attendance register", section: "StaffBoard Lite" },
+  { pattern: /^\/staffboard\/leave\/apply\/?$/, title: "Apply for leave", section: "StaffBoard Lite", parentHref: "/staffboard/leave", parentLabel: "My leave" },
+  { pattern: /^\/staffboard\/leave\/review\/?$/, title: "Leave review", section: "StaffBoard Lite", parentHref: "/staffboard/leave", parentLabel: "Staff leave" },
+  { pattern: /^\/staffboard\/leave\/settings\/?$/, title: "Leave settings", section: "StaffBoard Lite", parentHref: "/staffboard/leave", parentLabel: "Staff leave" },
+  { pattern: /^\/staffboard\/leave\/[^/]+\/edit\/?$/, title: "Edit leave application", section: "StaffBoard Lite", parentHref: "/staffboard/leave", parentLabel: "My leave" },
+  { pattern: /^\/staffboard\/leave\/[^/]+\/?$/, title: "Leave application", section: "StaffBoard Lite", parentHref: "/staffboard/leave", parentLabel: "My leave" },
+  { pattern: /^\/staffboard\/leave\/?$/, title: "My leave", section: "StaffBoard Lite" },
   { pattern: /^\/staffboard\/?$/, title: "StaffBoard Lite" },
   { pattern: /^\/account\/change-password\/?$/, title: "Account security", section: "Account" },
-  { pattern: /^\/account\/workspaces\/?$/, title: "Workspace", section: "Account" }
+  { pattern: /^\/account\/workspaces\/?$/, title: "Choose a workspace", section: "Account" }
 ];
 
 const AUTO_HIDE_DISABLED_ROUTES = [

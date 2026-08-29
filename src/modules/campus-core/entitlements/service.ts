@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { Prisma, type SubscriptionLifecycleStatus } from "@prisma/client";
 
 import { db } from "@/lib/db";
@@ -314,14 +315,16 @@ export async function requireInstitutionEntitlement(input: RequireEntitlementInp
   return state;
 }
 
-export async function getAttendanceEntitlementState(
-  ctx: EntitlementContext,
-  input: { institutionId?: string | null; branchId?: string | null } = {}
+async function loadAttendanceEntitlementState(
+  tenantId: string,
+  institutionId: string | null,
+  branchId: string | null
 ) {
   const state = await loadInstitutionModuleEntitlements({
-    ctx,
+    ctx: { tenantId, institutionId },
     moduleKey: ENTITLEMENT_MODULE_KEYS.ATTENDANCE,
-    ...input
+    institutionId,
+    branchId
   });
 
   const features = Object.fromEntries(
@@ -346,6 +349,19 @@ export async function getAttendanceEntitlementState(
     enabled: features[ATTENDANCE_ENTITLEMENT_FEATURES.MODULE].read,
     features
   };
+}
+
+const loadCachedAttendanceEntitlementState = cache(loadAttendanceEntitlementState);
+
+export function getAttendanceEntitlementState(
+  ctx: EntitlementContext,
+  input: { institutionId?: string | null; branchId?: string | null } = {}
+) {
+  return loadCachedAttendanceEntitlementState(
+    ctx.tenantId,
+    input.institutionId ?? ctx.institutionId ?? null,
+    input.branchId ?? null
+  );
 }
 
 export async function requireAttendanceEntitlement(

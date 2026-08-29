@@ -212,12 +212,26 @@ Empty, no-results, loading, error, permission, and prerequisite states share an 
 
 ## Motion and Accessibility
 
-- Small feedback uses 160ms; menus and larger transitions use 220ms.
+- Micro feedback uses 160ms, standard component movement uses 220ms, content-only page entry uses 280ms, and sheets use 320ms.
 - Motion is limited to opacity, small translation, color, border, and shadow changes.
 - `prefers-reduced-motion` disables entrance and hover movement without removing information.
 - Native landmarks, labels, buttons, links, tables, and details/summary semantics are retained.
 - Focus is visible globally and all primary controls meet the 44px target.
 - Layouts use `min-h-dvh`, mobile safe-area padding, constrained images, and `overflow-x-hidden` only at application-shell boundaries.
+
+## Final Responsive and Motion System
+
+The final system uses three shared glass levels rather than route-specific translucent values:
+
+- Application glass uses approximately 28% transparency for the command bar and navigation docks.
+- Elevated glass uses approximately 14% transparency for popovers, launchers, and bottom sheets.
+- Focus glass uses approximately 6% transparency for authentication and other temporary high-attention surfaces.
+
+Dense forms, tables, record cards, and long reading surfaces remain opaque. Browsers without `backdrop-filter` and users requesting reduced transparency receive opaque white surfaces. Print output removes blur, motion, and glass shadows.
+
+Authenticated school route changes animate only the page-content template below the persistent shell. The command bar and desktop/mobile navigation remain stable and do not remount for visual effect. The Administrator Portal uses the same desktop dock and a safe-area-aware mobile bottom navigation while retaining its independent authentication and server-side capability filtering.
+
+The dashboard route group intentionally has no shared `loading.tsx` fallback. A previous browser QA failure showed that this fallback could remain visually stuck while the route payload had completed. Existing route-specific loading, empty, validation, success, permission, and error states remain the supported loading-state pattern.
 
 ## Route Migration Checklist
 

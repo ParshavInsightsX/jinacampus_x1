@@ -2,25 +2,41 @@ import Link from "next/link";
 
 export function LegalLinks({
   tone = "light",
-  className = ""
+  className = "",
+  compact = false
 }: {
   tone?: "light" | "dark";
   className?: string;
+  compact?: boolean;
 }) {
   const linkClass = tone === "dark"
     ? "text-blue-100 hover:text-white"
     : "text-slate-600 hover:text-brand-700";
 
+  const links = compact
+    ? [
+        { href: "/legal/privacy", label: "Privacy" },
+        { href: "/legal/terms", label: "Terms" },
+        { href: "/legal", label: "Legal centre" }
+      ]
+    : [
+        { href: "/legal/privacy", label: "Privacy" },
+        { href: "/legal/terms", label: "Terms" },
+        { href: "/legal/cookies", label: "Cookies" },
+        { href: "/legal/data-rights", label: "Data rights" },
+        { href: "/legal/security", label: "Security" }
+      ];
+
   return (
     <nav
       aria-label="Legal and privacy"
-      className={`flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs font-semibold ${className}`}
+      className={`flex flex-wrap items-center justify-center gap-x-4 text-xs font-semibold ${className}`}
     >
-      <Link href="/legal/privacy" className={`min-h-11 content-center transition ${linkClass}`}>Privacy</Link>
-      <Link href="/legal/terms" className={`min-h-11 content-center transition ${linkClass}`}>Terms</Link>
-      <Link href="/legal/cookies" className={`min-h-11 content-center transition ${linkClass}`}>Cookies</Link>
-      <Link href="/legal/data-rights" className={`min-h-11 content-center transition ${linkClass}`}>Data rights</Link>
-      <Link href="/legal/security" className={`min-h-11 content-center transition ${linkClass}`}>Security</Link>
+      {links.map((link) => (
+        <Link key={link.href} href={link.href} className={`inline-flex min-h-11 items-center transition ${linkClass}`}>
+          {link.label}
+        </Link>
+      ))}
     </nav>
   );
 }

@@ -60,7 +60,7 @@ export function StatusBadge({ value, label }: { value?: string | null; label?: s
   const tone = statusTone(value);
 
   return (
-    <span className={`motion-soft-hover inline-flex whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-semibold ${statusToneClassNames[tone]}`}>
+    <span className={`inline-flex whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-semibold ${statusToneClassNames[tone]}`}>
       <span className={`mr-1.5 mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${statusDotClassNames[tone]}`} aria-hidden="true" />
       {label ?? formatEnumLabel(value)}
     </span>
@@ -167,7 +167,7 @@ export function PaginationControls({
   const hasPrevious = page > 1;
   const hasNext = page < totalPages;
 
-  const buttonClassName = "inline-flex min-h-11 w-full items-center justify-center rounded-xl border px-4 py-2 text-sm font-semibold sm:w-auto";
+  const buttonClassName = "inline-flex min-h-11 w-full items-center justify-center rounded-lg border px-4 py-2 text-sm font-semibold sm:w-auto";
   const enabledClassName = "border-slate-200 bg-white/90 text-slate-700 shadow-sm transition hover:border-brand-200 hover:text-brand-700 premium-focus";
   const disabledClassName = "cursor-not-allowed border-slate-100 bg-slate-50 text-slate-400";
 

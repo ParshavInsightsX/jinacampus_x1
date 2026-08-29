@@ -139,6 +139,23 @@ describe("institution subscriptions and entitlements", () => {
     expect(isFeatureNavigationEnabled("/gradebook", features)).toBe(false);
   });
 
+  it("allows self-card viewing without granting QR scanner or credential writes", () => {
+    const features = {
+      attendance: {
+        studentAttendance: false,
+        staffAttendance: true,
+        marking: false,
+        qrRead: true,
+        qrWrite: false,
+        reports: false
+      }
+    };
+
+    expect(isFeatureNavigationEnabled("/staffboard/attendance/card", features)).toBe(true);
+    expect(isFeatureNavigationEnabled("/staffboard/attendance/scan", features)).toBe(false);
+    expect(isFeatureNavigationEnabled("/staffboard/attendance/credentials", features)).toBe(false);
+  });
+
   it("batches administrator entitlement writes inside a bounded transaction", () => {
     const service = readFileSync(
       path.join(process.cwd(), "src/modules/campus-core/entitlements/administrator.service.ts"),

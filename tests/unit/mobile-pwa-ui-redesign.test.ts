@@ -85,7 +85,7 @@ describe("mobile web/PWA UI redesign", () => {
       "Home",
       "My Attendance",
       "Attendance History",
-      "Profile",
+      "Security",
       "More",
     ]);
     expect(getNavigationAudience(officePermissions, ["OFFICE_STAFF"])).toBe("office");
@@ -124,6 +124,22 @@ describe("mobile web/PWA UI redesign", () => {
     expect(mobileDashboard).toContain("Today's Operations");
     expect(`${actionCard}\n${statCard}\n${listCard}\n${emptyState}\n${stickyAction}`).toContain("rounded-lg");
     expect(stickyAction).toContain("env(safe-area-inset-bottom)");
+  });
+
+  it("keeps dock clearance singular and mobile record text readable", () => {
+    const layout = source("src/app/(dashboard)/layout.tsx");
+    const globals = source("src/app/globals.css");
+    const listCard = source("src/components/mobile/mobile-list-card.tsx");
+    const emptyState = source("src/components/mobile/mobile-empty-state.tsx");
+
+    expect(layout).not.toContain("lg:pb-40");
+    expect(layout).not.toContain("xl:pb-40");
+    expect(globals).toMatch(/\.mobile-shell-content\s*\{\s*scroll-padding-bottom:/);
+    expect(globals).toMatch(/\.mobile-shell-footer\s*\{\s*padding-bottom:/);
+    expect(listCard).toContain("break-words");
+    expect(listCard).not.toContain("truncate text-sm");
+    expect(emptyState).toContain("rounded-lg");
+    expect(emptyState).not.toContain("rounded-2xl");
   });
 
   it("makes supervised Staff QR scanning mobile-first while preserving server gating", () => {

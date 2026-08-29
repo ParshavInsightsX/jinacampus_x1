@@ -40,40 +40,18 @@ export async function getStaffBoardDashboardMetrics(
   const scope = await resolveDashboardScope(ctx, input);
   const branchFilter = activeBranchFilter(scope);
 
-  const [totalActiveStaff, totalTeachers, totalNonTeachingStaff, staffTypeGroups] = await Promise.all([
-    db.staffProfile.count({
-      where: {
-        tenantId: ctx.tenantId,
-        branchId: branchFilter,
-        employmentStatus: "ACTIVE"
-      }
-    }),
-    db.staffProfile.count({
-      where: {
-        tenantId: ctx.tenantId,
-        branchId: branchFilter,
-        employmentStatus: "ACTIVE",
-        staffType: "TEACHER"
-      }
-    }),
-    db.staffProfile.count({
-      where: {
-        tenantId: ctx.tenantId,
-        branchId: branchFilter,
-        employmentStatus: "ACTIVE",
-        NOT: { staffType: "TEACHER" }
-      }
-    }),
-    db.staffProfile.groupBy({
-      by: ["staffType"],
-      where: {
-        tenantId: ctx.tenantId,
-        branchId: branchFilter,
-        employmentStatus: "ACTIVE"
-      },
-      _count: { _all: true }
-    })
-  ]);
+  const staffTypeGroups = await db.staffProfile.groupBy({
+    by: ["staffType"],
+    where: {
+      tenantId: ctx.tenantId,
+      branchId: branchFilter,
+      employmentStatus: "ACTIVE"
+    },
+    _count: { _all: true }
+  });
+  const totalActiveStaff = staffTypeGroups.reduce((total, group) => total + group._count._all, 0);
+  const totalTeachers = staffTypeGroups.find((group) => group.staffType === "TEACHER")?._count._all ?? 0;
+  const totalNonTeachingStaff = totalActiveStaff - totalTeachers;
 
   return {
     totalActiveStaff,
@@ -90,7 +68,7 @@ export async function getStaffAttendanceDashboardMetrics(
   const scope = await resolveDashboardScope(ctx, input);
   const branchFilter = activeBranchFilter(scope);
 
-  const [totalActiveStaff, checkedIn, attendanceRecordsToday, statusGroups] = await Promise.all([
+  const [totalActiveStaff, checkedIn] = await Promise.all([
     db.staffProfile.count({
       where: {
         tenantId: ctx.tenantId,
@@ -110,7 +88,9 @@ export async function getStaffAttendanceDashboardMetrics(
           employmentStatus: "ACTIVE"
         }
       }
-    }),
+    })
+  ]);
+  const [attendanceRecordsToday, statusGroups] = await Promise.all([
     db.staffAttendanceRecord.count({
       where: {
         tenantId: ctx.tenantId,

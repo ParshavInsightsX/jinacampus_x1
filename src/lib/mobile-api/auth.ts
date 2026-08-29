@@ -13,6 +13,7 @@ import { getEffectivePermissions } from "@/lib/rbac/require-permission";
 import type { PermissionCode } from "@/lib/rbac/permissions";
 import { hasSchoolLoginRole } from "@/lib/rbac/roles";
 import type { TenantContext } from "@/lib/tenant/context";
+import { isUsableTenantBranchAccess } from "@/lib/tenant/branch-access";
 import { CAMPUS_CORE_AUDIT_EVENTS } from "@/modules/campus-core/audit-events";
 import { mobileLoginSchema, type MobileLoginInput } from "./schemas";
 
@@ -209,10 +210,8 @@ async function resolveMobileAuthFromRawToken(
     throw new AppError("PASSWORD_CHANGE_REQUIRED", "PASSWORD_CHANGE_REQUIRED", 403);
   }
 
-  const activeBranchAccesses = session.user.branchAccesses.filter((branchAccess) => (
-    branchAccess.tenantId === session.tenantId &&
-    branchAccess.branch.tenantId === session.tenantId &&
-    branchAccess.branch.status === "ACTIVE"
+  const activeBranchAccesses = session.user.branchAccesses.filter((access) => (
+    isUsableTenantBranchAccess(access, session.tenantId)
   ));
   const activeBranchAccess = activeBranchAccesses.find((branchAccess) => branchAccess.isPrimary) ?? activeBranchAccesses[0] ?? null;
   const activeBranchId = activeBranchAccess?.branchId ?? null;

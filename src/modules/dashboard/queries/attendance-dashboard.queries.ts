@@ -61,7 +61,7 @@ export async function getStudentAttendanceDashboardMetrics(
     };
   }
 
-  const [statusGroups, classSections, holidayEntries] = await Promise.all([
+  const [statusGroups, classSections] = await Promise.all([
     db.studentAttendanceRecord.groupBy({
       by: ["status"],
       where: {
@@ -112,20 +112,20 @@ export async function getStudentAttendanceDashboardMetrics(
           select: { studentId: true }
         }
       }
-    }),
-    db.academicCalendarEntry.findMany({
-      where: {
-        tenantId: ctx.tenantId,
-        academicYearId: scope.activeAcademicYearId,
-        status: "ACTIVE",
-        startDate: { lte: scope.date },
-        endDate: { gte: scope.date },
-        audiences: { has: "STUDENTS" },
-        OR: [{ branchId: null }, { branchId: branchFilter }]
-      },
-      select: { branchId: true }
     })
   ]);
+  const holidayEntries = await db.academicCalendarEntry.findMany({
+    where: {
+      tenantId: ctx.tenantId,
+      academicYearId: scope.activeAcademicYearId,
+      status: "ACTIVE",
+      startDate: { lte: scope.date },
+      endDate: { gte: scope.date },
+      audiences: { has: "STUDENTS" },
+      OR: [{ branchId: null }, { branchId: branchFilter }]
+    },
+    select: { branchId: true }
+  });
 
   const marked = statusGroups.reduce((total, group) => total + group._count._all, 0);
   const institutionWideHoliday = holidayEntries.some((entry) => entry.branchId === null);

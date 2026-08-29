@@ -48,71 +48,72 @@ export async function getAcademiaDashboardMetrics(
     }
   } : {};
 
-  const [totalActiveStudents, totalActiveEnrollments, totalClasses, totalClassSections, totalGuardians] =
-    await Promise.all([
-      db.student.count({
-        where: {
-          tenantId: ctx.tenantId,
-          branchId: branchFilter,
-          status: "ACTIVE",
-          ...assignedEnrollment
-        }
-      }),
-      scope.activeAcademicYearId
-        ? db.enrollment.count({
-            where: {
+  const [totalActiveStudents, totalActiveEnrollments] = await Promise.all([
+    db.student.count({
+      where: {
+        tenantId: ctx.tenantId,
+        branchId: branchFilter,
+        status: "ACTIVE",
+        ...assignedEnrollment
+      }
+    }),
+    scope.activeAcademicYearId
+      ? db.enrollment.count({
+          where: {
+            tenantId: ctx.tenantId,
+            branchId: branchFilter,
+            academicYearId: scope.activeAcademicYearId,
+            status: "ACTIVE",
+            ...(teacherScope ? { classSection: assignedClassSection } : {})
+          }
+        })
+      : Promise.resolve(0)
+  ]);
+  const [totalClasses, totalClassSections] = await Promise.all([
+    db.class.count({
+      where: {
+        tenantId: ctx.tenantId,
+        status: "ACTIVE",
+        ...(teacherScope ? {
+          classSections: {
+            some: {
               tenantId: ctx.tenantId,
               branchId: branchFilter,
-              academicYearId: scope.activeAcademicYearId,
-              status: "ACTIVE",
-              ...(teacherScope ? { classSection: assignedClassSection } : {})
-            }
-          })
-        : Promise.resolve(0),
-      db.class.count({
-        where: {
-          tenantId: ctx.tenantId,
-          status: "ACTIVE",
-          ...(teacherScope ? {
-            classSections: {
-              some: {
-                tenantId: ctx.tenantId,
-                branchId: branchFilter,
-                academicYearId: academicYearId!,
-                status: "ACTIVE",
-                ...assignedClassSection
-              }
-            }
-          } : {})
-        }
-      }),
-      scope.activeAcademicYearId
-        ? db.classSection.count({
-            where: {
-              tenantId: ctx.tenantId,
-              branchId: branchFilter,
-              academicYearId: scope.activeAcademicYearId,
+              academicYearId: academicYearId!,
               status: "ACTIVE",
               ...assignedClassSection
             }
-          })
-        : Promise.resolve(0),
-      db.guardian.count({
-        where: {
-          tenantId: ctx.tenantId,
-          studentLinks: {
-            some: {
-              student: {
-                tenantId: ctx.tenantId,
-                branchId: branchFilter,
-                status: "ACTIVE",
-                ...assignedEnrollment
-              }
-            }
+          }
+        } : {})
+      }
+    }),
+    scope.activeAcademicYearId
+      ? db.classSection.count({
+          where: {
+            tenantId: ctx.tenantId,
+            branchId: branchFilter,
+            academicYearId: scope.activeAcademicYearId,
+            status: "ACTIVE",
+            ...assignedClassSection
+          }
+        })
+      : Promise.resolve(0)
+  ]);
+  const totalGuardians = await db.guardian.count({
+    where: {
+      tenantId: ctx.tenantId,
+      studentLinks: {
+        some: {
+          student: {
+            tenantId: ctx.tenantId,
+            branchId: branchFilter,
+            status: "ACTIVE",
+            ...assignedEnrollment
           }
         }
-      })
-    ]);
+      }
+    }
+  });
 
   return {
     totalActiveStudents,

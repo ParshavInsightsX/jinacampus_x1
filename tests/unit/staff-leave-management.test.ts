@@ -20,6 +20,16 @@ function source(path: string) {
 }
 
 describe("Staff Leave management", () => {
+  it("renders the balance year from stable institution-time-zone server state", () => {
+    const settingsPage = source("src/app/(dashboard)/staffboard/leave/settings/page.tsx");
+    const settingsForm = source("src/modules/staffboard-lite/components/leave/staff-leave-settings-forms.tsx");
+
+    expect(settingsPage).toContain("getZonedDateTimeParts(new Date(), ctx.timeZone).year");
+    expect(settingsPage).toContain("defaultYear={defaultYear}");
+    expect(settingsForm).toContain("defaultValue={defaultYear}");
+    expect(settingsForm).not.toContain("new Date().getUTCFullYear()");
+  });
+
   it("calculates branch working dates and half-day duration server-side", () => {
     const dates = enumerateLeaveDates(
       new Date("2026-08-07"),

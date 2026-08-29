@@ -27,11 +27,11 @@ export function NavbarUserMenu({ context, branding, compact = false, onOpenChang
       panelRole="dialog"
       onOpenChange={onOpenChange}
       buttonClassName={compact
-        ? "flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-campus-border bg-white px-1.5 text-slate-700 shadow-sm transition hover:border-brand-200 hover:bg-brand-50 premium-focus"
-        : "flex min-h-14 max-w-[14rem] items-center gap-2 rounded-[1.25rem] border border-transparent bg-transparent px-2.5 text-slate-700 transition hover:bg-white/90 premium-focus"}
+        ? "jc-motion-interactive flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-campus-border bg-white px-1.5 text-slate-700 shadow-sm hover:border-brand-200 hover:bg-brand-50 premium-focus"
+        : "jc-motion-interactive flex min-h-14 max-w-[14rem] items-center gap-2 rounded-[1.25rem] border border-transparent bg-transparent px-2.5 text-slate-700 hover:bg-white/90 premium-focus"}
       panelClassName={compact
-        ? "absolute right-0 top-[calc(100%+0.6rem)] z-20 w-[min(20rem,calc(100vw-1.5rem))] rounded-lg border border-campus-border bg-white p-2 shadow-elevated"
-        : "absolute right-0 top-[calc(100%+0.85rem)] z-20 w-[min(20rem,calc(100vw-1.5rem))] rounded-[1.25rem] border border-white/90 bg-white/95 p-2 shadow-[0_24px_64px_rgba(3,15,46,0.20)] backdrop-blur-2xl"}
+        ? "jc-glass-elevated absolute right-0 top-[calc(100%+0.6rem)] z-20 w-[min(20rem,calc(100vw-1.5rem))] rounded-lg border p-2"
+        : "jc-glass-elevated absolute right-0 top-[calc(100%+0.85rem)] z-20 w-[min(20rem,calc(100vw-1.5rem))] rounded-[1.25rem] border p-2"}
       trigger={(isOpen) => (
         <>
           <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white">
@@ -43,7 +43,7 @@ export function NavbarUserMenu({ context, branding, compact = false, onOpenChang
               <span className="block truncate text-[11px] text-slate-500">{visibleRoles[0] ?? "School user"}</span>
             </span>
           )}
-          {compact ? null : <ChevronDown className={`hidden h-4 w-4 shrink-0 transition-transform motion-reduce:transition-none xl:block ${isOpen ? "rotate-180" : ""}`} aria-hidden="true" />}
+          {compact ? null : <ChevronDown className={`jc-motion-interactive hidden h-4 w-4 shrink-0 xl:block ${isOpen ? "rotate-180" : ""}`} aria-hidden="true" />}
         </>
       )}
     >

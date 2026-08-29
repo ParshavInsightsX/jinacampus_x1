@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { hashSessionToken } from "@/lib/auth/session";
 import { safeTimeZone } from "@/lib/dates/time-zone";
+import { isUsableTenantBranchAccess } from "@/lib/tenant/branch-access";
 
 export type TenantContext = {
   tenantId: string;
@@ -117,10 +118,8 @@ export async function getTenantContext(
   if (session.tenant.status !== "ACTIVE") throw new Error("TENANT_INACTIVE");
   if (session.user.status !== "ACTIVE") throw new Error("USER_INACTIVE");
 
-  const activeBranchAccesses = session.user.branchAccesses.filter((b) => (
-    b.tenantId === session.tenantId &&
-    b.branch.tenantId === session.tenantId &&
-    b.branch.status === "ACTIVE"
+  const activeBranchAccesses = session.user.branchAccesses.filter((access) => (
+    isUsableTenantBranchAccess(access, session.tenantId)
   ));
   const accessibleBranchIds = activeBranchAccesses.map((b) => b.branchId);
   const requestedBranchId = cookieStore.get("jc_branch")?.value ?? null;

@@ -11,7 +11,7 @@ describe("Academia setup and school governance repair", () => {
     const schoolProfilePage = source("src/app/(dashboard)/campus-core/institutions/page.tsx");
     const campusCoreServices = source("src/modules/campus-core/services/index.ts");
 
-    expect(schoolProfilePage).toContain("New schools are provisioned only from the JinaCampus Administrator Portal");
+    expect(schoolProfilePage).toContain("New schools are provisioned by an authorised JinaCampus platform administrator");
     expect(schoolProfilePage).not.toContain("createInstitutionAction");
     expect(campusCoreServices).toContain('permission: "platform.institution.manage"');
     expect(campusCoreServices).toContain("requireAccessibleInstitution");

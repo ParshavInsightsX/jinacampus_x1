@@ -88,10 +88,12 @@ describe("mobile browser QA pass", () => {
     const loginFormSource = readProjectFile("src/components/auth/login-form.tsx");
     const globalsSource = readProjectFile("src/app/globals.css");
 
-    expect(authShellSource).toContain("overflow-x-hidden");
+    expect(authShellSource).toContain("auth-shell-root");
+    expect(globalsSource).toContain("overflow: clip");
     expect(loginFormSource).toContain("auth-form-panel");
     expect(loginSource).toContain('<AuthShell variant="school">');
-    expect(authShellSource).toContain("env(safe-area-inset-bottom)");
+    expect(authShellSource).toContain("auth-shell-layout");
+    expect(globalsSource).toContain("env(safe-area-inset-bottom)");
     expect(globalsSource).toContain("min-w-0 max-w-full");
   });
 });

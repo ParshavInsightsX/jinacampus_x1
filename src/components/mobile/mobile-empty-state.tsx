@@ -9,7 +9,7 @@ type MobileEmptyStateProps = {
 export function MobileEmptyState({ title, description, action }: MobileEmptyStateProps) {
   return (
     <div
-      className="rounded-2xl border border-dashed border-slate-300 bg-white/82 p-5 text-center shadow-sm shadow-slate-950/5"
+      className="rounded-lg border border-dashed border-slate-300 bg-white p-5 text-center shadow-sm shadow-slate-950/5"
       data-mobile-empty-state="true"
     >
       <p className="text-sm font-semibold text-slate-900">{title}</p>
