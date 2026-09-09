@@ -37,10 +37,16 @@ const loadEffectivePermissions = cache(async (
         { OR: [{ endsAt: null }, { endsAt: { gt: now } }] }
       ]
     },
-    include: {
+    select: {
       role: {
-        include: {
-          rolePermissions: { where: { tenantId }, include: { permission: true } }
+        select: {
+          tenantId: true,
+          isActive: true,
+          rolePermissions: {
+            where: { tenantId },
+            // Authorization must not decode unrelated, evolving module enums.
+            select: { permission: { select: { code: true, isActive: true } } }
+          }
         }
       }
     }

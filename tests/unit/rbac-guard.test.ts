@@ -66,9 +66,9 @@ describe("RBAC guard", () => {
           }
         ])
       }),
-      include: expect.objectContaining({
+      select: expect.objectContaining({
         role: expect.objectContaining({
-          include: expect.objectContaining({
+          select: expect.objectContaining({
             rolePermissions: expect.objectContaining({ where: { tenantId } })
           })
         })
@@ -76,6 +76,40 @@ describe("RBAC guard", () => {
     }));
     expect(permissions.has("campuscore.user.view")).toBe(true);
     expect(permissions.has("academia.attendance.mark")).toBe(true);
+  });
+
+  it("loads only authorization fields and rejects permissions outside this release catalog", async () => {
+    mocks.db.userRoleAssignment.findMany.mockResolvedValue([
+      assignment(["campuscore.user.view", "kinbridge.account.manage", "future_module.unrecognised"])
+    ]);
+    const permissions = await getEffectivePermissions({ ctx, branchId, academicYearId });
+    expect(mocks.db.userRoleAssignment.findMany.mock.calls[0][0].select).toEqual({
+      role: { select: {
+        tenantId: true,
+        isActive: true,
+        rolePermissions: {
+          where: { tenantId },
+          select: { permission: { select: { code: true, isActive: true } } } }
+      } }
+    });
+    expect(permissions.has("campuscore.user.view")).toBe(true);
+    expect([...permissions]).not.toContain("kinbridge.account.manage");
+    expect([...permissions]).not.toContain("future_module.unrecognised");
+  });
+
+  it("fails closed if the permission database query fails", async () => {
+    mocks.db.userRoleAssignment.findMany.mockRejectedValue(new Error("DATABASE_UNAVAILABLE"));
+    await expect(requirePermission({ ctx, permission: "campuscore.user.view", branchId }))
+      .rejects.toThrow("DATABASE_UNAVAILABLE");
+  });
+
+  it("preserves assignment validity windows", async () => {
+    await getEffectivePermissions({ ctx, branchId, academicYearId });
+    const filters = mocks.db.userRoleAssignment.findMany.mock.calls[0][0].where.AND;
+    expect(filters).toEqual(expect.arrayContaining([
+      { OR: [{ startsAt: null }, { startsAt: { lte: expect.any(Date) } }] },
+      { OR: [{ endsAt: null }, { endsAt: { gt: expect.any(Date) } }] }
+    ]));
   });
 
   it("rejects missing exact permissions even when a related weaker permission exists", async () => {

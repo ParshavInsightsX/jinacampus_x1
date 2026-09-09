@@ -10,7 +10,7 @@
     "dev": "next dev",
     "dev:raw": "next dev",
     "dev:webpack": "next dev --webpack",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "postinstall": "prisma generate",
     "start": "next start",
     "typecheck": "tsc --noEmit",

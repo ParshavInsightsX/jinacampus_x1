@@ -94,7 +94,7 @@ describe("deployment environment validation", () => {
     expect(schema).toContain('url       = env("DATABASE_URL")');
     expect(schema).toContain('directUrl = env("DIRECT_URL")');
     expect(packageJson.scripts).toMatchObject({
-      build: "next build",
+      build: "prisma generate && next build",
       postinstall: "prisma generate",
       "db:migrate:deploy": "prisma migrate deploy",
       "db:migrate:status": "prisma migrate status",
